@@ -2,7 +2,19 @@
 
 ## Estado
 
-**Cierre técnico local completado el 2026-07-14.** La matriz equivalente a CI pasa sobre PostgreSQL 17 real y el frontend se conecta al backend real. El módulo no se marca como cierre externo definitivo hasta que el workflow sea ejecutado por GitHub Actions; localmente su YAML fue validado y todos sus comandos equivalentes pasaron.
+**Estado Módulo 1: CERRADO.** Cierre formal validado localmente y mediante GitHub-hosted el 2026-07-14.
+
+| Campo | Evidencia de cierre |
+|---|---|
+| Repositorio | `ippiX1992/nexus` |
+| Commit validado | `49bfea76ff2c940e2e56ee41d37dfbef1fc7b38d` |
+| Workflow | `Nexus Modules 1-2 Quality Gate` |
+| Run ID | `29365183544` |
+| Resultado | `success` |
+| Jobs | `backend-quality`, `frontend-quality`, `playwright-e2e`, `modules-1-2-gate` |
+| Artifacts | `nexus-backend-evidence`, `nexus-playwright-evidence` |
+
+La matriz final equivalente obtuvo 47 pruebas backend aprobadas, 81.00% de cobertura, Ruff y mypy aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real aprobado, wheel/sdist backend y build Next.js correctos.
 
 No se implementó ningún módulo de ecommerce, catálogo, CMS o constructor visual.
 
@@ -144,31 +156,32 @@ El clúster aislado usa `.pgtest/`, escucha solo en `127.0.0.1:55432` y no alter
 | Contaminación pool | Verificado | conexión reutilizada sin contexto devuelve cero filas | `test_pool_connection_does_not_leak_tenant` |
 | Refresh/Reuse | Verificado | familia revocada y auditoría | `test_api.py` |
 | Concurrencia refresh | Verificado | un 200, un 401, cero sucesores activos | `test_refresh_concurrency.py` |
-| API real | Verificado | HTTPX ASGI + PostgreSQL | 32 pruebas backend |
+| API real | Verificado | HTTPX ASGI + PostgreSQL | 47 pruebas backend en la matriz final |
 | Miembros/roles/owner | Verificado | CRUD, tenant guards, último owner, transferencia | `test_admin_api.py` |
 | 2FA | Verificado | setup, TOTP, recovery único, regenerate, disable | `test_security_flows.py` |
 | Rate limit | Verificado | límite, separación de clave, Retry-After | `test_rate_limit.py` |
 | CSRF | Verificado | ausente, incorrecto, origen ajeno, válido | `test_csrf.py` |
 | Frontend conectado | Verificado | flujo real cliente UI/API/PostgreSQL | `RUN_E2E=1 npm test` |
-| Navegador visual | Bloqueado | runtime integrado falló por permisos `EPERM` | no se declara verificado |
+| E2E Chromium real | Verificado | navegador oficial, API, frontend y PostgreSQL | `playwright-e2e` |
 | CI | Configurado | YAML válido y matriz local equivalente aprobada | `.github/workflows/modules-1-2-quality-gate.yml` |
-| CI GitHub-hosted | Pendiente externo | requiere push/ejecución en GitHub | workflow `Nexus Modules 1-2 Quality Gate` |
+| CI GitHub-hosted | Verificado | Run `29365183544`, resultado `success` | workflow `Nexus Modules 1-2 Quality Gate` |
 
 Resultados:
 
 ```text
-Pytest: 32 passed in 48.35s
-Cobertura: 80.75% (637 statements; threshold 80%)
+Pytest: 47 passed
+Cobertura: 81.00% (threshold 80%)
 Ruff: All checks passed!
-mypy: Success: no issues found in 24 source files
+mypy: Success: no issues found in 46 source files
 Alembic upgrade: exitoso sobre PostgreSQL vacío
 Alembic downgrade: exitoso hasta base
-Pruebas RLS: 2 escenarios aprobados
-Pruebas concurrencia: 1 passed; un éxito y una reutilización bloqueada
-Pruebas frontend: 5 passed en 2 archivos
-Build Next.js: compilación y 12 rutas generadas
+Pruebas RLS y concurrencia: aprobadas
+Pruebas frontend: 13 passed, 1 skipped
+E2E Chromium real: aprobado
+Build Next.js: compilación y 20 rutas generadas
 Build backend: sdist y wheel generados
-CI: workflow válido; ejecución GitHub-hosted pendiente
+CI GitHub-hosted: Run 29365183544, success
+Artifacts: nexus-backend-evidence, nexus-playwright-evidence
 ```
 
 Se generaron `coverage.xml` y `htmlcov/`.
@@ -196,7 +209,8 @@ Docker continúa disponible como opción mediante `docker compose up --build`; l
 - El access token reside en `sessionStorage`; un BFF con cookie HttpOnly reduciría riesgo XSS.
 - Los buckets vencidos requieren una tarea periódica de limpieza.
 - `npm audit` reporta dos avisos moderados heredados de PostCSS dentro de Next.js 16.2.10; no existe corrección ascendente segura reportada por npm al momento de esta validación.
-- El E2E visual del navegador integrado y la ejecución GitHub-hosted siguen pendientes de infraestructura externa.
+- La auditoría append-only no es todavía criptográficamente inmutable.
+- La migración histórica `0001` depende de metadata dinámica y requiere una estrategia futura de consolidación.
 
 ## Checklist de cierre
 
@@ -208,5 +222,5 @@ Docker continúa disponible como opción mediante `docker compose up --build`; l
 - [x] Cobertura ≥80%, Ruff, mypy y builds.
 - [x] Frontend conectado con integración real automatizada.
 - [x] CI reproducible configurado con PostgreSQL y Redis.
-- [ ] Ejecución del workflow en GitHub-hosted runner.
-- [ ] E2E visual mediante navegador integrado (bloqueado por permisos del runtime).
+- [x] Ejecución del workflow en GitHub-hosted runner.
+- [x] E2E Chromium real en GitHub-hosted.

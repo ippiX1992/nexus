@@ -1,8 +1,21 @@
 # Nexus — Arquitectura Maestra
 
-> Estado: arquitectura objetivo; Platform Kernel implementado como Módulo 2
+> Estado: arquitectura objetivo; Módulo 1 y Módulo 2 formalmente cerrados
 > Fecha: 2026-07-14
 > Alcance: evolución de Nexus sobre el Módulo 1 existente, sin reescribirlo
+
+## Registro de cierre de la plataforma v0.2
+
+- **Estado Módulo 1: CERRADO**
+- **Estado Módulo 2: CERRADO**
+- Repositorio: `ippiX1992/nexus`
+- Commit validado: `49bfea76ff2c940e2e56ee41d37dfbef1fc7b38d`
+- Workflow: `Nexus Modules 1-2 Quality Gate`
+- Run ID: `29365183544`
+- Resultado: `success`
+- Fecha de validación: `2026-07-14`
+
+Los jobs `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate` aprobaron. La matriz local equivalente registró 47 pruebas backend, 81.00% de cobertura, Ruff y mypy aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real, build backend wheel/sdist y build Next.js correctos. GitHub Actions publicó `nexus-backend-evidence` y `nexus-playwright-evidence`.
 
 ## 1. Propósito
 
@@ -45,14 +58,14 @@ Decisiones que se conservan:
 - Los guards revalidan membresía y permisos; las claims del JWT no son autoridad final.
 - Refresh token en cookie HttpOnly y access token de vida corta.
 
-Limitaciones de partida que deben tratarse como deuda planificada:
+Deuda residual después del cierre de los Módulos 1 y 2:
 
-- RLS aún no es transversal.
-- La migración inicial depende de metadata viva de SQLAlchemy.
-- No existe una jerarquía formal de tiendas, sitios y canales.
-- No existe outbox, bus de eventos, idempotencia general ni jobs persistentes.
-- El dominio puro y el flujo SQLAlchemy directo son caminos paralelos.
-- El cierre formal del Módulo 2 incorpora el baseline local; el CI remoto todavía no está demostrado.
+- La migración histórica `0001` depende de metadata viva de SQLAlchemy.
+- La auditoría append-only no es criptográficamente inmutable.
+- Dispatcher y jobs necesitan procesos supervisados antes de producción.
+- La limpieza de buckets, idempotency, outbox e inbox requiere jobs programados operacionales.
+- `npm audit` mantiene dos vulnerabilidades moderadas conocidas.
+- El dominio puro y el flujo SQLAlchemy directo de Identity siguen siendo caminos paralelos.
 
 ## 3. Visión arquitectónica
 
@@ -1043,7 +1056,7 @@ El orden representa dependencias arquitectónicas, no fechas comprometidas.
 ### Fase 0 — Arquitectura y baseline
 
 - Aprobar este documento.
-- Mantener el baseline Git y ejecutar CI remoto antes del tag final del Módulo 2.
+- Mantener el baseline Git validado y exigir CI remoto verde antes de cada tag final.
 - Registrar ADRs para tenancy, eventos, IDs, modularidad y secretos.
 - Congelar contrato actual del Módulo 1.
 
@@ -1283,3 +1296,11 @@ La aprobación del Módulo 2 fijó estas decisiones para la versión 0.2:
 - Observabilidad inicial usa correlation IDs y logs JSON, sin fijar todavía un proveedor externo.
 
 Siguen pendientes para incrementos futuros: criterio cuantitativo de extracción a broker, supervisor de workers, tenant directory regional/sharding, object storage/CDN, backend de métricas y trazas, y ADRs propios de Assets, CMS, Builder, Catalog y Billing.
+
+## 28. Cierre formal de Módulos 1 y 2
+
+El cierre documental del Módulo 1 — Identidad y Multi-Tenant y del Módulo 2 — Platform Kernel se apoya en el commit `49bfea76ff2c940e2e56ee41d37dfbef1fc7b38d`, validado el 2026-07-14 por el workflow `Nexus Modules 1-2 Quality Gate`, Run `29365183544`, resultado `success`.
+
+Los cuatro gates obligatorios aprobaron: `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate`. La evidencia incluye 47 pruebas backend aprobadas, cobertura local de 81.00%, Ruff, mypy, migraciones y RLS aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real, builds backend y Next.js, y los artifacts `nexus-backend-evidence` y `nexus-playwright-evidence`.
+
+Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, supervisión de dispatcher/jobs pendiente y limpieza programada operativa pendiente. Tampoco autoriza el inicio de Módulo 3 ni la implementación de Catalog, CMS, Builder o Checkout.

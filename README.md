@@ -2,6 +2,24 @@
 
 Nexus es una plataforma SaaS API-first. El repositorio contiene el Módulo 1 de identidad y multi-tenancy y el Módulo 2 Platform Kernel: Stores, Sites, Sales Channels, Environments, Markets, scopes, RLS, outbox/inbox, idempotencia, jobs, operations, cuotas y observabilidad.
 
+## Estado de los módulos
+
+- **Estado Módulo 1: CERRADO**
+- **Estado Módulo 2: CERRADO**
+
+| Campo | Evidencia de cierre |
+|---|---|
+| Repositorio | `ippiX1992/nexus` |
+| Commit validado | `49bfea76ff2c940e2e56ee41d37dfbef1fc7b38d` |
+| Workflow | `Nexus Modules 1-2 Quality Gate` |
+| Run ID | `29365183544` |
+| Resultado | `success` |
+| Fecha de validación | `2026-07-14` |
+
+Los jobs `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate` finalizaron correctamente en GitHub-hosted. La matriz local equivalente obtuvo 47 pruebas backend aprobadas, 81.00% de cobertura, Ruff y mypy aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real aprobado, wheel/sdist backend y build Next.js correctos. El run conservó los artifacts `nexus-backend-evidence` y `nexus-playwright-evidence`.
+
+El cierre no elimina la deuda residual: permanecen dos vulnerabilidades npm moderadas, la migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, necesidad de supervisar dispatcher/workers en producción y tareas de limpieza programada todavía pendientes.
+
 ## PostgreSQL de pruebas sin Docker
 
 ```powershell

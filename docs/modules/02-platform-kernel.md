@@ -2,6 +2,18 @@
 
 ## Estado
 
+**Estado Módulo 2: CERRADO.** Cierre formal validado localmente y mediante GitHub-hosted el 2026-07-14.
+
+| Campo | Evidencia de cierre |
+|---|---|
+| Repositorio | `ippiX1992/nexus` |
+| Commit validado | `49bfea76ff2c940e2e56ee41d37dfbef1fc7b38d` |
+| Workflow | `Nexus Modules 1-2 Quality Gate` |
+| Run ID | `29365183544` |
+| Resultado | `success` |
+| Jobs | `backend-quality`, `frontend-quality`, `playwright-e2e`, `modules-1-2-gate` |
+| Artifacts | `nexus-backend-evidence`, `nexus-playwright-evidence` |
+
 Platform Kernel implementa la jerarquía y los mecanismos transversales mínimos sobre Identidad y Multi-Tenant. No incluye catálogo, CMS, Builder ni flujos ecommerce.
 
 El boundary está en `app/modules/platform`:
@@ -300,7 +312,7 @@ Validado el 2026-07-14 sobre PostgreSQL 17 real y Chromium real:
 |---|---|
 | Alembic base → head y downgrade/upgrade | correcto; revisión final `0002 (head)` |
 | Backend | 47 pruebas aprobadas |
-| Cobertura | 81,00% (umbral 80%) |
+| Cobertura | 81.00% (umbral 80%) |
 | Ruff | aprobado con `F,I,UP,B` |
 | mypy | 46 archivos sin errores |
 | Frontend | 13 pruebas aprobadas; 1 integración condicionada omitida |
@@ -308,7 +320,7 @@ Validado el 2026-07-14 sobre PostgreSQL 17 real y Chromium real:
 | Build backend | wheel y sdist generados |
 | Build Next.js | 20 rutas generadas correctamente |
 
-El workflow de GitHub Actions contiene los mismos gates críticos, sin `continue-on-error`, y conserva evidencia E2E. No existe aún una ejecución GitHub-hosted demostrable porque no hay un remoto Git autorizado; por tanto, el CI remoto continúa pendiente y no se declara verde.
+El workflow de GitHub Actions ejecutó los mismos gates críticos, sin `continue-on-error`, sobre el commit validado. El Run `29365183544` terminó en `success`: `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate` aprobaron. Los artifacts publicados fueron `nexus-backend-evidence` y `nexus-playwright-evidence`.
 
 ## Riesgos pendientes
 
@@ -318,4 +330,5 @@ El workflow de GitHub Actions contiene los mismos gates críticos, sin `continue
 - Limpieza de idempotency/outbox/inbox requiere jobs programados operacionales.
 - Auditoría heredada del Módulo 1 aún no es criptográficamente inmutable.
 - La migración `0001` sigue usando metadata viva; Platform evita agravarla, pero una futura consolidación requiere estrategia documentada.
+- `npm audit` mantiene dos vulnerabilidades moderadas conocidas; no se aplicó una actualización disruptiva automática.
 - Data residency, sharding y tenant directory quedan para escala posterior.
