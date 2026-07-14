@@ -151,8 +151,8 @@ El clúster aislado usa `.pgtest/`, escucha solo en `127.0.0.1:55432` y no alter
 | CSRF | Verificado | ausente, incorrecto, origen ajeno, válido | `test_csrf.py` |
 | Frontend conectado | Verificado | flujo real cliente UI/API/PostgreSQL | `RUN_E2E=1 npm test` |
 | Navegador visual | Bloqueado | runtime integrado falló por permisos `EPERM` | no se declara verificado |
-| CI | Configurado | YAML válido y matriz local equivalente aprobada | `.github/workflows/module-1.yml` |
-| CI GitHub-hosted | Pendiente externo | requiere push/ejecución en GitHub | workflow `Module 1 Identity and Tenancy` |
+| CI | Configurado | YAML válido y matriz local equivalente aprobada | `.github/workflows/modules-1-2-quality-gate.yml` |
+| CI GitHub-hosted | Pendiente externo | requiere push/ejecución en GitHub | workflow `Nexus Modules 1-2 Quality Gate` |
 
 Resultados:
 

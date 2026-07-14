@@ -249,7 +249,7 @@ jobs:
             frontend/test-results/
             artifacts/logs/
 
-  module-1-gate:
+  modules-1-2-gate:
     name: Modules 1-2 final gate
     runs-on: ubuntu-latest
     if: always()
