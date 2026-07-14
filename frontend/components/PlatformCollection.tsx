@@ -1,0 +1,21 @@
+"use client";
+import{FormEvent,useEffect,useState}from"react";
+import Link from"next/link";
+import{ApiError,api}from"@/lib/api";
+import{activeStore,createResource,listStores,selectStore,Store}from"@/lib/platform";
+
+type Kind="sites"|"channels"|"environments"|"markets";
+type Item={id:string;name:string;code:string;status:string;site_type?:string;channel_type?:string;environment_type?:string;country_code?:string};
+const labels:Record<Kind,string>={sites:"Sites",channels:"Channels",environments:"Environments",markets:"Markets"};
+
+function technicalError(value:unknown){if(value instanceof ApiError)return `${value.message}${value.correlationId?` · ID ${value.correlationId}`:""}`;return value instanceof Error?value.message:"Error inesperado"}
+
+export function PlatformCollection({kind}:{kind:Kind}){
+ const[store,setStore]=useState(activeStore()),[stores,setStores]=useState<Store[]>([]),[items,setItems]=useState<Item[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
+ async function load(storeId=store){setLoading(true);setError("");try{setStores(await listStores());if(storeId)setItems(await api(`/stores/${storeId}/${kind}`))}catch(e){setError(technicalError(e))}finally{setLoading(false)}}
+ useEffect(()=>{load()},[kind]);
+ function choose(id:string){selectStore(id);setStore(id);load(id)}
+ async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();if(!store)return;const formElement=event.currentTarget;const form=new FormData(formElement);const base={code:form.get("code"),name:form.get("name")};let payload:Record<string,unknown>=base;if(kind==="sites")payload={...base,slug:form.get("slug"),site_type:form.get("type"),primary_domain_placeholder:form.get("domain")||null};if(kind==="channels")payload={...base,channel_type:form.get("type")};if(kind==="environments")payload={...base,environment_type:form.get("type")};if(kind==="markets")payload={...base,country_code:form.get("country"),currency_code:form.get("currency"),default_locale:form.get("locale"),timezone:form.get("timezone")};try{await createResource(`/stores/${store}/${kind}`,payload);formElement.reset();await load()}catch(e){setError(technicalError(e))}}
+ async function archive(id:string){try{await api(`/${kind}/${id}/archive`,{method:"POST"});await load()}catch(e){setError(technicalError(e))}}
+ return <><div className="row"><span>Store activo</span><select aria-label="Store activo" value={store??""} onChange={e=>choose(e.target.value)}><option value="">Selecciona un store</option>{stores.filter(s=>s.status!=="archived").map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>{!store&&<p>Selecciona un store o <Link href="/platform/stores/new">crea uno</Link>.</p>}{store&&<form className="tile" onSubmit={submit}><strong>Crear {labels[kind].slice(0,-1)}</strong><label>Código<input name="code" required/></label><label>Nombre<input name="name" required/></label>{kind==="sites"&&<><label>Slug<input name="slug" required/></label><label>Tipo<select name="type"><option value="commerce">Commerce</option><option value="content">Content</option><option value="landing">Landing</option><option value="portal">Portal</option></select></label><label>Dominio futuro<input name="domain"/></label></>}{kind==="channels"&&<label>Tipo<select name="type">{["web","mobile","marketplace","b2b","social","pos","api"].map(v=><option key={v}>{v}</option>)}</select></label>}{kind==="environments"&&<label>Tipo<select name="type">{["development","preview","staging","production"].map(v=><option key={v}>{v}</option>)}</select></label>}{kind==="markets"&&<><label>País ISO<input name="country" defaultValue="EC" maxLength={2}/></label><label>Moneda ISO<input name="currency" defaultValue="USD" maxLength={3}/></label><label>Locale<input name="locale" defaultValue="es-EC"/></label><label>Zona IANA<input name="timezone" defaultValue="America/Guayaquil"/></label></>}<button>Crear</button></form>}{loading?<p>Cargando…</p>:items.length===0&&store?<p>No hay {labels[kind].toLowerCase()} todavía.</p>:items.map(item=><div className="row" key={item.id}><span><strong>{item.name}</strong><br/>{item.code} · {item.status}</span>{item.status!=="archived"&&<button style={{width:"auto"}} onClick={()=>archive(item.id)}>Archivar</button>}</div>)}{error&&<p className="error" role="alert">{error}</p>}</>
+}

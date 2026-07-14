@@ -1,0 +1,30 @@
+{
+    "name": "nexus-identity-ui",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "lint": "tsc --noEmit",
+        "start": "next start",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:e2e": "playwright test"
+    },
+    "dependencies": {
+        "next": "^16.2.10",
+        "react": "19.1.0",
+        "react-dom": "19.1.0",
+        "zod": "3.25.76"
+    },
+    "devDependencies": {
+        "@playwright/test": "1.61.1",
+        "@tailwindcss/postcss": "4.1.11",
+        "@types/node": "24.0.15",
+        "@types/react": "19.1.8",
+        "@types/react-dom": "19.1.6",
+        "jsdom": "^29.1.1",
+        "tailwindcss": "4.1.11",
+        "typescript": "5.8.3",
+        "vitest": "^4.1.10"
+    }
+}

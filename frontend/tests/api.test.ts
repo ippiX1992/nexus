@@ -1,0 +1,9 @@
+import {beforeEach,describe,expect,it,vi} from "vitest";
+import {ApiError,api,readCookie,saveToken,token} from "../lib/api";
+describe("secure API client",()=>{
+ beforeEach(()=>{sessionStorage.clear();document.cookie="csrf_token=; Max-Age=0; path=/";vi.restoreAllMocks()});
+ it("keeps the access token in session storage",()=>{saveToken("access");expect(token()).toBe("access")});
+ it("sends credentials, bearer and double-submit CSRF",async()=>{saveToken("access");document.cookie="csrf_token=csrf-value; path=/";const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(JSON.stringify({ok:true}),{status:200,headers:{"Content-Type":"application/json"}}));await api("/auth/refresh",{method:"POST"});const init=fetchMock.mock.calls[0][1]!;const headers=init.headers as Headers;expect(init.credentials).toBe("include");expect(headers.get("Authorization")).toBe("Bearer access");expect(headers.get("X-CSRF-Token")).toBe("csrf-value")});
+ it("refreshes an expired access token once",async()=>{saveToken("old");document.cookie="csrf_token=csrf-value; path=/";const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response("{}",{status:401})).mockResolvedValueOnce(new Response(JSON.stringify({access_token:"new"}),{status:200,headers:{"Content-Type":"application/json"}})).mockResolvedValueOnce(new Response(JSON.stringify({ok:true}),{status:200,headers:{"Content-Type":"application/json"}}));expect(await api("/me")).toEqual({ok:true});expect(token()).toBe("new");expect(fetchMock).toHaveBeenCalledTimes(3)});
+ it("surfaces backend errors",async()=>{vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(JSON.stringify({detail:"Denied"}),{status:403,headers:{"Content-Type":"application/json","X-Correlation-ID":"request-id"}}));try{await api("/me/context")}catch(error){expect(error).toBeInstanceOf(ApiError);expect((error as ApiError).message).toBe("Denied");expect((error as ApiError).correlationId).toBe("request-id")}});
+});

@@ -1,0 +1,8 @@
+node_modules
+.next
+playwright-report
+test-results
+npm-debug.log
+*.tsbuildinfo
+*.log
+*.tmp

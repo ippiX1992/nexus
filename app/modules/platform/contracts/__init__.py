@@ -1,0 +1,1 @@
+"""Stable Platform Kernel contracts."""
