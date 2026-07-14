@@ -271,13 +271,16 @@ El Builder referencia contenido y productos por contratos; no duplica sus datos.
 
 Responsabilidades:
 
-- Productos, variantes y opciones.
+- Productos maestros propiedad del tenant, compartibles entre stores mediante assignments explícitos.
+- Variantes obligatorias —incluida una variante default para productos simples— y opciones.
 - Categorías, colecciones y taxonomía comercial.
-- Atributos y media references.
-- Estado editorial y publicación por canal.
+- Atributos tipados, metafields gobernados y media references hacia el futuro módulo Assets.
+- Estado editorial separado de la elegibilidad de publicación por target Store/Channel/Market/Environment.
 - Proyecciones para búsqueda.
 
-No calcula precio final, stock disponible ni impuestos.
+Catalog no registra cada Product en `platform_resource_scopes`: usa ownership tenant, RLS forzado y assignments tenant/store-aware para no convertir el registry del Kernel en un hot path de millones de recursos. No calcula precio final, stock disponible ni impuestos, y no es propietario de archivos binarios ni de la publicación por Environment.
+
+El diseño detallado del Módulo 3 se encuentra en `docs/modules/03-catalog-core-plan.md`, `docs/architecture/catalog-domain.md`, `docs/architecture/catalog-data-model.md` y `docs/architecture/catalog-events.md`. Estos documentos son planificación y no declaran el módulo implementado.
 
 ### 5.8 Pricing & Promotions
 
@@ -1092,6 +1095,8 @@ Estado: implementado en `app/modules/platform` y migración `0002`; consultar `d
 - Inventory locations y availability.
 - Search projections.
 
+Decisión de secuencia del 2026-07-14: Catalog Core es el siguiente módulo planificado sobre Identity y Platform Kernel. Su implementación deberá aislar Product/Variant/Classification/Assignments de Pricing e Inventory; las asociaciones de media permanecen condicionadas al contrato de Assets. Esta decisión no adelanta CMS, Builder, Checkout ni otros componentes de Commerce.
+
 ### Fase 5 — Transactional commerce
 
 - Customer.
@@ -1303,4 +1308,4 @@ El cierre documental del Módulo 1 — Identidad y Multi-Tenant y del Módulo 2 
 
 Los cuatro gates obligatorios aprobaron: `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate`. La evidencia incluye 47 pruebas backend aprobadas, cobertura local de 81.00%, Ruff, mypy, migraciones y RLS aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real, builds backend y Next.js, y los artifacts `nexus-backend-evidence` y `nexus-playwright-evidence`.
 
-Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, supervisión de dispatcher/jobs pendiente y limpieza programada operativa pendiente. Tampoco autoriza el inicio de Módulo 3 ni la implementación de Catalog, CMS, Builder o Checkout.
+Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, supervisión de dispatcher/jobs pendiente y limpieza programada operativa pendiente. El Módulo 3 cuenta únicamente con planificación arquitectónica; este documento no autoriza su implementación ni la de Catalog, CMS, Builder o Checkout.
