@@ -1,6 +1,6 @@
 # Nexus — Arquitectura Maestra
 
-> Estado: arquitectura objetivo; Módulo 1 y Módulo 2 formalmente cerrados
+> Estado: arquitectura objetivo; Módulos 1 y 2 cerrados; **Módulo 3 EN PROGRESO / M3.0 RELEASE CANDIDATE**
 > Fecha: 2026-07-14
 > Alcance: evolución de Nexus sobre el Módulo 1 existente, sin reescribirlo
 
@@ -280,7 +280,7 @@ Responsabilidades:
 
 Catalog no registra cada Product en `platform_resource_scopes`: usa ownership tenant, RLS forzado y assignments tenant/store-aware para no convertir el registry del Kernel en un hot path de millones de recursos. No calcula precio final, stock disponible ni impuestos, y no es propietario de archivos binarios ni de la publicación por Environment.
 
-El diseño detallado del Módulo 3 se encuentra en `docs/modules/03-catalog-core-plan.md`, `docs/architecture/catalog-domain.md`, `docs/architecture/catalog-data-model.md` y `docs/architecture/catalog-events.md`. Estos documentos son planificación y no declaran el módulo implementado.
+El diseño objetivo está en `docs/modules/03-catalog-core-plan.md`, `docs/architecture/catalog-domain.md`, `docs/architecture/catalog-data-model.md` y `docs/architecture/catalog-events.md`. La superficie materializada y su evidencia se documentan en `docs/modules/03-catalog-foundation.md`; sólo M3.0 está implementado y no equivale al cierre del Módulo 3.
 
 ### 5.8 Pricing & Promotions
 
@@ -1308,4 +1308,23 @@ El cierre documental del Módulo 1 — Identidad y Multi-Tenant y del Módulo 2 
 
 Los cuatro gates obligatorios aprobaron: `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-gate`. La evidencia incluye 47 pruebas backend aprobadas, cobertura local de 81.00%, Ruff, mypy, migraciones y RLS aprobados, 13 pruebas frontend aprobadas y 1 omitida, E2E Chromium real, builds backend y Next.js, y los artifacts `nexus-backend-evidence` y `nexus-playwright-evidence`.
 
-Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, supervisión de dispatcher/jobs pendiente y limpieza programada operativa pendiente. El Módulo 3 cuenta únicamente con planificación arquitectónica; este documento no autoriza su implementación ni la de Catalog, CMS, Builder o Checkout.
+Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, supervisión de dispatcher/jobs pendiente y limpieza programada operativa pendiente. M3.0 se construye encima de este baseline sin alterar su evidencia de cierre; CMS, Builder y Checkout continúan fuera de alcance.
+
+## 29. Estado arquitectónico de M3.0 Catalog Foundation
+
+Estado permitido al 2026-07-14:
+
+- **Módulo 3: EN PROGRESO**;
+- **Incremento M3.0: RELEASE CANDIDATE**;
+- GitHub-hosted: pendiente por ausencia deliberada de push;
+- M3.1–M3.7: pendientes y no autorizados.
+
+M3.0 materializa el bounded context `app/modules/catalog` con 12 tablas tenant-aware, Product/Variant default, identifiers, Brands, Taxonomy/Category closure, traducción/SEO básicos y assignments Product–Category/Product–Store. Se apoya en RBAC, RLS, idempotency, audit, entitlements y outbox existentes; Platform Kernel no adquiere dependencias hacia Catalog.
+
+El contrato conserva las decisiones de largo plazo: master tenant-owned, SKU tenant-wide reservado, archive sin hard delete, `active` distinto de `published`, asignaciones separadas del master y ninguna fila Product en `platform_resource_scopes`. La superficie real comprende 27 paths/40 operaciones, 18 permisos y 21 eventos v1.
+
+El quality gate local ampliado mantiene `backend-quality`, `frontend-quality`, `playwright-e2e` y `modules-1-2-catalog-foundation-gate`; configura artifacts `nexus-catalog-foundation-backend-evidence` y `nexus-catalog-foundation-playwright-evidence`. La evidencia hosted de Módulos 1 y 2 permanece históricamente asociada al workflow y Run indicados en la sección 28, no se reutiliza para certificar M3.0.
+
+Riesgos abiertos: dos vulnerabilidades npm moderadas; `0001` con metadata dinámica; auditoría no criptográficamente inmutable; supervisión de dispatcher/jobs y limpieza programada pendientes; posible hot spot del lock de cuota por tenant a tasas extremas; necesidad futura de projections/Search para listados de gran escala; locale fallback avanzado, restore y purge aún no definidos.
+
+El detalle verificable está en `docs/modules/03-catalog-foundation.md`. No se inicia M3.1 ni se implementan CMS, Builder, Checkout, Search, Pricing o Inventory como parte de este RC.

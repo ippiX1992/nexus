@@ -1,6 +1,7 @@
-# Catalog Core — Event Contracts
+# Catalog Core — Target and Implemented Event Contracts
 
-> Estado: contratos propuestos para Módulo 3; no implementados.
+> Estado: envelope y 21 eventos de M3.0 implementados; contratos restantes son objetivo futuro.
+> Incremento: **M3.0 RELEASE CANDIDATE**; Módulo 3 EN PROGRESO.
 > Transporte: outbox/inbox del Platform Kernel.
 > Semántica: entrega at-least-once, consumers idempotentes, sin orden global.
 
@@ -351,3 +352,33 @@ Logs estructurados incluyen `event_id`, `event_type`, `tenant_id`, `aggregate_id
 6. Retención de event evidence y vínculo con Operations.
 
 Ninguna decisión abierta justifica usar acceso directo de consumers a tablas Catalog.
+
+## 15. Eventos materializados en M3.0
+
+La implementación emite únicamente:
+
+- `catalog.product_type.created.v1`;
+- `catalog.product_type.updated.v1`;
+- `catalog.product_type.archived.v1`;
+- `catalog.product.created.v1`;
+- `catalog.product.updated.v1`;
+- `catalog.product.activated.v1`;
+- `catalog.product.archived.v1`;
+- `catalog.variant.created.v1`;
+- `catalog.variant.updated.v1`;
+- `catalog.variant.archived.v1`;
+- `catalog.brand.created.v1`;
+- `catalog.brand.updated.v1`;
+- `catalog.brand.archived.v1`;
+- `catalog.taxonomy.created.v1`;
+- `catalog.category.created.v1`;
+- `catalog.category.updated.v1`;
+- `catalog.category.moved.v1`;
+- `catalog.category.archived.v1`;
+- `catalog.product.assigned_to_category.v1`;
+- `catalog.product.assigned_to_store.v1`;
+- `catalog.product.unassigned_from_store.v1`.
+
+Todos reutilizan el envelope de Platform Kernel, llevan `event_version=1`, correlation/actor/tenant/aggregate y se insertan en el outbox dentro de la transacción del cambio. Los masters usan `store_id=null`; los eventos de Store identifican la Store. Idempotency replay no duplica eventos y rollback no deja eventos huérfanos.
+
+No se implementan todavía eventos de Options, Attributes, Collections, Tags, media, imports, publicación, eligibility completa ni Search projection. `active` no produce ni implica `published`; ese hecho pertenece a Publishing futuro.

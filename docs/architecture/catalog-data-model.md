@@ -1,6 +1,7 @@
-# Catalog Core — Data Model
+# Catalog Core — Target and Implemented Data Model
 
-> Documento de diseño; no constituye una migración ni autoriza implementación.
+> Documento objetivo; sólo la sección “Modelo materializado en M3.0” describe persistencia implementada.
+> Estado: **Módulo 3 EN PROGRESO; M3.0 RELEASE CANDIDATE**.
 > Prefijo reservado: `catalog_`.
 > Base de datos objetivo: PostgreSQL, conforme al Platform Kernel existente.
 
@@ -653,3 +654,39 @@ Riesgo específico: `0001_identity_baseline` depende de `Base.metadata` dinámic
 - Purge regulado y retención configurable.
 
 Estas decisiones se posponen sin usar JSON genérico ni owner polimórfico como atajo.
+
+## 19. Modelo materializado en M3.0
+
+La migración explícita `0003_catalog_foundation` crea únicamente estas 12 tablas:
+
+| Tabla | Ownership y propósito |
+|---|---|
+| `catalog_product_types` | definición estructural tenant-owned |
+| `catalog_brands` | marca tenant-owned |
+| `catalog_products` | master Product tenant-owned |
+| `catalog_product_variants` | unidad vendible y SKU |
+| `catalog_product_identifiers` | identificadores normalizados de Variant |
+| `catalog_product_translations` | nombre, descripciones y slug por locale |
+| `catalog_product_seo` | SEO básico separado por locale |
+| `catalog_taxonomies` | raíz de clasificación |
+| `catalog_categories` | nodo jerárquico editable |
+| `catalog_category_closure` | paths ancestor/descendant |
+| `catalog_product_categories` | clasificación explícita y primary |
+| `catalog_product_stores` | asignación administrativa a Store |
+
+No existen aún tablas para Options, Attributes, Metafields, Collections, Tags, media, Channel/Market assignments ni Search. Las secciones anteriores que describen esas entidades son arquitectura objetivo para M3.1–M3.7, no evidencia de implementación.
+
+### 19.1 Constraints y aislamiento reales
+
+- Todas las tablas habilitan y fuerzan RLS con políticas por operación.
+- Las FKs internas incluyen `tenant_id`; las referencias a Store también preservan tenant.
+- Índices únicos parciales garantizan una default Variant y un primary Identifier.
+- SKU e Identifier permanecen reservados aunque la fila se archive.
+- Closure y Category conservan Taxonomy/tenant en constraints y transacciones.
+- Product–Category limita primary a una por Taxonomy.
+- Product–Store es único por Product/Store y acepta contexto Store adicional en RLS.
+- Los updates de aggregates usan `version`; los endpoints exigen `If-Match`.
+
+### 19.2 Migración y compatibilidad
+
+`0001` y `0002` permanecen intactas. Se verificaron `0002 → 0003`, `0003 → 0002`, segundo upgrade a `0003` y reconstrucción `base → head` sobre PostgreSQL real. El riesgo histórico de `0001_identity_baseline` y metadata dinámica se mantiene abierto; M3.0 no declara haberlo eliminado.

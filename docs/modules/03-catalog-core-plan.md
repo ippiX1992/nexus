@@ -1,8 +1,9 @@
 # Módulo 3 — Catalog Core: plan de implementación
 
-> Tipo de entrega: análisis, arquitectura y planificación exclusivamente.
-> Estado del módulo: **PLANIFICADO — NO IMPLEMENTADO**.
-> Rama de planificación: `feature/catalog-core`.
+> Tipo de entrega: plan vivo y trazabilidad de implementación incremental.
+> Estado: **Módulo 3: EN PROGRESO**.
+> Incremento: **M3.0: RELEASE CANDIDATE**; M3.1–M3.7 pendientes.
+> Rama: `feature/catalog-core`.
 > Baseline verificado: `0642cd827826c61855e4695a6f0589c653095fa1`.
 
 ## 1. Estado base y evidencia
@@ -20,13 +21,21 @@
 
 Los Módulos 1 y 2 permanecen cerrados. Catalog se construirá sobre sus contratos; no se reescriben Identity, tenancy, RBAC, RLS, audit, scopes, idempotency, outbox/inbox, entitlements, Operations ni Jobs.
 
+### 1.1 Ejecución de M3.0
+
+M3.0 fue autorizado e implementado como un vertical más amplio que la estimación original de Foundation: incluye Product Type, Product/Variant, Identifier, Brand, traducción/SEO básicos, Taxonomy/Category closure y assignments Product–Category/Product–Store. La evidencia normativa está en [M3.0 — Catalog Foundation](03-catalog-foundation.md).
+
+La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. GitHub-hosted permanece pendiente al no existir push autorizado.
+
+Esta ampliación consume parte del alcance originalmente atribuido a M3.1, M3.3, M3.4 y M3.5. Antes de iniciar M3.1 se debe rebaselinar su contenido para no duplicar funcionalidades; esa replanificación no está autorizada en M3.0.
+
 ## 2. Resumen ejecutivo
 
 Se recomienda construir Catalog Core como un bounded context tenant-owned dentro del monolito modular. El master Product se comparte entre todas las Stores del tenant y se vincula a Store, Channel y Market mediante assignments explícitos. No se crea todavía una entidad contenedora `Catalog` ni se registra cada Product en `platform_resource_scopes`.
 
 La Variant es siempre la unidad vendible: incluso un producto simple tiene una Variant default. SKU es único en el tenant y permanece reservado al archivar. Attributes descriptivos, Options generadoras de variantes y Metafields extensibles se modelan por separado. Categories son jerárquicas dentro de Taxonomies; Collections son manuales inicialmente. `active` expresa madurez editorial, mientras que publication eligibility se evalúa para un target Platform y no equivale a published.
 
-El primer incremento funcional futuro debe empezar por foundation de datos/RLS/RBAC y el vertical Product–Variant, no por una UI amplia ni por importadores. Cada slice debe cerrar migración, dominio, API, eventos, administración y pruebas antes de ampliar superficie.
+M3.0 materializa Foundation y el vertical mínimo aprobado. Cada incremento posterior debe cerrar migración, dominio, API, eventos, administración y pruebas antes de ampliar superficie.
 
 ## 3. Objetivos
 
@@ -798,8 +807,8 @@ Estimación relativa para un equipo familiarizado con el baseline. No es comprom
 
 | Incremento | Resultado vertical | Tamaño | Dependencias / gate de salida |
 |---|---|---|---|
-| M3.0 Foundation | permissions, entitlements iniciales, migración explícita, RLS/schema tests, package skeleton | M (1–2 semanas-equipo) | Resolver aislamiento de `0001`; migration/RLS gate verde |
-| M3.1 Product–Variant | Product Type básico, Product, default Variant, SKU, lifecycle, API/eventos/admin mínimo | L (3–4) | Idempotency, concurrency y cross-tenant E2E |
+| M3.0 Foundation | **IMPLEMENTADO — RC local**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted pendiente |
+| M3.1 Product–Variant | **PENDIENTE DE REBASELINE**: sólo capacidades no entregadas en M3.0 | Por estimar | Aprobación explícita de nuevo alcance; no duplicar M3.0 |
 | M3.2 Options–Attributes | Options/Values/combinations, typed attributes, schema governance | L (3–4) | Preview/quota, no combinations duplicadas |
 | M3.3 Classification | Brand, Taxonomy/Category closure, manual Collections, tags | L (2–3) | Cycle/concurrency tests y UI de árbol |
 | M3.4 Localization–SEO | traducciones, SEO/slugs, locale validation | M (2–3) | Locale decision y slug conflict E2E |
@@ -808,7 +817,7 @@ Estimación relativa para un equipo familiarizado con el baseline. No es comprom
 | M3.7 Hardening | performance million-scale fixtures, admin completeness, runbooks, docs, hosted gate | L (2–3) | p95 targets, all jobs green, evidence artifacts |
 | Futuro separado | Import runtime/connectors y Search engine | No estimado aquí | Contracts aprobados; Operations/Assets/infra decisions |
 
-Secuencia recomendada: M3.0 → M3.1 → M3.2; M3.3 y M3.4 pueden avanzar después con baja superposición; M3.5 requiere todos los requisitos de eligibility; M3.6 media depende de Assets; M3.7 cierra. Rango secuencial indicativo: 17–24 semanas-equipo, reducible por paralelización después de estabilizar M3.1.
+Secuencia controlada: cerrar evidencia hosted de M3.0 y rebaselinar M3.1 antes de autorizarlo; M3.2–M3.7 continúan pendientes. Las estimaciones originales dejan de ser compromiso porque M3.0 absorbió varias capacidades previstas después.
 
 ## 21. Gates de aceptación del módulo
 
@@ -827,8 +836,8 @@ Módulo 3 no se considera cerrado hasta que:
 - riesgos residuales permanezcan documentados;
 - no se declaren completos Assets, Search, import connectors, Pricing o Inventory.
 
-## 22. Próximo paso recomendado
+## 22. Estado de detención
 
-Solicitar aprobación explícita de este plan y, en particular, de diez decisiones arquitectónicas: tenant-owned master, Variant default, SKU tenant-wide reservado, no `Catalog` root inicial, no Product resource scopes, closure categories, manual Collections, separación Attributes/Options/Metafields, assignments target-based y media por Asset port.
+M3.0 queda como Release Candidate local. El siguiente paso operativo, sólo con autorización, es publicar la rama y validar el workflow GitHub-hosted ampliado.
 
-Tras la aprobación, el único siguiente trabajo debe ser especificar y ejecutar **M3.0 Foundation** en un alcance nuevo y controlado. Esta entrega se detiene antes de implementación, commit y push.
+No se inicia M3.1, no se crea tag y no se hace push en esta entrega. El Módulo 3 permanece EN PROGRESO.

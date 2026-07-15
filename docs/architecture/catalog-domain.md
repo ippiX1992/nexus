@@ -1,6 +1,7 @@
 # Catalog Core — Domain Architecture
 
-> Estado: diseño aprobado técnicamente, pendiente de aprobación funcional e implementación.
+> Estado: diseño aprobado; **Módulo 3 EN PROGRESO**.
+> Implementación: **M3.0 Catalog Foundation RELEASE CANDIDATE**; M3.1–M3.7 pendientes.
 > Alcance: Módulo 3 — Catalog Core.
 > Dependencias cerradas: Módulo 1 — Identity and Multi-Tenant; Módulo 2 — Platform Kernel.
 
@@ -383,7 +384,7 @@ El diseño deja extensiones explícitas para:
 
 ## 18. Criterios de aceptación arquitectónicos
 
-Antes de implementar, deben quedar aprobadas estas decisiones:
+Las siguientes decisiones fueron aprobadas como guardrails del módulo:
 
 1. Product maestro tenant-owned y compartido entre stores.
 2. Todo Product tiene Variant, incluida la default.
@@ -395,3 +396,25 @@ Antes de implementar, deben quedar aprobadas estas decisiones:
 8. Media por referencia a Assets, sin blobs ni URLs arbitrarias.
 9. Productos fuera de `platform_resource_scopes`.
 10. Integraciones asíncronas mediante outbox/inbox y contracts versionados.
+
+## 19. Materialización en M3.0
+
+M3.0 implementa un subconjunto deliberado del modelo objetivo. El boundary real reside en `app/modules/catalog` y conserva la dirección API → Application → Domain → ports/repositorios → adapters SQLAlchemy.
+
+Implementado:
+
+- Product Type, Brand, Product y Product Variant;
+- Variant default obligatoria y creación atómica con Product;
+- Product Identifier, traducción y SEO básicos;
+- Taxonomy, Category y closure transaccional;
+- asignaciones Product–Category y Product–Store;
+- permisos, RLS, idempotencia, versiones, entitlements, audit y outbox.
+
+Aún no materializado:
+
+- Options/Values, Attributes, Metafields, Collections y Tags;
+- Channel/Market assignments y eligibility completa por target;
+- media/Assets, Search projections e import runtime;
+- Pricing, Inventory y publicación.
+
+El master continúa tenant-owned y fuera de `platform_resource_scopes`. Product–Store expresa disponibilidad administrativa y `eligible`; Publishing será el único propietario futuro del estado publicado. La descripción operativa y evidencia están en `docs/modules/03-catalog-foundation.md`.

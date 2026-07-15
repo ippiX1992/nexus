@@ -163,7 +163,7 @@ El clúster aislado usa `.pgtest/`, escucha solo en `127.0.0.1:55432` y no alter
 | CSRF | Verificado | ausente, incorrecto, origen ajeno, válido | `test_csrf.py` |
 | Frontend conectado | Verificado | flujo real cliente UI/API/PostgreSQL | `RUN_E2E=1 npm test` |
 | E2E Chromium real | Verificado | navegador oficial, API, frontend y PostgreSQL | `playwright-e2e` |
-| CI | Configurado | YAML válido y matriz local equivalente aprobada | `.github/workflows/modules-1-2-quality-gate.yml` |
+| CI | Configurado | El gate actual conserva este baseline y añade M3.0 | `.github/workflows/modules-1-2-catalog-foundation-quality-gate.yml` |
 | CI GitHub-hosted | Verificado | Run `29365183544`, resultado `success` | workflow `Nexus Modules 1-2 Quality Gate` |
 
 Resultados:
