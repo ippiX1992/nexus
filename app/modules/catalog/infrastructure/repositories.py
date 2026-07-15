@@ -2,10 +2,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.models import TenantModel
 from app.modules.catalog.infrastructure.models import (
     BrandModel,
     CategoryClosureModel,
@@ -41,7 +40,12 @@ class SqlAlchemyCatalogRepository:
         self.session = session
 
     async def lock_tenant(self, tenant_id: UUID) -> None:
-        await self.session.scalar(select(TenantModel.id).where(TenantModel.id == tenant_id).with_for_update())
+        await self.session.execute(
+            text(
+                "SELECT pg_advisory_xact_lock(hashtextextended(CAST(:tenant_id AS text), 0))"
+            ),
+            {"tenant_id": str(tenant_id)},
+        )
 
     async def entitlement_limit(self, tenant_id: UUID, key: str) -> int:
         value = await self.session.scalar(
