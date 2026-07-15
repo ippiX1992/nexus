@@ -7,6 +7,7 @@ from app.api.routes import router
 from app.core.config import get_settings
 from app.core.observability import correlation_and_logging_middleware
 from app.infrastructure.database import engine
+from app.modules.catalog.api.routes import router as catalog_router
 from app.modules.platform.api.routes import router as platform_router
 
 settings=get_settings(); app=FastAPI(title=settings.app_name,version="0.2.0")
@@ -15,6 +16,7 @@ app.add_middleware(CORSMiddleware,allow_origins=settings.origins,allow_credentia
 app.include_router(router)
 app.include_router(admin_router)
 app.include_router(platform_router)
+app.include_router(catalog_router)
 @app.get("/health",tags=["operations"])
 async def health(): return {"status":"ok","service":settings.app_name}
 @app.get("/ready",tags=["operations"])

@@ -251,6 +251,7 @@ class SqlAlchemyCatalogRepository:
                     select(ProductIdentifierModel).where(
                         ProductIdentifierModel.tenant_id == tenant_id,
                         ProductIdentifierModel.variant_id == variant_id,
+                        ProductIdentifierModel.archived_at.is_(None),
                     ).order_by(ProductIdentifierModel.created_at, ProductIdentifierModel.id)
                 )
             ).all()

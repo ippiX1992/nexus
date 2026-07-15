@@ -8,6 +8,8 @@ from uuid import UUID
 from app.modules.platform.domain.values import normalize_code, validate_locale
 
 IDENTIFIER_TYPES = frozenset({"ean", "upc", "isbn", "mpn", "external"})
+_SLUG_SEPARATOR = re.compile(r"[\s_]+")
+_SLUG_HYPHENS = re.compile(r"-+")
 _SKU_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
@@ -23,7 +25,14 @@ def normalize_sku(value: str) -> tuple[str, str]:
 
 
 def normalize_slug(value: str) -> str:
-    return normalize_code(value)
+    normalized = unicodedata.normalize("NFKC", value).strip().casefold()
+    normalized = _SLUG_SEPARATOR.sub("-", normalized)
+    normalized = _SLUG_HYPHENS.sub("-", normalized).strip("-")
+    if not normalized or len(normalized) > 200:
+        raise ValueError("Slug must contain 1 to 200 characters")
+    if any(not (character.isalnum() or character == "-") for character in normalized):
+        raise ValueError("Slug must be alphanumeric with hyphens")
+    return normalized
 
 
 def normalize_locale(value: str) -> str:

@@ -73,6 +73,12 @@ def _resource_columns() -> list[sa.Column]:
 
 def _create_rls(table: str) -> None:
     predicate = "tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid"
+    if table == "catalog_product_stores":
+        store_context = "NULLIF(current_setting('app.current_store_id', true), '')"
+        predicate += (
+            f" AND ({store_context} IS NULL OR "
+            f"store_id = {store_context}::uuid)"
+        )
     op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
     op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
     op.execute(f"CREATE POLICY {table}_select ON {table} FOR SELECT USING ({predicate})")
