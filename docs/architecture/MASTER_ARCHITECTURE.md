@@ -1,6 +1,6 @@
 # Nexus — Arquitectura Maestra
 
-> Estado: arquitectura objetivo; Módulos 1 y 2 cerrados; **Módulo 3 EN PROGRESO / M3.0 RELEASE CANDIDATE**
+> Estado: arquitectura objetivo; Módulos 1 y 2 cerrados; **Módulo 3 EN PROGRESO / M3.0 Catalog Foundation CERRADO** (M3.1–M3.9 pendientes, numeración oficial en `docs/modules/03-catalog-core-plan.md` sección 20)
 > Fecha: 2026-07-14
 > Alcance: evolución de Nexus sobre el Módulo 1 existente, sin reescribirlo
 
@@ -1319,7 +1319,7 @@ Estado permitido al 2026-07-14, cerrado el 2026-07-16:
 - GitHub-hosted: [Pull Request #1](https://github.com/ippiX1992/nexus/pull/1) (`feature/catalog-core` → `main`) integrado mediante merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`. Quality gate verde en las tres instancias del mismo contenido: push a la rama (run `29464039820`), Pull Request (run `29464236414`), push del commit integrado en `main` (run `29465055151`) — 4/4 jobs cada vez;
 - Tag RC `module-3-catalog-foundation-v0.1.0-rc.1` (sin modificar) → `47fad54`; tag final `module-3-catalog-foundation-v0.1.0` sobre el commit de cierre documental; `nexus-platform-v0.3.0` sobre el mismo commit;
 - `main` sin branch protection configurada — riesgo documentado, tarea prioritaria pendiente (PR obligatorio, checks obligatorios, sin force push, sin eliminar `main`, conversaciones resueltas, aprobación mínima con más colaboradores);
-- M3.1–M3.7: pendientes y no autorizados.
+- M3.1–M3.9: pendientes y no autorizados (numeración oficial reconciliada el 2026-07-16 en `docs/modules/03-catalog-core-plan.md` sección 20; M3.1 — Options y Variant Combinations — tiene diseño aprobado en `docs/modules/03-1-catalog-options-plan.md`, pendiente de implementación).
 
 M3.0 materializa el bounded context `app/modules/catalog` con 12 tablas tenant-aware, Product/Variant default, identifiers, Brands, Taxonomy/Category closure, traducción/SEO básicos y assignments Product–Category/Product–Store. Se apoya en RBAC, RLS, idempotency, audit, entitlements y outbox existentes; Platform Kernel no adquiere dependencias hacia Catalog.
 
@@ -1329,4 +1329,4 @@ El quality gate local ampliado mantiene `backend-quality`, `frontend-quality`, `
 
 Riesgos abiertos: dos vulnerabilidades npm moderadas; `0001` con metadata dinámica; auditoría no criptográficamente inmutable; supervisión de dispatcher/jobs y limpieza programada pendientes; posible hot spot del lock de cuota por tenant a tasas extremas; necesidad futura de projections/Search para listados de gran escala; locale fallback avanzado, restore y purge aún no definidos.
 
-El detalle verificable está en `docs/modules/03-catalog-foundation.md`. No se inicia M3.1 ni se implementan CMS, Builder, Checkout, Search, Pricing o Inventory como parte de este RC.
+El detalle verificable está en `docs/modules/03-catalog-foundation.md`. No se inicia M3.1 (diseño aprobado, implementación pendiente) ni M3.2–M3.9, ni se implementan CMS, Builder, Checkout, Search, Pricing o Inventory.

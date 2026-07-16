@@ -2,7 +2,8 @@
 
 > Tipo de entrega: plan vivo y trazabilidad de implementación incremental.
 > Estado: **Módulo 3: EN PROGRESO**.
-> Incremento: **M3.0 Catalog Foundation: CERRADO**; M3.1–M3.7 pendientes y no autorizados.
+> Incremento: **M3.0 Catalog Foundation: CERRADO**; M3.1–M3.9 pendientes y no autorizados.
+> Numeración oficial reconciliada el 2026-07-16 — ver sección 20.
 > Rama de origen: `feature/catalog-core` (integrada a `main` vía [PR #1](https://github.com/ippiX1992/nexus/pull/1), merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`).
 > Baseline verificado: `0642cd827826c61855e4695a6f0589c653095fa1`.
 
@@ -27,7 +28,11 @@ M3.0 fue autorizado e implementado como un vertical más amplio que la estimaci�
 
 La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. La rama fue publicada, el quality gate GitHub-hosted quedó aprobado, y el [PR #1](https://github.com/ippiX1992/nexus/pull/1) se integró a `main` mediante merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`, validado con un cuarto run verde (4/4 jobs) ejecutado directamente sobre ese commit en `main`.
 
-Esta ampliación consume parte del alcance originalmente atribuido a M3.1, M3.3, M3.4 y M3.5. Antes de iniciar M3.1 se debe rebaselinar su contenido para no duplicar funcionalidades; esa replanificación no está autorizada en M3.0.
+Esta ampliación consumió alcance originalmente estimado para incrementos posteriores: clasificación
+completa (Brand, Taxonomy, Categories, closure table), traducción básica, SEO básico y Store
+assignment. La numeración de incrementos posteriores a M3.0 fue reconciliada el 2026-07-16
+(sección 20) precisamente para reflejar esto — ningún incremento posterior a M3.0 vuelve a incluir
+esas capacidades como pendientes.
 
 ## 2. Resumen ejecutivo
 
@@ -805,19 +810,27 @@ Runbooks necesarios antes de producción:
 
 Estimación relativa para un equipo familiarizado con el baseline. No es compromiso calendario; rangos incluyen diseño detallado, implementación, pruebas, documentación y CI, pero no Pricing/Inventory/Assets/Search engine/import connectors.
 
+**Numeración oficial reconciliada el 2026-07-16** — reemplaza toda numeración anterior de este
+documento y de `docs/modules/03-catalog-foundation.md`/`docs/architecture/MASTER_ARCHITECTURE.md`.
+Brand, Taxonomy, Categories, closure table, traducción básica, SEO básico y Store assignment ya
+fueron entregados en M3.0 y no vuelven a aparecer como pendientes en ningún incremento posterior.
+
 | Incremento | Resultado vertical | Tamaño | Dependencias / gate de salida |
 |---|---|---|---|
-| M3.0 Foundation | **CERRADO**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted verde en rama, PR y `main` (commit `59859c3e`); tag final `module-3-catalog-foundation-v0.1.0` |
-| M3.1 Product–Variant | **PENDIENTE DE REBASELINE**: sólo capacidades no entregadas en M3.0 | Por estimar | Aprobación explícita de nuevo alcance; no duplicar M3.0 |
-| M3.2 Options–Attributes | Options/Values/combinations, typed attributes, schema governance | L (3–4) | Preview/quota, no combinations duplicadas |
-| M3.3 Classification | Brand, Taxonomy/Category closure, manual Collections, tags | L (2–3) | Cycle/concurrency tests y UI de árbol |
-| M3.4 Localization–SEO | traducciones, SEO/slugs, locale validation | M (2–3) | Locale decision y slug conflict E2E |
-| M3.5 Assignments–Eligibility | Store/Channel/Market assignments y diagnostic target-based | L (2–3) | Platform hierarchy contract; no “published” state |
-| M3.6 Extensibility–Media | Metafields y media associations | M/L (2–3) | Asset Reference Port antes de habilitar media |
-| M3.7 Hardening | performance million-scale fixtures, admin completeness, runbooks, docs, hosted gate | L (2–3) | p95 targets, all jobs green, evidence artifacts |
-| Futuro separado | Import runtime/connectors y Search engine | No estimado aquí | Contracts aprobados; Operations/Assets/infra decisions |
+| M3.0 — Catalog Foundation | **CERRADO**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted verde en rama, PR y `main` (commit `59859c3e`); tag final `module-3-catalog-foundation-v0.1.0` |
+| M3.1 — Options y Variant Combinations | Option, Option Value, Product Option, Variant Option Value, fingerprint de combinación, generación controlada en lote (preview → confirmación → Operation → Job) | L (3–4) | Diseño completo en `docs/modules/03-1-catalog-options-plan.md`; preview/cuota, sin combinaciones duplicadas (constraint de base) |
+| M3.2 — Attributes / Features descriptivos | Attribute Definition/Value tipados, asignación a nivel de Product (no Variant), herencia de recomendación por categoría | M (2–3) | No genera combinaciones ni fingerprint; depende de M3.1 solo como precedente de patrón, no de datos compartidos |
+| M3.3 — Collections y Tags | Collections manuales, tags — clasificación restante no cubierta por Brand/Taxonomy/Category (ya en M3.0) | M (2) | — |
+| M3.4 — Localization y SEO avanzado | fallbacks de locale, redirects, canonicalización avanzada, Open Graph, structured data, gobernanza de locales | M (2–3) | Traducción/SEO *básicos* ya entregados en M3.0; este incremento es explícitamente lo avanzado, no una repetición |
+| M3.5 — Assets y Media Associations | Asset Reference Port, asociación de media a Product/Variant | M/L (2–3) | Debe existir antes de CMS, Builder y storefronts reales |
+| M3.6 — Channel y Market Eligibility | Store/Channel/Market assignments (Store ya entregado en M3.0), diagnostic target-based | L (2–3) | Platform hierarchy contract; no introduce estado "published" |
+| M3.7 — Metafields y Extensibilidad | Metafields tipados, extensibilidad de esquema más allá de Attributes/Features fijos | M/L (2–3) | Depende de que Assets (M3.5) exista si Metafields necesita referenciar media |
+| M3.8 — Search Projections y Catalog Hardening | proyección de búsqueda, performance a escala, admin completeness, runbooks, hosted gate final | L (2–3) | El modelo de catálogo debe estar más estable — se diseña después de M3.1–M3.7, no antes; p95 targets, all jobs green |
+| M3.9 — Catalog Administration, Imports y Bulk Actions | listado administrativo avanzado, filtros, columnas configurables, acciones masivas, exportaciones, bulk-import (rediseñado bajo `CLAUDE.md`, no el heredado congelado), navegación administrativa, búsqueda administrativa, reportes de error por fila | L (3–4) | Depende del modelo definitivo de catálogo (M3.1–M3.8) y de la experiencia administrativa resultante; bulk-import heredado (`feature/catalog-bulk-import`, congelado) se evalúa acá, no antes |
 
-Secuencia controlada: cerrar evidencia hosted de M3.0 y rebaselinar M3.1 antes de autorizarlo; M3.2–M3.7 continúan pendientes. Las estimaciones originales dejan de ser compromiso porque M3.0 absorbió varias capacidades previstas después.
+Secuencia controlada: M3.1 es el siguiente incremento candidato, sujeto a aprobación explícita
+independiente de esta reconciliación de numeración. M3.2–M3.9 continúan pendientes y no
+autorizados. Las estimaciones son relativas, no compromiso calendario.
 
 ## 21. Gates de aceptación del módulo
 
