@@ -78,6 +78,10 @@ jobs:
           alembic upgrade 0003
           alembic downgrade 0001
           alembic upgrade head
+          alembic downgrade 0003
+          alembic upgrade 0004
+          alembic downgrade 0003
+          alembic upgrade 0004
           alembic downgrade base
           alembic upgrade head
       - name: Ruff
@@ -90,9 +94,11 @@ jobs:
           tests/integration/test_rls.py
           tests/integration/test_platform_rls.py
           tests/integration/test_catalog_rls.py
+          tests/integration/test_catalog_options_rls.py
           tests/integration/test_refresh_concurrency.py
           tests/integration/test_platform_concurrency.py
           tests/integration/test_catalog_concurrency.py
+          tests/integration/test_catalog_options_concurrency.py
           tests/integration/test_catalog_migrations.py
       - name: Pytest and coverage gate
         run: python -m pytest -q --cov=app --cov-report=term-missing --cov-report=xml --cov-report=html --cov-fail-under=80
