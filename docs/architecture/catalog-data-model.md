@@ -1,7 +1,7 @@
 # Catalog Core — Target and Implemented Data Model
 
 > Documento objetivo; sólo la sección “Modelo materializado en M3.0” describe persistencia implementada.
-> Estado: **Módulo 3 EN PROGRESO; M3.0 RELEASE CANDIDATE**.
+> Estado: **Módulo 3 EN PROGRESO; M3.0 Catalog Foundation: CERRADO**.
 > Prefijo reservado: `catalog_`.
 > Base de datos objetivo: PostgreSQL, conforme al Platform Kernel existente.
 
