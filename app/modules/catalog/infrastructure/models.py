@@ -119,12 +119,25 @@ class ProductVariantModel(CatalogResourceMixin, Base):
             postgresql_where=text("is_default"),
         ),
         Index("ix_catalog_variants_tenant_product_status", "tenant_id", "product_id", "status", "created_at", "id"),
+        CheckConstraint(
+            "combination_fingerprint IS NULL OR combination_fingerprint ~ '^[0-9a-f]{64}$'",
+            name="ck_catalog_variant_fingerprint_format",
+        ),
+        Index(
+            "uq_catalog_variant_combination_fingerprint",
+            "tenant_id",
+            "product_id",
+            "combination_fingerprint",
+            unique=True,
+            postgresql_where=text("archived_at IS NULL AND combination_fingerprint IS NOT NULL"),
+        ),
     )
     product_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
     sku: Mapped[str] = mapped_column(String(160), nullable=False)
     sku_normalized: Mapped[str] = mapped_column(String(160), nullable=False)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    combination_fingerprint: Mapped[str | None] = mapped_column(String(64))
 
 
 class ProductIdentifierModel(Base):
@@ -361,17 +374,188 @@ class ProductStoreModel(CatalogResourceMixin, Base):
     eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
+class OptionModel(CatalogResourceMixin, Base):
+    __tablename__ = "catalog_options"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_options_tenant_id"),
+        UniqueConstraint("tenant_id", "code", name="uq_catalog_options_tenant_code"),
+        CheckConstraint("status IN ('active','archived')", name="ck_catalog_option_status"),
+        CheckConstraint("input_type IN ('select','swatch')", name="ck_catalog_option_input_type"),
+        CheckConstraint("version > 0", name="ck_catalog_option_version"),
+        Index("ix_catalog_options_tenant_status_position", "tenant_id", "status", "position", "id"),
+    )
+    code: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    input_type: Mapped[str] = mapped_column(String(20), nullable=False, default="select")
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+
+
+class OptionTranslationModel(Base):
+    __tablename__ = "catalog_option_translations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "option_id"],
+            ["catalog_options.tenant_id", "catalog_options.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_option_translations_tenant_option",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_option_translations_tenant_id"),
+        UniqueConstraint("tenant_id", "option_id", "locale", name="uq_catalog_option_translation_option_locale"),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    locale: Mapped[str] = mapped_column(String(35), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class OptionValueModel(CatalogResourceMixin, Base):
+    __tablename__ = "catalog_option_values"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "option_id"],
+            ["catalog_options.tenant_id", "catalog_options.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_option_values_tenant_option",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_option_values_tenant_id"),
+        UniqueConstraint("tenant_id", "option_id", "id", name="uq_catalog_option_values_tenant_option_id"),
+        UniqueConstraint("tenant_id", "option_id", "code", name="uq_catalog_option_value_tenant_option_code"),
+        CheckConstraint("status IN ('active','archived')", name="ck_catalog_option_value_status"),
+        CheckConstraint(
+            "swatch_hex IS NULL OR swatch_hex ~ '^#[0-9a-fA-F]{6}$'",
+            name="ck_catalog_option_value_swatch_hex",
+        ),
+        CheckConstraint("version > 0", name="ck_catalog_option_value_version"),
+        Index(
+            "ix_catalog_option_values_tenant_option_status",
+            "tenant_id",
+            "option_id",
+            "status",
+            "position",
+            "id",
+        ),
+    )
+    option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    code: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[str] = mapped_column(String(200), nullable=False)
+    swatch_hex: Mapped[str | None] = mapped_column(String(7))
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+
+
+class OptionValueTranslationModel(Base):
+    __tablename__ = "catalog_option_value_translations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "option_value_id"],
+            ["catalog_option_values.tenant_id", "catalog_option_values.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_option_value_translations_tenant_value",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_option_value_translations_tenant_id"),
+        UniqueConstraint(
+            "tenant_id", "option_value_id", "locale", name="uq_catalog_option_value_translation_value_locale"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    option_value_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    locale: Mapped[str] = mapped_column(String(35), nullable=False)
+    value: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ProductOptionModel(Base):
+    __tablename__ = "catalog_product_options"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "product_id"],
+            ["catalog_products.tenant_id", "catalog_products.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_options_tenant_product",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "option_id"],
+            ["catalog_options.tenant_id", "catalog_options.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_options_tenant_option",
+        ),
+        CheckConstraint("position >= 0", name="ck_catalog_product_option_position"),
+        Index("ix_catalog_product_options_product", "tenant_id", "product_id", "position", "option_id"),
+    )
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
+    product_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class VariantOptionValueModel(Base):
+    __tablename__ = "catalog_variant_option_values"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "variant_id"],
+            ["catalog_product_variants.tenant_id", "catalog_product_variants.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_variant_option_values_tenant_variant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "product_id"],
+            ["catalog_products.tenant_id", "catalog_products.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_variant_option_values_tenant_product",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "product_id", "option_id"],
+            ["catalog_product_options.tenant_id", "catalog_product_options.product_id", "catalog_product_options.option_id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_variant_option_values_tenant_product_option",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "option_id", "option_value_id"],
+            ["catalog_option_values.tenant_id", "catalog_option_values.option_id", "catalog_option_values.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_variant_option_values_tenant_value",
+        ),
+        UniqueConstraint(
+            "tenant_id", "variant_id", "option_id", name="uq_catalog_variant_option_one_value_per_option"
+        ),
+        Index("ix_catalog_variant_option_values_value", "tenant_id", "option_value_id", "variant_id"),
+    )
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
+    variant_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    product_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    option_value_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 __all__ = [
     "BrandModel",
     "CategoryClosureModel",
     "CategoryModel",
+    "OptionModel",
+    "OptionTranslationModel",
+    "OptionValueModel",
+    "OptionValueTranslationModel",
     "ProductCategoryModel",
     "ProductIdentifierModel",
     "ProductModel",
+    "ProductOptionModel",
     "ProductSeoModel",
     "ProductStoreModel",
     "ProductTranslationModel",
     "ProductTypeModel",
     "ProductVariantModel",
     "TaxonomyModel",
+    "VariantOptionValueModel",
 ]

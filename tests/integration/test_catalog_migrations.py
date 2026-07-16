@@ -62,6 +62,17 @@ def test_catalog_migration_round_trip_and_security_contract() -> None:
     alembic("upgrade", "0003")
 
     dsn = URL.replace("postgresql+psycopg://", "postgresql://")
+    try:
+        _assert_m30_security_contract(dsn)
+    finally:
+        # This test intentionally stops at 0003 to check the M3.0 contract in
+        # isolation from 0004 -- but the shared test DB must not be left below
+        # head for the tests that run after this one (M3.1's own tables and
+        # the combination_fingerprint column would otherwise be missing).
+        alembic("upgrade", "head")
+
+
+def _assert_m30_security_contract(dsn: str) -> None:
     with psycopg.connect(dsn) as connection:
         tables = {
             row[0]
@@ -171,3 +182,112 @@ def test_catalog_migration_round_trip_and_security_contract() -> None:
         ).fetchone()
         assert store_policy is not None
         assert "app.current_store_id" in store_policy[0]
+
+
+CATALOG_OPTIONS_TABLES = {
+    "catalog_options",
+    "catalog_option_translations",
+    "catalog_option_values",
+    "catalog_option_value_translations",
+    "catalog_product_options",
+    "catalog_variant_option_values",
+}
+CATALOG_OPTIONS_PERMISSIONS = {
+    "catalog.option.read",
+    "catalog.option.create",
+    "catalog.option.update",
+    "catalog.option.archive",
+    "catalog.option_value.read",
+    "catalog.option_value.create",
+    "catalog.option_value.update",
+    "catalog.option_value.archive",
+    "catalog.product_option.read",
+    "catalog.product_option.manage",
+    "catalog.variant_combination.read",
+    "catalog.variant_combination.create",
+    "catalog.variant_combination.generate",
+    "catalog.variant_combination.archive",
+}
+
+
+def test_catalog_options_migration_round_trip_and_security_contract() -> None:
+    alembic("downgrade", "0003")
+    alembic("upgrade", "0004")
+    alembic("downgrade", "0003")
+    alembic("upgrade", "0004")
+
+    dsn = URL.replace("postgresql+psycopg://", "postgresql://")
+    with psycopg.connect(dsn) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'")
+        }
+        assert CATALOG_OPTIONS_TABLES <= tables
+
+        for table in CATALOG_OPTIONS_TABLES:
+            policy_count = connection.execute(
+                "SELECT count(*) FROM pg_policy WHERE polrelid=%s::regclass", (table,)
+            ).fetchone()
+            assert policy_count is not None and policy_count[0] == 4
+            rls = connection.execute(
+                "SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid=%s::regclass", (table,)
+            ).fetchone()
+            assert rls == (True, True)
+            privileges = connection.execute(
+                """
+                SELECT
+                    has_table_privilege('nexus_app', %s, 'SELECT'),
+                    has_table_privilege('nexus_app', %s, 'INSERT'),
+                    has_table_privilege('nexus_app', %s, 'UPDATE'),
+                    has_table_privilege('nexus_app', %s, 'DELETE')
+                """,
+                (table, table, table, table),
+            ).fetchone()
+            assert privileges == (True, True, True, True)
+
+        permissions = {
+            row[0]
+            for row in connection.execute(
+                "SELECT code FROM permissions WHERE code LIKE 'catalog.option%' OR code LIKE 'catalog.product_option%' OR code LIKE 'catalog.variant_combination%'"
+            )
+        }
+        assert permissions == CATALOG_OPTIONS_PERMISSIONS
+
+        entitlements = dict(
+            connection.execute(
+                """
+                SELECT key, default_value FROM platform_entitlement_definitions
+                WHERE key IN (
+                    'catalog.product_options.max_per_product',
+                    'catalog.option_values.max_per_option',
+                    'catalog.variant_combinations.max_per_product',
+                    'catalog.combination_generation.max_per_operation'
+                )
+                """
+            ).fetchall()
+        )
+        assert entitlements == {
+            "catalog.product_options.max_per_product": 6,
+            "catalog.option_values.max_per_option": 200,
+            "catalog.variant_combinations.max_per_product": 100,
+            "catalog.combination_generation.max_per_operation": 50,
+        }
+
+        fingerprint_column = connection.execute(
+            """
+            SELECT data_type FROM information_schema.columns
+            WHERE table_name='catalog_product_variants' AND column_name='combination_fingerprint'
+            """
+        ).fetchone()
+        assert fingerprint_column is not None
+
+        fingerprint_index = connection.execute(
+            "SELECT indexname FROM pg_indexes WHERE tablename='catalog_product_variants' AND indexname=%s",
+            ("uq_catalog_variant_combination_fingerprint",),
+        ).fetchone()
+        assert fingerprint_index is not None
+
+        one_value_per_option = connection.execute(
+            "SELECT conname FROM pg_constraint WHERE conrelid='catalog_variant_option_values'::regclass AND contype='u'"
+        ).fetchall()
+        assert ("uq_catalog_variant_option_one_value_per_option",) in one_value_per_option
