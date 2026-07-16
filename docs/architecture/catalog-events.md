@@ -1,7 +1,10 @@
 # Catalog Core — Target and Implemented Event Contracts
 
-> Estado: envelope y 21 eventos de M3.0 implementados; contratos restantes son objetivo futuro.
-> Incremento: **M3.0 Catalog Foundation: CERRADO**; Módulo 3 EN PROGRESO.
+> Estado: envelope y 21 eventos de M3.0 implementados; 14 eventos de M3.1 implementados como RC
+> local (rama `feature/catalog-options`, no integrada a `main`); contratos restantes son objetivo
+> futuro.
+> Incremento: **M3.0 Catalog Foundation: CERRADO**; **M3.1 Options y Variant Combinations:
+> RELEASE CANDIDATE local**; Módulo 3 EN PROGRESO.
 > Transporte: outbox/inbox del Platform Kernel.
 > Semántica: entrega at-least-once, consumers idempotentes, sin orden global.
 
@@ -381,4 +384,28 @@ La implementación emite únicamente:
 
 Todos reutilizan el envelope de Platform Kernel, llevan `event_version=1`, correlation/actor/tenant/aggregate y se insertan en el outbox dentro de la transacción del cambio. Los masters usan `store_id=null`; los eventos de Store identifican la Store. Idempotency replay no duplica eventos y rollback no deja eventos huérfanos.
 
-No se implementan todavía eventos de Options, Attributes, Collections, Tags, media, imports, publicación, eligibility completa ni Search projection. `active` no produce ni implica `published`; ese hecho pertenece a Publishing futuro.
+## 15.1 Eventos materializados en M3.1 (RELEASE CANDIDATE local)
+
+Implementados en la rama `feature/catalog-options`, **no integrados a `main`**:
+
+- `catalog.option.created.v1`;
+- `catalog.option.updated.v1`;
+- `catalog.option.archived.v1`;
+- `catalog.option_value.created.v1`;
+- `catalog.option_value.updated.v1`;
+- `catalog.option_value.archived.v1`;
+- `catalog.product.option_attached.v1`;
+- `catalog.product.option_detached.v1`;
+- `catalog.variant.combination_created.v1`;
+- `catalog.variant.combination_updated.v1`;
+- `catalog.variant.combination_archived.v1`;
+- `catalog.variant_generation.requested.v1`;
+- `catalog.variant_generation.completed.v1`;
+- `catalog.variant_generation.failed.v1`.
+
+Mismo envelope, mismas garantías transaccionales que M3.0; payloads limitados a IDs, nunca a
+nombres traducidos. Detalle: [`docs/modules/03-1-catalog-options.md`](../modules/03-1-catalog-options.md).
+
+No se implementan todavía eventos de Attributes, Collections, Tags, media, imports, publicación,
+eligibility completa ni Search projection. `active` no produce ni implica `published`; ese hecho
+pertenece a Publishing futuro.

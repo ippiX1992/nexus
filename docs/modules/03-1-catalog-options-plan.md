@@ -1,10 +1,11 @@
 # M3.1 — Options y Variant Combinations: plan de incremento
 
-> Estado: **diseño funcional y técnico APROBADO (2026-07-16), implementación PENDIENTE.** Siguió
-> el proceso obligatorio de `CLAUDE.md` (pasos 1–4: PrestaShop, otras plataformas, diseño Nexus,
-> tabla de comparación) hasta el paso 5 (aprobación explícita del usuario), que ya ocurrió para el
-> diseño — no para la implementación, que sigue requiriendo autorización explícita separada antes
-> de escribir migración, modelo, endpoint, test o frontend. M3.0 Catalog Foundation está
+> Estado: **diseño funcional y técnico APROBADO (2026-07-16); implementado como M3.1: RELEASE
+> CANDIDATE local en `feature/catalog-options` (no integrado a `main`, sin push, sin PR, sin
+> tag).** Siguió el proceso obligatorio de `CLAUDE.md` (pasos 1–4: PrestaShop, otras plataformas,
+> diseño Nexus, tabla de comparación) hasta el paso 5 (aprobación explícita del usuario), y luego
+> el paso 6 (implementación) hasta el estado de RC local — evidencia completa en
+> [`docs/modules/03-1-catalog-options.md`](03-1-catalog-options.md). M3.0 Catalog Foundation está
 > **CERRADO** (PR #1, merge commit `59859c3e`, tag `module-3-catalog-foundation-v0.1.0`; commit
 > documental final `08a70d7`, alineación de arquitectura `5d025d9`). El Módulo 3 permanece
 > **EN PROGRESO**.

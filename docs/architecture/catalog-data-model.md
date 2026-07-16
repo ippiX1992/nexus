@@ -1,7 +1,9 @@
 # Catalog Core — Target and Implemented Data Model
 
-> Documento objetivo; sólo la sección “Modelo materializado en M3.0” describe persistencia implementada.
-> Estado: **Módulo 3 EN PROGRESO; M3.0 Catalog Foundation: CERRADO**.
+> Documento objetivo; sólo la sección “Modelo materializado en M3.0” (más la nota de M3.1 en la
+> sección 19) describe persistencia implementada.
+> Estado: **Módulo 3 EN PROGRESO; M3.0 Catalog Foundation: CERRADO; M3.1 Options y Variant
+> Combinations: RELEASE CANDIDATE local (no integrado a `main`)**.
 > Prefijo reservado: `catalog_`.
 > Base de datos objetivo: PostgreSQL, conforme al Platform Kernel existente.
 
@@ -674,7 +676,14 @@ La migración explícita `0003_catalog_foundation` crea únicamente estas 12 tab
 | `catalog_product_categories` | clasificación explícita y primary |
 | `catalog_product_stores` | asignación administrativa a Store |
 
-No existen aún tablas para Options, Attributes, Metafields, Collections, Tags, media, Channel/Market assignments ni Search. Las secciones anteriores que describen esas entidades son arquitectura objetivo para M3.1–M3.7, no evidencia de implementación.
+Las 6 tablas de Options (`catalog_options`, `catalog_option_translations`, `catalog_option_values`,
+`catalog_option_value_translations`, `catalog_product_options`, `catalog_variant_option_values`) y
+la columna `catalog_product_variants.combination_fingerprint` existen como **M3.1: RELEASE
+CANDIDATE local** en la rama `feature/catalog-options` (migración `0004_catalog_options`), **no
+integradas a `main`**. Detalle: [`docs/modules/03-1-catalog-options.md`](../modules/03-1-catalog-options.md).
+No existen aún tablas para Attributes, Metafields, Collections, Tags, media, Channel/Market
+assignments ni Search. Las secciones anteriores que describen esas entidades son arquitectura
+objetivo para M3.2–M3.7, no evidencia de implementación.
 
 ### 19.1 Constraints y aislamiento reales
 

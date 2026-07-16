@@ -1,6 +1,10 @@
 # Catalog Options — Domain Design (M3.1)
 
-> Estado: **propuesta de diseño, no implementada.** Sigue el proceso de `CLAUDE.md`. Depende del
+> Estado: **implementado como M3.1: RELEASE CANDIDATE local** en `feature/catalog-options` (no
+> integrado a `main`) — ver evidencia en
+> [`docs/modules/03-1-catalog-options.md`](../modules/03-1-catalog-options.md). Este documento
+> conserva el diseño aprobado tal como se aprobó; las decisiones aquí descritas fueron implementadas
+> sin desviaciones salvo las anotadas inline. Sigue el proceso de `CLAUDE.md`. Depende del
 > análisis comparativo ya hecho en
 > [catalog-options-attributes-prestashop-mapping.md](catalog-options-attributes-prestashop-mapping.md)
 > (PrestaShop, VTEX, Shopify, BigCommerce, Adobe Commerce) — este documento no repite esa

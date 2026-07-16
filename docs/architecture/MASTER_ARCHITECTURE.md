@@ -1,7 +1,7 @@
 # Nexus — Arquitectura Maestra
 
-> Estado: arquitectura objetivo; Módulos 1 y 2 cerrados; **Módulo 3 EN PROGRESO / M3.0 Catalog Foundation CERRADO** (M3.1–M3.9 pendientes, numeración oficial en `docs/modules/03-catalog-core-plan.md` sección 20)
-> Fecha: 2026-07-14
+> Estado: arquitectura objetivo; Módulos 1 y 2 cerrados; **Módulo 3 EN PROGRESO / M3.0 Catalog Foundation CERRADO / M3.1 Options y Variant Combinations: RELEASE CANDIDATE local (no integrado a `main`)** (M3.2–M3.9 pendientes, numeración oficial en `docs/modules/03-catalog-core-plan.md` sección 20)
+> Fecha: 2026-07-16
 > Alcance: evolución de Nexus sobre el Módulo 1 existente, sin reescribirlo
 
 ## Registro de cierre de la plataforma v0.2
@@ -280,7 +280,7 @@ Responsabilidades:
 
 Catalog no registra cada Product en `platform_resource_scopes`: usa ownership tenant, RLS forzado y assignments tenant/store-aware para no convertir el registry del Kernel en un hot path de millones de recursos. No calcula precio final, stock disponible ni impuestos, y no es propietario de archivos binarios ni de la publicación por Environment.
 
-El diseño objetivo está en `docs/modules/03-catalog-core-plan.md`, `docs/architecture/catalog-domain.md`, `docs/architecture/catalog-data-model.md` y `docs/architecture/catalog-events.md`. La superficie materializada y su evidencia se documentan en `docs/modules/03-catalog-foundation.md`; sólo M3.0 está implementado y no equivale al cierre del Módulo 3.
+El diseño objetivo está en `docs/modules/03-catalog-core-plan.md`, `docs/architecture/catalog-domain.md`, `docs/architecture/catalog-data-model.md` y `docs/architecture/catalog-events.md`. La superficie materializada y su evidencia se documentan en `docs/modules/03-catalog-foundation.md` (M3.0, integrado a `main`) y `docs/modules/03-1-catalog-options.md` (M3.1, RC local en `feature/catalog-options`, no integrado a `main`); ninguno de los dos equivale al cierre del Módulo 3.
 
 ### 5.8 Pricing & Promotions
 
@@ -1319,7 +1319,7 @@ Estado permitido al 2026-07-14, cerrado el 2026-07-16:
 - GitHub-hosted: [Pull Request #1](https://github.com/ippiX1992/nexus/pull/1) (`feature/catalog-core` → `main`) integrado mediante merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`. Quality gate verde en las tres instancias del mismo contenido: push a la rama (run `29464039820`), Pull Request (run `29464236414`), push del commit integrado en `main` (run `29465055151`) — 4/4 jobs cada vez;
 - Tag RC `module-3-catalog-foundation-v0.1.0-rc.1` (sin modificar) → `47fad54`; tag final `module-3-catalog-foundation-v0.1.0` sobre el commit de cierre documental; `nexus-platform-v0.3.0` sobre el mismo commit;
 - `main` sin branch protection configurada — riesgo documentado, tarea prioritaria pendiente (PR obligatorio, checks obligatorios, sin force push, sin eliminar `main`, conversaciones resueltas, aprobación mínima con más colaboradores);
-- M3.1–M3.9: pendientes y no autorizados (numeración oficial reconciliada el 2026-07-16 en `docs/modules/03-catalog-core-plan.md` sección 20; M3.1 — Options y Variant Combinations — tiene diseño aprobado en `docs/modules/03-1-catalog-options-plan.md`, pendiente de implementación).
+- M3.2–M3.9: pendientes y no autorizados (numeración oficial reconciliada el 2026-07-16 en `docs/modules/03-catalog-core-plan.md` sección 20).
 
 M3.0 materializa el bounded context `app/modules/catalog` con 12 tablas tenant-aware, Product/Variant default, identifiers, Brands, Taxonomy/Category closure, traducción/SEO básicos y assignments Product–Category/Product–Store. Se apoya en RBAC, RLS, idempotency, audit, entitlements y outbox existentes; Platform Kernel no adquiere dependencias hacia Catalog.
 
@@ -1329,4 +1329,23 @@ El quality gate local ampliado mantiene `backend-quality`, `frontend-quality`, `
 
 Riesgos abiertos: dos vulnerabilidades npm moderadas; `0001` con metadata dinámica; auditoría no criptográficamente inmutable; supervisión de dispatcher/jobs y limpieza programada pendientes; posible hot spot del lock de cuota por tenant a tasas extremas; necesidad futura de projections/Search para listados de gran escala; locale fallback avanzado, restore y purge aún no definidos.
 
-El detalle verificable está en `docs/modules/03-catalog-foundation.md`. No se inicia M3.1 (diseño aprobado, implementación pendiente) ni M3.2–M3.9, ni se implementan CMS, Builder, Checkout, Search, Pricing o Inventory.
+El detalle verificable está en `docs/modules/03-catalog-foundation.md`.
+
+## 29.1 Estado arquitectónico de M3.1 Options y Variant Combinations
+
+**M3.1: RELEASE CANDIDATE local**, implementado sobre `feature/catalog-options` (rama local,
+**no integrada a `main`, no publicada, sin push, sin PR, sin tag**), partiendo del diseño
+aprobado en `docs/modules/03-1-catalog-options-plan.md`. Agrega 6 tablas
+(`catalog_options`, `catalog_option_translations`, `catalog_option_values`,
+`catalog_option_value_translations`, `catalog_product_options`,
+`catalog_variant_option_values`) más `catalog_product_variants.combination_fingerprint`
+(migración `0004_catalog_options`), 17 operaciones API nuevas, 14 permisos, 14 eventos v1, y
+generación de combinaciones en lote reutilizando Operation/Job del Platform Kernel (sin mecanismo
+de jobs nuevo). Evidencia local: 107 pruebas backend aprobadas, cobertura 77.24% (**por debajo
+del 80% requerido — brecha declarada, no oculta**), Ruff y mypy aprobados, migraciones
+0003↔0004 y base→head verificadas, RLS/RBAC y concurrencia reales verificados contra PostgreSQL,
+frontend sin regresión (build/lint/typecheck en verde) con una página mínima de administración
+de Options. Sin pruebas E2E Chromium para este incremento. Detalle:
+[`docs/modules/03-1-catalog-options.md`](../modules/03-1-catalog-options.md).
+
+No se implementa M3.2–M3.9, ni CMS, Builder, Checkout, Search, Pricing o Inventory.

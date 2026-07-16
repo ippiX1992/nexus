@@ -1,6 +1,8 @@
 # Catalog Option Combinations — Fingerprint, Explosion Control, Data Model (M3.1)
 
-> Estado: **propuesta de diseño, no implementada.** Complementa
+> Estado: **implementado como M3.1: RELEASE CANDIDATE local** en `feature/catalog-options` (no
+> integrado a `main`) — ver evidencia en
+> [`docs/modules/03-1-catalog-options.md`](../modules/03-1-catalog-options.md). Complementa
 > [catalog-options-domain.md](catalog-options-domain.md) (conceptos y reglas de negocio) con el
 > mecanismo técnico de combinación: fingerprint, control de explosión combinatoria, modelo de datos
 > completo, RLS y concurrencia. Sigue el proceso de `CLAUDE.md`.

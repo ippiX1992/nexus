@@ -30,7 +30,19 @@ M3.0 implementa 12 tablas con FORCE RLS, 27 paths/40 operaciones API, 18 permiso
 
 Riesgos residuales sin resolver por este cierre: dos vulnerabilidades npm moderadas, migración histórica `0001` dependiente de metadata dinámica, auditoría no criptográficamente inmutable, dispatcher/jobs sin supervisión en producción, limpieza programada pendiente, y `main` sin branch protection configurada (recomendado como tarea prioritaria: PR obligatorio, checks obligatorios, prohibición de force push y de eliminar `main`, conversaciones resueltas antes de mergear, al menos una aprobación cuando haya más colaboradores).
 
-Los incrementos M3.1–M3.7 continúan pendientes. No están implementados Options, Attributes, Metafields, Collections, Tags, media, imports, Search, publicación, Pricing ni Inventory.
+**M3.1 Options y Variant Combinations: RELEASE CANDIDATE local**, implementado en la rama
+`feature/catalog-options`, **no integrado a `main` ni publicado** (sin push, sin PR, sin tag).
+Agrega Options/Option Values, asignación por Product, combinaciones de Variant con fingerprint
+único, generación en lote durable vía Operation/Job del Platform Kernel, RLS/RBAC/eventos propios
+y una página de administración mínima. Evidencia local: 107 pruebas backend aprobadas, cobertura
+77.24% (por debajo del 80% requerido — brecha declarada, no resuelta), Ruff y mypy aprobados,
+build backend y Next.js correctos, RLS y concurrencia reales verificados contra PostgreSQL.
+Sin pruebas E2E Chromium para este incremento. Detalle: [M3.1 — Options y Variant
+Combinations](docs/modules/03-1-catalog-options.md).
+
+Los incrementos M3.2–M3.9 continúan pendientes y no autorizados. No están implementados
+Attributes, Metafields, Collections, Tags, media, imports, Search, publicación, Pricing ni
+Inventory.
 
 Detalle y evidencia: [M3.0 — Catalog Foundation](docs/modules/03-catalog-foundation.md).
 
@@ -76,3 +88,4 @@ Arquitectura y módulos:
 - [Módulo 2 — Platform Kernel](docs/modules/02-platform-kernel.md)
 - [Módulo 3 — plan de Catalog Core](docs/modules/03-catalog-core-plan.md)
 - [M3.0 — Catalog Foundation](docs/modules/03-catalog-foundation.md)
+- [M3.1 — Options y Variant Combinations (RC local)](docs/modules/03-1-catalog-options.md)
