@@ -1,10 +1,12 @@
 # Módulo 3 — Catalog Foundation
 
 > Estado del módulo: **Módulo 3: EN PROGRESO**.
-> Estado del incremento: **Incremento M3.0: RELEASE CANDIDATE**.
-> Rama: `feature/catalog-core`.
-> Fecha de evidencia local: `2026-07-14`.
-> GitHub-hosted: rama publicada y quality gate aprobado (workflow `Nexus Modules 1-2 and Catalog Foundation Quality Gate`, run sobre `feature/catalog-core` @ `47fad54`, 4/4 jobs en verde). Pull Request, merge a `main` y tag final quedan pendientes.
+> Estado del incremento: **Incremento M3.0 Catalog Foundation: CERRADO**.
+> Rama de origen: `feature/catalog-core` (integrada y cerrada).
+> Fecha de evidencia local: `2026-07-14`. Fecha de cierre: `2026-07-16`.
+> Pull Request: [#1](https://github.com/ippiX1992/nexus/pull/1), `feature/catalog-core` → `main`, merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`.
+> GitHub-hosted: quality gate verde en las tres instancias del mismo contenido — push a la rama (run `29464039820`), evento del Pull Request (run `29464236414`) y push del commit integrado en `main` (run `29465055151`) — 4/4 jobs cada vez: backend quality/PostgreSQL/RLS/Catalog, frontend tests/lint/typecheck/build, Playwright E2E, gate final. Artifacts: `nexus-catalog-foundation-backend-evidence`, `nexus-catalog-foundation-playwright-evidence`.
+> Tag RC (sin modificar): `module-3-catalog-foundation-v0.1.0-rc.1` → `47fad54`. Tag final: `module-3-catalog-foundation-v0.1.0`, sobre el commit de cierre documental.
 
 ## 1. Alcance entregado
 
@@ -216,7 +218,9 @@ Permanecen abiertos:
 - el lock por tenant puede convertirse en hot spot con tasas de escritura extremas; debe medirse antes de particionar;
 - locale governance se deriva de locales habilitados en Store y aún no tiene fallback avanzado;
 - archive no incluye restore ni purge;
-- GitHub-hosted no ha validado todavía el commit de M3.0.
+- `main` no tiene branch protection configurada — riesgo documentado, no bloquea este cierre, queda como tarea prioritaria: exigir Pull Request, checks obligatorios, prohibir force push y eliminación de `main`, exigir conversaciones resueltas antes de mergear, y al menos una aprobación cuando haya más colaboradores.
+
+GitHub-hosted validó el commit de cierre de M3.0 (ver cabecera de este documento).
 
 ## 13. Trabajo pendiente
 

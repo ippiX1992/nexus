@@ -1312,11 +1312,13 @@ Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades np
 
 ## 29. Estado arquitectónico de M3.0 Catalog Foundation
 
-Estado permitido al 2026-07-14, actualizado al 2026-07-15:
+Estado permitido al 2026-07-14, cerrado el 2026-07-16:
 
 - **Módulo 3: EN PROGRESO**;
-- **Incremento M3.0: RELEASE CANDIDATE**;
-- GitHub-hosted: rama `feature/catalog-core` publicada y quality gate aprobado (4/4 jobs en verde sobre `47fad54`). Pull Request, merge a `main` y tag final quedan pendientes;
+- **Incremento M3.0 Catalog Foundation: CERRADO**;
+- GitHub-hosted: [Pull Request #1](https://github.com/ippiX1992/nexus/pull/1) (`feature/catalog-core` → `main`) integrado mediante merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`. Quality gate verde en las tres instancias del mismo contenido: push a la rama (run `29464039820`), Pull Request (run `29464236414`), push del commit integrado en `main` (run `29465055151`) — 4/4 jobs cada vez;
+- Tag RC `module-3-catalog-foundation-v0.1.0-rc.1` (sin modificar) → `47fad54`; tag final `module-3-catalog-foundation-v0.1.0` sobre el commit de cierre documental; `nexus-platform-v0.3.0` sobre el mismo commit;
+- `main` sin branch protection configurada — riesgo documentado, tarea prioritaria pendiente (PR obligatorio, checks obligatorios, sin force push, sin eliminar `main`, conversaciones resueltas, aprobación mínima con más colaboradores);
 - M3.1–M3.7: pendientes y no autorizados.
 
 M3.0 materializa el bounded context `app/modules/catalog` con 12 tablas tenant-aware, Product/Variant default, identifiers, Brands, Taxonomy/Category closure, traducción/SEO básicos y assignments Product–Category/Product–Store. Se apoya en RBAC, RLS, idempotency, audit, entitlements y outbox existentes; Platform Kernel no adquiere dependencias hacia Catalog.

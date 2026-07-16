@@ -2,8 +2,8 @@
 
 > Tipo de entrega: plan vivo y trazabilidad de implementación incremental.
 > Estado: **Módulo 3: EN PROGRESO**.
-> Incremento: **M3.0: RELEASE CANDIDATE**; M3.1–M3.7 pendientes.
-> Rama: `feature/catalog-core`.
+> Incremento: **M3.0 Catalog Foundation: CERRADO**; M3.1–M3.7 pendientes y no autorizados.
+> Rama de origen: `feature/catalog-core` (integrada a `main` vía [PR #1](https://github.com/ippiX1992/nexus/pull/1), merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`).
 > Baseline verificado: `0642cd827826c61855e4695a6f0589c653095fa1`.
 
 ## 1. Estado base y evidencia
@@ -25,7 +25,7 @@ Los Módulos 1 y 2 permanecen cerrados. Catalog se construirá sobre sus contrat
 
 M3.0 fue autorizado e implementado como un vertical más amplio que la estimación original de Foundation: incluye Product Type, Product/Variant, Identifier, Brand, traducción/SEO básicos, Taxonomy/Category closure y assignments Product–Category/Product–Store. La evidencia normativa está en [M3.0 — Catalog Foundation](03-catalog-foundation.md).
 
-La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. La rama fue publicada y el quality gate GitHub-hosted quedó aprobado (4/4 jobs en verde sobre `47fad54`); Pull Request, merge a `main` y tag final permanecen pendientes.
+La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. La rama fue publicada, el quality gate GitHub-hosted quedó aprobado, y el [PR #1](https://github.com/ippiX1992/nexus/pull/1) se integró a `main` mediante merge commit `59859c3eda062fde38d4d75dc5b6fde565ada4f0`, validado con un cuarto run verde (4/4 jobs) ejecutado directamente sobre ese commit en `main`.
 
 Esta ampliación consume parte del alcance originalmente atribuido a M3.1, M3.3, M3.4 y M3.5. Antes de iniciar M3.1 se debe rebaselinar su contenido para no duplicar funcionalidades; esa replanificación no está autorizada en M3.0.
 
@@ -807,7 +807,7 @@ Estimación relativa para un equipo familiarizado con el baseline. No es comprom
 
 | Incremento | Resultado vertical | Tamaño | Dependencias / gate de salida |
 |---|---|---|---|
-| M3.0 Foundation | **IMPLEMENTADO — RC publicado**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted verde (4/4 jobs sobre `47fad54`); PR/merge/tag final pendientes |
+| M3.0 Foundation | **CERRADO**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted verde en rama, PR y `main` (commit `59859c3e`); tag final `module-3-catalog-foundation-v0.1.0` |
 | M3.1 Product–Variant | **PENDIENTE DE REBASELINE**: sólo capacidades no entregadas en M3.0 | Por estimar | Aprobación explícita de nuevo alcance; no duplicar M3.0 |
 | M3.2 Options–Attributes | Options/Values/combinations, typed attributes, schema governance | L (3–4) | Preview/quota, no combinations duplicadas |
 | M3.3 Classification | Brand, Taxonomy/Category closure, manual Collections, tags | L (2–3) | Cycle/concurrency tests y UI de árbol |
@@ -838,12 +838,19 @@ Módulo 3 no se considera cerrado hasta que:
 
 ## 22. Estado de detención
 
-Actualizado al 2026-07-15: M3.0 queda como Release Candidate **publicado**. La rama `feature/catalog-core`
-fue publicada y el workflow `Nexus Modules 1-2 and Catalog Foundation Quality Gate` quedó aprobado en
-GitHub-hosted (4/4 jobs en verde sobre `47fad54`; también sobre el tag
-`module-3-catalog-foundation-v0.1.0-rc.1`, mismo commit). El siguiente paso operativo, sólo con
-autorización explícita, es abrir el Pull Request `feature/catalog-core → main`, integrarlo y cortar el
-tag final.
+Actualizado al 2026-07-16: **M3.0 Catalog Foundation queda CERRADO.** El [PR #1](https://github.com/ippiX1992/nexus/pull/1)
+(`feature/catalog-core → main`) fue integrado con autorización explícita mediante merge commit
+`59859c3eda062fde38d4d75dc5b6fde565ada4f0`, preservando el historial completo (sin squash). El
+workflow `Nexus Modules 1-2 and Catalog Foundation Quality Gate` corrió en verde (4/4 jobs) tres
+veces sobre el mismo contenido: push a la rama (`29464039820`), evento del Pull Request
+(`29464236414`) y push del commit integrado en `main` (`29465055151`) — este último es la evidencia
+final, no se reutilizó ningún run anterior. El tag RC `module-3-catalog-foundation-v0.1.0-rc.1`
+se conserva sin modificar; el tag final `module-3-catalog-foundation-v0.1.0` (y `nexus-platform-v0.3.0`)
+se cortan sobre el commit de cierre documental, una vez validado en `main`.
 
-No se inicia M3.1. No se crea tag final todavía — solo existe el RC
-`module-3-catalog-foundation-v0.1.0-rc.1`. El Módulo 3 permanece EN PROGRESO.
+Los tres commits de seguridad locales (separación de clave TOTP/JWT, guard de arranque en
+producción, limpieza de `rate_limit_buckets`) no forman parte de este cierre — quedaron
+preservados en la rama local `backup/catalog-security-local`, sin publicar y sin mezclar con M3.0;
+se revisarán después, en una rama separada.
+
+No se inicia M3.1. El Módulo 3 permanece EN PROGRESO.
