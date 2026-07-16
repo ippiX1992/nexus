@@ -20,18 +20,31 @@ CATALOG_PERMISSIONS = (
     "catalog.category.read", "catalog.category.manage",
     "catalog.assignment.read", "catalog.assignment.manage",
 )
+CATALOG_OPTIONS_PERMISSIONS = (
+    "catalog.option.read", "catalog.option.create", "catalog.option.update", "catalog.option.archive",
+    "catalog.option_value.read", "catalog.option_value.create", "catalog.option_value.update", "catalog.option_value.archive",
+    "catalog.product_option.read", "catalog.product_option.manage",
+    "catalog.variant_combination.read", "catalog.variant_combination.create",
+    "catalog.variant_combination.generate", "catalog.variant_combination.archive",
+)
 PERMISSIONS = (
     "tenant.read", "tenant.update", "member.read", "member.invite", "member.update", "member.remove",
     "role.read", "role.create", "role.update", "role.delete", "audit.read", "security.manage",
-    *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS,
+    *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS,
 )
 
-CATALOG_READ_PERMISSIONS = {permission for permission in CATALOG_PERMISSIONS if permission.endswith(".read")}
+CATALOG_READ_PERMISSIONS = {
+    permission for permission in (*CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS) if permission.endswith(".read")
+}
 CATALOG_EDITOR_PERMISSIONS = {
     "catalog.product.read", "catalog.product.create", "catalog.product.update",
     "catalog.variant.read", "catalog.variant.create", "catalog.variant.update",
     "catalog.product_type.read", "catalog.brand.read", "catalog.brand.manage",
     "catalog.taxonomy.read", "catalog.category.read", "catalog.category.manage", "catalog.assignment.read",
+    "catalog.option.read", "catalog.option.create", "catalog.option.update",
+    "catalog.option_value.read", "catalog.option_value.create", "catalog.option_value.update",
+    "catalog.product_option.read", "catalog.product_option.manage",
+    "catalog.variant_combination.read", "catalog.variant_combination.create", "catalog.variant_combination.generate",
 }
 
 ROLE_PERMISSIONS = {
@@ -41,6 +54,7 @@ ROLE_PERMISSIONS = {
         "tenant.read", "member.read", "member.invite", "role.read", "audit.read",
         *(permission for permission in PLATFORM_PERMISSIONS if not permission.endswith(".archive") and permission != "entitlement.manage"),
         *(permission for permission in CATALOG_PERMISSIONS if permission != "catalog.product_type.manage"),
+        *CATALOG_OPTIONS_PERMISSIONS,
     },
     "editor": {
         "tenant.read", "member.read", "role.read", "store.read", "site.read", "channel.read",

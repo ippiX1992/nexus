@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import re
 import unicodedata
@@ -8,6 +9,7 @@ from uuid import UUID
 from app.modules.platform.domain.values import normalize_code, validate_locale
 
 IDENTIFIER_TYPES = frozenset({"ean", "upc", "isbn", "mpn", "external"})
+_HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 _SLUG_SEPARATOR = re.compile(r"[\s_]+")
 _SLUG_HYPHENS = re.compile(r"-+")
 _SKU_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -77,3 +79,41 @@ def decode_cursor(value: str) -> tuple[datetime, UUID]:
         return datetime.fromisoformat(payload["created_at"]), UUID(payload["id"])
     except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
         raise ValueError("Invalid catalog cursor") from exc
+
+
+def normalize_swatch_hex(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not _HEX_COLOR.match(normalized):
+        raise ValueError("swatch_hex must be a #RRGGBB hex color")
+    return normalized.upper()
+
+
+def derive_variant_sku(base: str, value_codes: list[str]) -> tuple[str, str]:
+    """Deterministic SKU for a generated combination: BASE-CODE1-CODE2 (sorted).
+
+    Sorted so the same combination always derives the same candidate SKU
+    regardless of the order values were selected in. Collisions (another
+    Variant already owns this exact SKU) are the caller's responsibility to
+    detect and disambiguate -- this function is pure and does not touch the
+    database.
+    """
+    suffix = "-".join(sorted(code.strip().upper() for code in value_codes))
+    candidate = f"{base.strip().upper()}-{suffix}" if suffix else base.strip().upper()
+    return normalize_sku(candidate)
+
+
+def combination_fingerprint(pairs: list[tuple[UUID, UUID]]) -> str | None:
+    """SHA-256 over `option_id:value_id` pairs sorted by option_id, `|`-joined.
+
+    Never fed names, slugs, or positions -- only stable UUIDs. Returns None
+    (not the hash of an empty string) when there are no pairs, so a simple
+    product without Options never collides with another one at the unique
+    index level (NULL is excluded from the partial unique index by design).
+    """
+    if not pairs:
+        return None
+    ordered = sorted(pairs, key=lambda pair: str(pair[0]))
+    canonical = "|".join(f"{option_id}:{value_id}" for option_id, value_id in ordered)
+    return hashlib.sha256(canonical.encode()).hexdigest()

@@ -9,15 +9,21 @@ from app.modules.catalog.infrastructure.models import (
     BrandModel,
     CategoryClosureModel,
     CategoryModel,
+    OptionModel,
+    OptionTranslationModel,
+    OptionValueModel,
+    OptionValueTranslationModel,
     ProductCategoryModel,
     ProductIdentifierModel,
     ProductModel,
+    ProductOptionModel,
     ProductSeoModel,
     ProductStoreModel,
     ProductTranslationModel,
     ProductTypeModel,
     ProductVariantModel,
     TaxonomyModel,
+    VariantOptionValueModel,
 )
 from app.modules.platform.contracts.events import EventEnvelope
 from app.modules.platform.infrastructure.models import (
@@ -32,6 +38,7 @@ RESOURCE_MODELS: dict[str, Any] = {
     "product_type": ProductTypeModel,
     "brand": BrandModel,
     "taxonomy": TaxonomyModel,
+    "option": OptionModel,
 }
 
 
@@ -503,6 +510,242 @@ class SqlAlchemyCatalogRepository:
     ) -> ProductStoreModel:
         row = ProductStoreModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
         self.session.add(row)
+        return row
+
+    # --- M3.1 Options and Variant Combinations ---
+    async def get_option(self, tenant_id: UUID, resource_id: UUID, *, lock: bool = False) -> OptionModel | None:
+        return await self._get(OptionModel, tenant_id, resource_id, lock)
+
+    async def get_option_by_code(self, tenant_id: UUID, code: str) -> OptionModel | None:
+        return await self.session.scalar(
+            select(OptionModel).where(OptionModel.tenant_id == tenant_id, OptionModel.code == code)
+        )
+
+    async def get_option_value(self, tenant_id: UUID, resource_id: UUID, *, lock: bool = False) -> OptionValueModel | None:
+        return await self._get(OptionValueModel, tenant_id, resource_id, lock)
+
+    async def list_option_values(self, tenant_id: UUID, option_id: UUID) -> list[OptionValueModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(OptionValueModel).where(
+                        OptionValueModel.tenant_id == tenant_id, OptionValueModel.option_id == option_id
+                    ).order_by(OptionValueModel.position, OptionValueModel.id)
+                )
+            ).all()
+        )
+
+    async def count_option_values(self, tenant_id: UUID, option_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count()).select_from(OptionValueModel).where(
+                    OptionValueModel.tenant_id == tenant_id,
+                    OptionValueModel.option_id == option_id,
+                    OptionValueModel.status != "archived",
+                )
+            )
+            or 0
+        )
+
+    async def create_option(self, tenant_id: UUID, actor_id: UUID, data: dict[str, Any]) -> OptionModel:
+        row = OptionModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
+        self.session.add(row)
+        return row
+
+    async def create_option_value(self, tenant_id: UUID, actor_id: UUID, data: dict[str, Any]) -> OptionValueModel:
+        row = OptionValueModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
+        self.session.add(row)
+        return row
+
+    async def get_product_option(
+        self, tenant_id: UUID, product_id: UUID, option_id: UUID, *, lock: bool = False
+    ) -> ProductOptionModel | None:
+        statement = select(ProductOptionModel).where(
+            ProductOptionModel.tenant_id == tenant_id,
+            ProductOptionModel.product_id == product_id,
+            ProductOptionModel.option_id == option_id,
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
+    async def list_product_options(self, tenant_id: UUID, product_id: UUID) -> list[ProductOptionModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(ProductOptionModel).where(
+                        ProductOptionModel.tenant_id == tenant_id,
+                        ProductOptionModel.product_id == product_id,
+                    ).order_by(ProductOptionModel.position, ProductOptionModel.option_id)
+                )
+            ).all()
+        )
+
+    async def count_product_options(self, tenant_id: UUID, product_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count()).select_from(ProductOptionModel).where(
+                    ProductOptionModel.tenant_id == tenant_id, ProductOptionModel.product_id == product_id
+                )
+            )
+            or 0
+        )
+
+    async def replace_product_options(
+        self, tenant_id: UUID, product_id: UUID, assignments: list[dict[str, Any]]
+    ) -> None:
+        await self.session.execute(
+            delete(ProductOptionModel).where(
+                ProductOptionModel.tenant_id == tenant_id, ProductOptionModel.product_id == product_id
+            )
+        )
+        self.session.add_all(
+            [ProductOptionModel(tenant_id=tenant_id, product_id=product_id, **item) for item in assignments]
+        )
+
+    async def count_active_variants_using_option(self, tenant_id: UUID, product_id: UUID, option_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(func.distinct(VariantOptionValueModel.variant_id)))
+                .select_from(VariantOptionValueModel)
+                .join(
+                    ProductVariantModel,
+                    (ProductVariantModel.tenant_id == VariantOptionValueModel.tenant_id)
+                    & (ProductVariantModel.id == VariantOptionValueModel.variant_id),
+                )
+                .where(
+                    VariantOptionValueModel.tenant_id == tenant_id,
+                    VariantOptionValueModel.product_id == product_id,
+                    VariantOptionValueModel.option_id == option_id,
+                    ProductVariantModel.status == "active",
+                )
+            )
+            or 0
+        )
+
+    async def count_variant_combinations(self, tenant_id: UUID, product_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count()).select_from(ProductVariantModel).where(
+                    ProductVariantModel.tenant_id == tenant_id,
+                    ProductVariantModel.product_id == product_id,
+                    ProductVariantModel.archived_at.is_(None),
+                    ProductVariantModel.combination_fingerprint.is_not(None),
+                )
+            )
+            or 0
+        )
+
+    async def get_variant_by_fingerprint(
+        self, tenant_id: UUID, product_id: UUID, fingerprint: str
+    ) -> ProductVariantModel | None:
+        return await self.session.scalar(
+            select(ProductVariantModel).where(
+                ProductVariantModel.tenant_id == tenant_id,
+                ProductVariantModel.product_id == product_id,
+                ProductVariantModel.combination_fingerprint == fingerprint,
+                ProductVariantModel.archived_at.is_(None),
+            )
+        )
+
+    async def list_variant_option_values(self, tenant_id: UUID, variant_id: UUID) -> list[VariantOptionValueModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(VariantOptionValueModel).where(
+                        VariantOptionValueModel.tenant_id == tenant_id,
+                        VariantOptionValueModel.variant_id == variant_id,
+                    )
+                )
+            ).all()
+        )
+
+    async def replace_variant_option_values(
+        self, tenant_id: UUID, variant_id: UUID, product_id: UUID, pairs: list[dict[str, Any]]
+    ) -> None:
+        await self.session.execute(
+            delete(VariantOptionValueModel).where(
+                VariantOptionValueModel.tenant_id == tenant_id, VariantOptionValueModel.variant_id == variant_id
+            )
+        )
+        self.session.add_all(
+            [
+                VariantOptionValueModel(tenant_id=tenant_id, variant_id=variant_id, product_id=product_id, **item)
+                for item in pairs
+            ]
+        )
+
+    async def set_variant_fingerprint(self, tenant_id: UUID, variant_id: UUID, fingerprint: str | None) -> None:
+        variant = await self.session.scalar(
+            select(ProductVariantModel).where(
+                ProductVariantModel.tenant_id == tenant_id, ProductVariantModel.id == variant_id
+            ).with_for_update()
+        )
+        if variant is not None:
+            variant.combination_fingerprint = fingerprint
+
+    async def list_option_translations(self, tenant_id: UUID, option_id: UUID) -> list[OptionTranslationModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(OptionTranslationModel).where(
+                        OptionTranslationModel.tenant_id == tenant_id,
+                        OptionTranslationModel.option_id == option_id,
+                    ).order_by(OptionTranslationModel.locale)
+                )
+            ).all()
+        )
+
+    async def upsert_option_translation(
+        self, tenant_id: UUID, option_id: UUID, locale: str, data: dict[str, Any]
+    ) -> OptionTranslationModel:
+        row = await self.session.scalar(
+            select(OptionTranslationModel).where(
+                OptionTranslationModel.tenant_id == tenant_id,
+                OptionTranslationModel.option_id == option_id,
+                OptionTranslationModel.locale == locale,
+            ).with_for_update()
+        )
+        if row is None:
+            row = OptionTranslationModel(tenant_id=tenant_id, option_id=option_id, locale=locale, **data)
+            self.session.add(row)
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+        return row
+
+    async def list_option_value_translations(
+        self, tenant_id: UUID, option_value_id: UUID
+    ) -> list[OptionValueTranslationModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(OptionValueTranslationModel).where(
+                        OptionValueTranslationModel.tenant_id == tenant_id,
+                        OptionValueTranslationModel.option_value_id == option_value_id,
+                    ).order_by(OptionValueTranslationModel.locale)
+                )
+            ).all()
+        )
+
+    async def upsert_option_value_translation(
+        self, tenant_id: UUID, option_value_id: UUID, locale: str, data: dict[str, Any]
+    ) -> OptionValueTranslationModel:
+        row = await self.session.scalar(
+            select(OptionValueTranslationModel).where(
+                OptionValueTranslationModel.tenant_id == tenant_id,
+                OptionValueTranslationModel.option_value_id == option_value_id,
+                OptionValueTranslationModel.locale == locale,
+            ).with_for_update()
+        )
+        if row is None:
+            row = OptionValueTranslationModel(
+                tenant_id=tenant_id, option_value_id=option_value_id, locale=locale, **data
+            )
+            self.session.add(row)
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
         return row
 
     async def add_event(self, envelope: EventEnvelope) -> None:
