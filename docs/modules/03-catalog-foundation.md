@@ -224,12 +224,18 @@ GitHub-hosted validó el commit de cierre de M3.0 (ver cabecera de este document
 
 ## 13. Trabajo pendiente
 
-- M3.1: Product–Variant avanzado según replanificación, sin duplicar el vertical ya entregado.
-- M3.2: Options y Attributes.
-- M3.3: Collections, Tags y clasificación restante.
-- M3.4: localización y SEO avanzados.
-- M3.5: assignments Channel/Market y elegibilidad target-based.
-- M3.6: Metafields y media, condicionado a Assets.
-- M3.7: hardening, rendimiento a escala, runbooks y gate hosted de cierre.
+**Numeración oficial reconciliada el 2026-07-16** (fuente de verdad:
+`docs/modules/03-catalog-core-plan.md` sección 20):
 
-Ninguno de esos incrementos está implementado ni autorizado por esta entrega. El Módulo 3 no está cerrado.
+- M3.1: Options y Variant Combinations — diseño completo en `docs/modules/03-1-catalog-options-plan.md`.
+- M3.2: Attributes / Features descriptivos.
+- M3.3: Collections y Tags.
+- M3.4: Localization y SEO avanzado.
+- M3.5: Assets y Media Associations.
+- M3.6: Channel y Market Eligibility.
+- M3.7: Metafields y Extensibilidad.
+- M3.8: Search Projections y Catalog Hardening.
+- M3.9: Catalog Administration, Imports y Bulk Actions.
+
+Ninguno de esos incrementos está implementado ni autorizado. M3.1 tiene diseño aprobado a nivel
+funcional/técnico, pendiente de implementación. El Módulo 3 permanece EN PROGRESO.

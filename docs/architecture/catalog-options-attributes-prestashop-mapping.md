@@ -4,6 +4,20 @@
 > `CLAUDE.md` — análisis de PrestaShop, análisis de otras plataformas, tabla de comparación,
 > diseño Nexus, y **espera de aprobación explícita antes de escribir código**. Ningún incremento
 > posterior a M3.0 está autorizado todavía.
+>
+> **Consolidación (2026-07-16)**: este documento sigue siendo la fuente de la investigación
+> comparativa (secciones 2–3, PrestaShop/VTEX/Shopify/BigCommerce/Adobe Commerce) y de la
+> separación conceptual Options/Attributes (sección 1). Las decisiones de dominio de M3.1
+> (ownership, unicidad, archivado, traducciones, variant default) y el diseño técnico de
+> combinaciones (fingerprint, explosión combinatoria, modelo de datos, RLS, concurrencia) se
+> movieron y ampliaron a documentos dedicados, para no duplicar contenido a medida que crecen:
+> [catalog-options-domain.md](catalog-options-domain.md) y
+> [catalog-option-combinations.md](catalog-option-combinations.md). El plan de incremento
+> (entitlements, eventos, API, UX, roadmap) vive en
+> [docs/modules/03-1-catalog-options-plan.md](../modules/03-1-catalog-options-plan.md). La sección
+> 4 de este documento (diseño Nexus original) queda como registro histórico de la primera pasada
+> de diseño — donde los documentos nuevos amplían o corrigen un punto, los nuevos documentos son la
+> versión vigente.
 
 ## 0. Estado real de M3.0 (verificado contra GitHub, no contra el README)
 
@@ -396,10 +410,10 @@ criterio ya usado en M3.0 y explícitamente pedido por el usuario para el finger
   (personalización del comprador en el momento de compra, sin SKU propio) que no encaja ni en
   Options ni en Attributes/Features tal como el usuario los definió. No se mezcla en M3.1/M3.2; si
   se quiere, es un módulo propio a analizar con el mismo proceso de `CLAUDE.md` cuando corresponda.
-- La numeración M3.1=Options / M3.2=Attributes diverge de la tabla ya publicada en
-  `docs/modules/03-catalog-foundation.md` sección 13 (que tenía M3.1=Product-Variant avanzado,
-  M3.2=Options+Attributes combinados). Hay que reconciliar esa tabla cuando se autorice el primer
-  incremento posterior a M3.0, para no dejar dos fuentes de verdad contradictorias.
+- **Resuelto (2026-07-16)**: la numeración M3.1=Options / M3.2=Attributes quedó reconciliada
+  formalmente como numeración oficial del Módulo 3 (`docs/modules/03-catalog-core-plan.md`
+  sección 20, replicada en `docs/modules/03-catalog-foundation.md` §13 y
+  `docs/architecture/MASTER_ARCHITECTURE.md` §29). Ya no hay dos fuentes de verdad contradictorias.
 - Traducción vía tabla satélite (Options y Attributes) agrega un JOIN a cualquier lectura que
   necesite el nombre localizado — mismo costo ya aceptado para Product; el listado administrativo
   de M3.0 tuvo que protegerse explícitamente contra N+1 (sección 9 de ese doc), la misma disciplina
