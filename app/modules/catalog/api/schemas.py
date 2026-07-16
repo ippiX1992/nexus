@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -116,6 +116,7 @@ class ProductPage(BaseModel):
 
 class VariantCreate(BaseModel):
     sku: str = Field(min_length=1, max_length=160)
+    option_value_ids: list[UUID] | None = Field(default=None, max_length=20)
 
 
 class VariantUpdate(BaseModel):
@@ -129,6 +130,7 @@ class VariantResponse(CatalogSchema):
     sku: str
     is_default: bool
     status: str
+    combination_fingerprint: str | None = None
     version: int
     created_at: datetime
     updated_at: datetime
@@ -307,3 +309,128 @@ class ProductDetail(BaseModel):
 class CatalogUsageResponse(BaseModel):
     products: int
     product_limit: int
+
+
+class OptionCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    input_type: Literal["select", "swatch"] = "select"
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class OptionUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    input_type: Literal["select", "swatch"] | None = None
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class OptionResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    input_type: str
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class OptionPage(BaseModel):
+    items: list[OptionResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class OptionTranslationPut(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+class OptionTranslationResponse(CatalogSchema):
+    id: UUID
+    option_id: UUID
+    locale: str
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class OptionValueCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    value: str = Field(min_length=1, max_length=200)
+    swatch_hex: str | None = Field(default=None, min_length=7, max_length=7)
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class OptionValueUpdate(BaseModel):
+    value: str | None = Field(default=None, min_length=1, max_length=200)
+    swatch_hex: str | None = Field(default=None, min_length=7, max_length=7)
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class OptionValueResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    option_id: UUID
+    code: str
+    value: str
+    swatch_hex: str | None
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class OptionValueTranslationPut(BaseModel):
+    value: str = Field(min_length=1, max_length=200)
+
+
+class OptionValueTranslationResponse(CatalogSchema):
+    id: UUID
+    option_value_id: UUID
+    locale: str
+    value: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductOptionInput(BaseModel):
+    option_id: UUID
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class ProductOptionsPut(BaseModel):
+    options: list[ProductOptionInput] = Field(max_length=50)
+
+
+class ProductOptionResponse(CatalogSchema):
+    tenant_id: UUID
+    product_id: UUID
+    option_id: UUID
+    required: bool
+    position: int
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class VariantGenerationPreviewResponse(BaseModel):
+    options_considered: list[dict[str, Any]]
+    theoretical_total: int
+    existing_combinations: int
+    new_combinations: int
+    duplicate_combinations: int
+    tenant_limit: int
+    remaining_capacity: int
+    warnings: list[str]
+    estimated_work: int
+
+
+class VariantGenerationAccepted(BaseModel):
+    operation_id: UUID
+    status: str

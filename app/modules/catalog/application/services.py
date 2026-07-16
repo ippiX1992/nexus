@@ -8,23 +8,29 @@ from app.modules.catalog.contracts.repositories import CatalogRepository
 from app.modules.catalog.domain.policies import (
     CatalogConflict,
     CatalogNotFound,
+    CatalogOptionsQuotaExceeded,
     CatalogPolicyError,
     CatalogQuotaExceeded,
     CatalogVersionConflict,
     CategoryCycle,
+    ensure_combination_complete,
     ensure_expected_version,
+    ensure_options_quota,
     ensure_product_activation,
     ensure_product_mutable,
+    ensure_product_option_retirable,
     ensure_quota,
     ensure_reference_active,
     ensure_store_assignment,
     ensure_variant_archive,
 )
 from app.modules.catalog.domain.values import (
+    combination_fingerprint,
     normalize_identifier,
     normalize_locale,
     normalize_sku,
     normalize_slug,
+    normalize_swatch_hex,
     normalized_code,
 )
 from app.modules.platform.contracts.events import EventActor, EventEnvelope
@@ -104,6 +110,20 @@ class CatalogService:
         try:
             ensure_quota(key, current, limit)
         except CatalogQuotaExceeded:
+            await self._audit(
+                "catalog.quota_exceeded",
+                "denied",
+                resource,
+                {"entitlement": key, "current": current, "limit": limit},
+            )
+            raise
+
+    async def _options_quota(self, key: str, current: int, limit: int, resource: UUID | None = None) -> None:
+        """Same as _quota but for the M3.1 entitlements, which map to 409 -- see
+        CatalogOptionsQuotaExceeded."""
+        try:
+            ensure_options_quota(key, current, limit)
+        except CatalogOptionsQuotaExceeded:
             await self._audit(
                 "catalog.quota_exceeded",
                 "denied",
@@ -437,6 +457,9 @@ class CatalogService:
                 {"variant_id": str(row.id), "sku": row.sku, "is_default": False, "status": row.status},
             )
         )
+        option_value_ids = data.get("option_value_ids")
+        if option_value_ids:
+            await self._apply_combination(row, product, option_value_ids)
         await self._audit("catalog.variant_created", "success", row.id, {"product_id": str(product.id)})
         return row
 
@@ -963,3 +986,385 @@ class CatalogService:
                 {"store_id": str(store_id)},
             )
         return row
+
+    # --- M3.1 Options ---
+
+    async def create_option(self, data: dict[str, Any]) -> Any:
+        row = await self.repository.create_option(
+            self.actor.tenant_id,
+            self.actor.user_id,
+            {
+                "code": normalized_code(data["code"]),
+                "name": data["name"].strip(),
+                "input_type": data.get("input_type", "select"),
+                "position": data.get("position", 0),
+                "status": "active",
+            },
+        )
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.option.created.v1",
+                "catalog.option",
+                row.id,
+                row.version,
+                {"code": row.code, "name": row.name, "input_type": row.input_type},
+            )
+        )
+        await self._audit("catalog.option_created", "success", row.id)
+        return row
+
+    async def update_option(self, resource_id: UUID, expected: int, data: dict[str, Any]) -> Any:
+        row = await self.repository.get_option(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("option", resource_id)
+        await self._version("option", row, expected)
+        ensure_reference_active(row.status, "Option")
+        changed: list[str] = []
+        for field in ("name", "input_type", "position"):
+            if field in data and data[field] is not None:
+                value = data[field].strip() if isinstance(data[field], str) else data[field]
+                if getattr(row, field) != value:
+                    setattr(row, field, value)
+                    changed.append(field)
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        await self.repository.add_event(
+            self._event("catalog.option.updated.v1", "catalog.option", row.id, row.version, {"changed_fields": changed})
+        )
+        await self._audit("catalog.option_updated", "success", row.id, {"changed_fields": changed})
+        return row
+
+    async def archive_option(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_option(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("option", resource_id)
+        await self._version("option", row, expected)
+        if row.status != "archived":
+            row.status = "archived"
+            row.archived_at = datetime.now(UTC)
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event("catalog.option.archived.v1", "catalog.option", row.id, row.version, {"status": row.status})
+            )
+            await self._audit("catalog.option_archived", "success", row.id)
+        return row
+
+    async def upsert_option_translation(self, option_id: UUID, locale_value: str, data: dict[str, Any]) -> Any:
+        option = await self.repository.get_option(self.actor.tenant_id, option_id, lock=True)
+        if option is None:
+            await self._missing("option", option_id)
+        ensure_reference_active(option.status, "Option")
+        locale = normalize_locale(locale_value)
+        row = await self.repository.upsert_option_translation(
+            self.actor.tenant_id, option.id, locale, {"name": data["name"].strip()}
+        )
+        option.updated_by = self.actor.user_id
+        option.version += 1
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.option.updated.v1", "catalog.option", option.id, option.version,
+                {"changed_fields": ["translations"], "locales": [locale]},
+            )
+        )
+        await self._audit("catalog.option_translation_updated", "success", option.id, {"locale": locale})
+        return row
+
+    async def create_option_value(self, option_id: UUID, data: dict[str, Any]) -> Any:
+        option = await self.repository.get_option(self.actor.tenant_id, option_id, lock=True)
+        if option is None:
+            await self._missing("option", option_id)
+        ensure_reference_active(option.status, "Option")
+        limit = await self.repository.entitlement_limit(self.actor.tenant_id, "catalog.option_values.max_per_option")
+        current = await self.repository.count_option_values(self.actor.tenant_id, option.id)
+        await self._options_quota("catalog.option_values.max_per_option", current, limit, option.id)
+        row = await self.repository.create_option_value(
+            self.actor.tenant_id,
+            self.actor.user_id,
+            {
+                "option_id": option.id,
+                "code": normalized_code(data["code"]),
+                "value": data["value"].strip(),
+                "swatch_hex": normalize_swatch_hex(data.get("swatch_hex")),
+                "position": data.get("position", 0),
+                "status": "active",
+            },
+        )
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.option_value.created.v1", "catalog.option", option.id, option.version,
+                {"option_value_id": str(row.id), "code": row.code, "value": row.value},
+            )
+        )
+        await self._audit("catalog.option_value_created", "success", row.id, {"option_id": str(option.id)})
+        return row
+
+    async def update_option_value(self, resource_id: UUID, expected: int, data: dict[str, Any]) -> Any:
+        row = await self.repository.get_option_value(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("option_value", resource_id)
+        await self._version("option_value", row, expected)
+        ensure_reference_active(row.status, "Option Value")
+        changed: list[str] = []
+        for field in ("value", "position"):
+            if field in data and data[field] is not None:
+                value = data[field].strip() if isinstance(data[field], str) else data[field]
+                if getattr(row, field) != value:
+                    setattr(row, field, value)
+                    changed.append(field)
+        if "swatch_hex" in data:
+            value = normalize_swatch_hex(data["swatch_hex"])
+            if row.swatch_hex != value:
+                row.swatch_hex = value
+                changed.append("swatch_hex")
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        await self.repository.add_event(
+            self._event(
+                "catalog.option_value.updated.v1", "catalog.option", row.option_id, row.version,
+                {"option_value_id": str(row.id), "changed_fields": changed},
+            )
+        )
+        await self._audit("catalog.option_value_updated", "success", row.id, {"changed_fields": changed})
+        return row
+
+    async def archive_option_value(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_option_value(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("option_value", resource_id)
+        await self._version("option_value", row, expected)
+        if row.status != "archived":
+            row.status = "archived"
+            row.archived_at = datetime.now(UTC)
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event(
+                    "catalog.option_value.archived.v1", "catalog.option", row.option_id, row.version,
+                    {"option_value_id": str(row.id), "status": row.status},
+                )
+            )
+            await self._audit("catalog.option_value_archived", "success", row.id)
+        return row
+
+    async def upsert_option_value_translation(self, option_value_id: UUID, locale_value: str, data: dict[str, Any]) -> Any:
+        value = await self.repository.get_option_value(self.actor.tenant_id, option_value_id, lock=True)
+        if value is None:
+            await self._missing("option_value", option_value_id)
+        ensure_reference_active(value.status, "Option Value")
+        locale = normalize_locale(locale_value)
+        row = await self.repository.upsert_option_value_translation(
+            self.actor.tenant_id, value.id, locale, {"value": data["value"].strip()}
+        )
+        value.updated_by = self.actor.user_id
+        value.version += 1
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.option_value.updated.v1", "catalog.option", value.option_id, value.version,
+                {"option_value_id": str(value.id), "changed_fields": ["translations"], "locales": [locale]},
+            )
+        )
+        await self._audit("catalog.option_value_translation_updated", "success", value.id, {"locale": locale})
+        return row
+
+    # --- M3.1 Product Options ---
+
+    async def set_product_options(self, product_id: UUID, expected: int, options: list[dict[str, Any]]) -> list[Any]:
+        product = await self.repository.get_product(self.actor.tenant_id, product_id, lock=True)
+        if product is None:
+            await self._missing("product", product_id)
+        await self._version("product", product, expected)
+        ensure_product_mutable(product.status)
+        seen: set[UUID] = set()
+        normalized: list[dict[str, Any]] = []
+        for item in options:
+            option_id = item["option_id"]
+            if option_id in seen:
+                raise CatalogConflict("Duplicate Option in product options assignment")
+            seen.add(option_id)
+            option = await self.repository.get_option(self.actor.tenant_id, option_id)
+            if option is None:
+                await self._missing("option", option_id)
+            ensure_reference_active(option.status, "Option")
+            normalized.append({"option_id": option.id, "required": True, "position": item.get("position", 0)})
+        limit = await self.repository.entitlement_limit(self.actor.tenant_id, "catalog.product_options.max_per_product")
+        # This PUT replaces the whole set in one shot, so the check is on the final
+        # size directly rather than the "current count before adding one more" shape
+        # that ensure_quota/_quota assume for incremental creates.
+        await self._options_quota("catalog.product_options.max_per_product", len(normalized) - 1, limit, product.id)
+        existing = await self.repository.list_product_options(self.actor.tenant_id, product.id)
+        existing_ids = {row.option_id for row in existing}
+        removed_ids = existing_ids - seen
+        for option_id in removed_ids:
+            active = await self.repository.count_active_variants_using_option(self.actor.tenant_id, product.id, option_id)
+            ensure_product_option_retirable(active)
+        await self.repository.replace_product_options(self.actor.tenant_id, product.id, normalized)
+        product.updated_by = self.actor.user_id
+        product.version += 1
+        added_ids = seen - existing_ids
+        for option_id in added_ids:
+            await self.repository.add_event(
+                self._event(
+                    "catalog.product.option_attached.v1", "catalog.product", product.id, product.version,
+                    {"option_id": str(option_id)},
+                )
+            )
+        for option_id in removed_ids:
+            await self.repository.add_event(
+                self._event(
+                    "catalog.product.option_detached.v1", "catalog.product", product.id, product.version,
+                    {"option_id": str(option_id)},
+                )
+            )
+        await self._audit(
+            "catalog.product_options_changed", "success", product.id,
+            {"attached": [str(i) for i in added_ids], "detached": [str(i) for i in removed_ids]},
+        )
+        return await self.repository.list_product_options(self.actor.tenant_id, product.id)
+
+    # --- M3.1 Variant Combinations ---
+
+    async def _apply_combination(self, row: Any, product: Any, option_value_ids: list[UUID]) -> str | None:
+        """Validate and persist a Variant's combination. Caller holds locks on both rows.
+
+        Returns the new fingerprint (or None for an empty/no-Options combination).
+        Bumps row.version and product.version and emits the created/updated event --
+        the caller only needs to commit/audit around it.
+        """
+        product_options = [
+            item for item in await self.repository.list_product_options(self.actor.tenant_id, product.id)
+            if item.archived_at is None
+        ]
+        required_option_ids = frozenset(item.option_id for item in product_options)
+        pairs: list[dict[str, Any]] = []
+        fingerprint_pairs: list[tuple[UUID, UUID]] = []
+        provided_option_ids: set[UUID] = set()
+        for value_id in option_value_ids:
+            value = await self.repository.get_option_value(self.actor.tenant_id, value_id)
+            if value is None:
+                await self._missing("option_value", value_id)
+            ensure_reference_active(value.status, "Option Value")
+            if value.option_id in provided_option_ids:
+                raise CatalogConflict("Combination cannot include two values for the same Option")
+            provided_option_ids.add(value.option_id)
+            pairs.append({"option_id": value.option_id, "option_value_id": value.id})
+            fingerprint_pairs.append((value.option_id, value.id))
+        ensure_combination_complete(required_option_ids, frozenset(provided_option_ids))
+        new_fingerprint = combination_fingerprint(fingerprint_pairs)
+        is_new_combination = row.combination_fingerprint is None
+        if new_fingerprint is not None:
+            if is_new_combination:
+                limit = await self.repository.entitlement_limit(
+                    self.actor.tenant_id, "catalog.variant_combinations.max_per_product"
+                )
+                current = await self.repository.count_variant_combinations(self.actor.tenant_id, product.id)
+                await self._options_quota("catalog.variant_combinations.max_per_product", current, limit, product.id)
+            existing_owner = await self.repository.get_variant_by_fingerprint(
+                self.actor.tenant_id, product.id, new_fingerprint
+            )
+            if existing_owner is not None and existing_owner.id != row.id:
+                await self._audit(
+                    "catalog.combination_duplicate", "denied", row.id,
+                    {"product_id": str(product.id), "fingerprint": new_fingerprint},
+                )
+                raise CatalogConflict("This combination already exists for another Variant of this Product")
+        await self.repository.replace_variant_option_values(self.actor.tenant_id, row.id, product.id, pairs)
+        await self.repository.set_variant_fingerprint(self.actor.tenant_id, row.id, new_fingerprint)
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        product.updated_by = self.actor.user_id
+        product.version += 1
+        event_type = "catalog.variant.combination_created.v1" if is_new_combination else "catalog.variant.combination_updated.v1"
+        await self.repository.add_event(
+            self._event(
+                event_type, "catalog.product", product.id, product.version,
+                {"variant_id": str(row.id), "fingerprint": new_fingerprint},
+            )
+        )
+        return new_fingerprint
+
+    async def set_variant_combination(self, variant_id: UUID, expected: int, option_value_ids: list[UUID]) -> Any:
+        variant = await self.repository.get_variant(self.actor.tenant_id, variant_id)
+        if variant is None:
+            await self._missing("variant", variant_id)
+        product = await self.repository.get_product(self.actor.tenant_id, variant.product_id, lock=True)
+        if product is None:
+            await self._missing("product", variant.product_id)
+        row = await self.repository.get_variant(self.actor.tenant_id, variant_id, lock=True)
+        if row is None:
+            await self._missing("variant", variant_id)
+        await self._version("variant", row, expected)
+        ensure_product_mutable(product.status)
+        if row.status == "archived":
+            raise CatalogPolicyError("Archived variants cannot be updated")
+        fingerprint = await self._apply_combination(row, product, option_value_ids)
+        await self._audit(
+            "catalog.variant_combination_set", "success", row.id,
+            {"product_id": str(product.id), "fingerprint": fingerprint},
+        )
+        return row
+
+    async def preview_variant_generation(self, product_id: UUID) -> dict[str, Any]:
+        """Read-only: never writes, never runs inside the durable generation Job.
+
+        Returns the ten fields required by the M3.1 design
+        (docs/architecture/catalog-option-combinations.md section 2): options
+        considered, per-Option Value counts, theoretical total, existing/new/
+        duplicate combinations, tenant limit, remaining capacity, warnings and
+        estimated work. `duplicate_combinations` is always 0 in this
+        increment -- generation always targets "everything missing from the
+        full cartesian", there is no per-combination candidate selection UI
+        yet that could produce duplicates within a single request.
+        """
+        product = await self.repository.get_product(self.actor.tenant_id, product_id)
+        if product is None:
+            await self._missing("product", product_id)
+        product_options = [
+            item for item in await self.repository.list_product_options(self.actor.tenant_id, product.id)
+            if item.archived_at is None
+        ]
+        if not product_options:
+            raise CatalogPolicyError("Product has no active Options to generate combinations from")
+        options_considered: list[dict[str, Any]] = []
+        theoretical_total = 1
+        warnings: list[str] = []
+        for po in product_options:
+            option = await self.repository.get_option(self.actor.tenant_id, po.option_id)
+            count = await self.repository.count_option_values(self.actor.tenant_id, po.option_id)
+            options_considered.append(
+                {"option_id": str(po.option_id), "code": option.code if option else None, "value_count": count}
+            )
+            if count == 0:
+                warnings.append(f"Option {option.code if option else po.option_id} has no active Values")
+            theoretical_total *= count
+        existing_combinations = await self.repository.count_variant_combinations(self.actor.tenant_id, product.id)
+        new_combinations = max(theoretical_total - existing_combinations, 0)
+        tenant_limit = await self.repository.entitlement_limit(
+            self.actor.tenant_id, "catalog.variant_combinations.max_per_product"
+        )
+        remaining_capacity = max(tenant_limit - existing_combinations, 0)
+        operation_limit = await self.repository.entitlement_limit(
+            self.actor.tenant_id, "catalog.combination_generation.max_per_operation"
+        )
+        estimated_work = new_combinations
+        if estimated_work > operation_limit:
+            warnings.append(
+                f"Estimated work ({estimated_work}) exceeds catalog.combination_generation.max_per_operation ({operation_limit})"
+            )
+        if estimated_work > remaining_capacity:
+            warnings.append(f"Estimated work ({estimated_work}) exceeds remaining capacity ({remaining_capacity})")
+        return {
+            "options_considered": options_considered,
+            "theoretical_total": theoretical_total,
+            "existing_combinations": existing_combinations,
+            "new_combinations": new_combinations,
+            "duplicate_combinations": 0,
+            "tenant_limit": tenant_limit,
+            "remaining_capacity": remaining_capacity,
+            "warnings": warnings,
+            "estimated_work": estimated_work,
+        }

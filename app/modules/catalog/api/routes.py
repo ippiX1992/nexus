@@ -23,10 +23,23 @@ from app.modules.catalog.api.schemas import (
     CategoryUpdate,
     IdentifierCreate,
     IdentifierResponse,
+    OptionCreate,
+    OptionPage,
+    OptionResponse,
+    OptionTranslationPut,
+    OptionTranslationResponse,
+    OptionUpdate,
+    OptionValueCreate,
+    OptionValueResponse,
+    OptionValueTranslationPut,
+    OptionValueTranslationResponse,
+    OptionValueUpdate,
     ProductCategoriesPut,
     ProductCategoryResponse,
     ProductCreate,
     ProductDetail,
+    ProductOptionResponse,
+    ProductOptionsPut,
     ProductPage,
     ProductResponse,
     ProductSeoPut,
@@ -45,18 +58,24 @@ from app.modules.catalog.api.schemas import (
     TaxonomyPage,
     TaxonomyResponse,
     VariantCreate,
+    VariantGenerationAccepted,
+    VariantGenerationPreviewResponse,
     VariantPage,
     VariantResponse,
     VariantUpdate,
 )
+from app.modules.catalog.application.generation import create_generation_operation
 from app.modules.catalog.application.services import CatalogActor, CatalogService
 from app.modules.catalog.domain.policies import (
     CatalogConflict,
     CatalogNotFound,
+    CatalogOptionsQuotaExceeded,
     CatalogPolicyError,
     CatalogQuotaExceeded,
     CatalogVersionConflict,
     CategoryCycle,
+    ensure_generation_within_limits,
+    ensure_product_mutable,
 )
 from app.modules.catalog.domain.values import decode_cursor, encode_cursor
 from app.modules.catalog.infrastructure.repositories import SqlAlchemyCatalogRepository
@@ -113,6 +132,11 @@ def _next_cursor(rows: list[Any], has_more: bool) -> str | None:
 def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, CatalogNotFound):
         return HTTPException(404, str(exc))
+    if isinstance(exc, CatalogOptionsQuotaExceeded):
+        # M3.1 convention: quota errors are 409, never 429 (reserved for transport
+        # rate limiting) -- checked before the generic CatalogQuotaExceeded branch,
+        # which M3.0's own entitlements still use and are tested against as 429.
+        return HTTPException(409, str(exc))
     if isinstance(exc, CatalogQuotaExceeded):
         return HTTPException(429, str(exc))
     if isinstance(exc, (CatalogVersionConflict, CatalogConflict, IdempotencyConflict)):
@@ -557,6 +581,12 @@ async def create_variant(
     try:
         row = await service.create_variant(product_id, payload.model_dump())
         await db.flush()
+        if payload.option_value_ids:
+            # Assigning a combination emits an extra UPDATE on this same row
+            # (combination_fingerprint), which expires onupdate columns like
+            # updated_at -- refresh before validating, same as _finish_mutation
+            # already does for PATCH/archive endpoints.
+            await db.refresh(row)
         response = VariantResponse.model_validate(row)
     except (CatalogPolicyError, IntegrityError, ValueError) as exc:
         await _creation_failure(db, record, exc)
@@ -953,3 +983,286 @@ async def catalog_usage(
         products=await repository.count_products(ctx.tenant_id),
         product_limit=await repository.entitlement_limit(ctx.tenant_id, "catalog.products.max"),
     )
+
+
+# --- M3.1 Options and Variant Combinations ---
+
+
+@router.get("/options", response_model=OptionPage)
+async def list_options(
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    cursor: str | None = None,
+    status: str | None = None,
+) -> OptionPage:
+    rows, has_more = await SqlAlchemyCatalogRepository(db).list_resources(
+        "option", ctx.tenant_id, limit=limit, cursor=_cursor(cursor), status=status
+    )
+    return OptionPage(
+        items=[OptionResponse.model_validate(row) for row in rows],
+        next_cursor=_next_cursor(rows, has_more),
+        has_more=has_more,
+    )
+
+
+@router.post("/options", response_model=OptionResponse, status_code=201)
+async def create_option(
+    payload: OptionCreate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    record = await _begin_create(db, ctx, idempotency_key, "POST", "/api/v1/catalog/options", payload.model_dump(mode="json"))
+    if isinstance(record, JSONResponse):
+        return record
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.create_option(payload.model_dump())
+        await db.flush()
+        response = OptionResponse.model_validate(row)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response)
+
+
+@router.get("/options/{resource_id}", response_model=OptionResponse)
+async def get_option(
+    resource_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> OptionResponse:
+    row = await SqlAlchemyCatalogRepository(db).get_option(ctx.tenant_id, resource_id)
+    if row is None:
+        raise HTTPException(404, "Option not found")
+    return OptionResponse.model_validate(row)
+
+
+@router.patch("/options/{resource_id}", response_model=OptionResponse)
+async def update_option(
+    resource_id: UUID,
+    payload: OptionUpdate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> OptionResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.update_option(resource_id, _expected_version(if_match), payload.model_dump(exclude_unset=True))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, OptionResponse)
+
+
+@router.post("/options/{resource_id}/archive", response_model=OptionResponse)
+async def archive_option(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> OptionResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.archive_option(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, OptionResponse)
+
+
+@router.put("/options/{resource_id}/translations/{locale}", response_model=OptionTranslationResponse)
+async def upsert_option_translation(
+    resource_id: UUID,
+    locale: str,
+    payload: OptionTranslationPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> OptionTranslationResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.upsert_option_translation(resource_id, locale, payload.model_dump())
+        await db.commit()
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return OptionTranslationResponse.model_validate(row)
+
+
+@router.get("/options/{resource_id}/values", response_model=list[OptionValueResponse])
+async def list_option_values(
+    resource_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option_value.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[OptionValueResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_option(ctx.tenant_id, resource_id) is None:
+        raise HTTPException(404, "Option not found")
+    return [OptionValueResponse.model_validate(row) for row in await repository.list_option_values(ctx.tenant_id, resource_id)]
+
+
+@router.post("/options/{resource_id}/values", response_model=OptionValueResponse, status_code=201)
+async def create_option_value(
+    resource_id: UUID,
+    payload: OptionValueCreate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option_value.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    endpoint = f"/api/v1/catalog/options/{resource_id}/values"
+    record = await _begin_create(db, ctx, idempotency_key, "POST", endpoint, payload.model_dump(mode="json"))
+    if isinstance(record, JSONResponse):
+        return record
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.create_option_value(resource_id, payload.model_dump())
+        await db.flush()
+        response = OptionValueResponse.model_validate(row)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response)
+
+
+@router.patch("/option-values/{resource_id}", response_model=OptionValueResponse)
+async def update_option_value(
+    resource_id: UUID,
+    payload: OptionValueUpdate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option_value.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> OptionValueResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.update_option_value(
+            resource_id, _expected_version(if_match), payload.model_dump(exclude_unset=True)
+        )
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, OptionValueResponse)
+
+
+@router.post("/option-values/{resource_id}/archive", response_model=OptionValueResponse)
+async def archive_option_value(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option_value.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> OptionValueResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.archive_option_value(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, OptionValueResponse)
+
+
+@router.put("/option-values/{resource_id}/translations/{locale}", response_model=OptionValueTranslationResponse)
+async def upsert_option_value_translation(
+    resource_id: UUID,
+    locale: str,
+    payload: OptionValueTranslationPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.option_value.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> OptionValueTranslationResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.upsert_option_value_translation(resource_id, locale, payload.model_dump())
+        await db.commit()
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return OptionValueTranslationResponse.model_validate(row)
+
+
+@router.get("/products/{product_id}/options", response_model=list[ProductOptionResponse])
+async def list_product_options(
+    product_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_option.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[ProductOptionResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_product(ctx.tenant_id, product_id) is None:
+        raise HTTPException(404, "Product not found")
+    return [
+        ProductOptionResponse.model_validate(row)
+        for row in await repository.list_product_options(ctx.tenant_id, product_id)
+    ]
+
+
+@router.put("/products/{product_id}/options", response_model=list[ProductOptionResponse])
+async def set_product_options(
+    product_id: UUID,
+    payload: ProductOptionsPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_option.manage"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> list[ProductOptionResponse]:
+    service, _ = _service(request, ctx, db)
+    try:
+        rows = await service.set_product_options(
+            product_id, _expected_version(if_match), [item.model_dump() for item in payload.options]
+        )
+        await db.commit()
+    except (CatalogPolicyError, IntegrityError) as exc:
+        await _mutation_failure(db, exc)
+    return [ProductOptionResponse.model_validate(row) for row in rows]
+
+
+@router.post("/products/{product_id}/variant-generation/preview", response_model=VariantGenerationPreviewResponse)
+async def preview_variant_generation(
+    product_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.variant_combination.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    request: Request,
+) -> VariantGenerationPreviewResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        preview = await service.preview_variant_generation(product_id)
+    except CatalogPolicyError as exc:
+        raise _http_error(exc) from exc
+    return VariantGenerationPreviewResponse(**preview)
+
+
+@router.post("/products/{product_id}/variant-generation", response_model=VariantGenerationAccepted, status_code=202)
+async def request_variant_generation(
+    product_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.variant_combination.generate"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    endpoint = f"/api/v1/catalog/products/{product_id}/variant-generation"
+    record = await _begin_create(db, ctx, idempotency_key, "POST", endpoint, {"if_match": if_match})
+    if isinstance(record, JSONResponse):
+        return record
+    service, repository = _service(request, ctx, db)
+    try:
+        product = await repository.get_product(ctx.tenant_id, product_id, lock=True)
+        if product is None:
+            await service._missing("product", product_id)  # noqa: SLF001
+        await service._version("product", product, _expected_version(if_match))  # noqa: SLF001
+        ensure_product_mutable(product.status)
+        preview = await service.preview_variant_generation(product_id)
+        per_operation_limit = await repository.entitlement_limit(
+            ctx.tenant_id, "catalog.combination_generation.max_per_operation"
+        )
+        ensure_generation_within_limits(preview["estimated_work"], per_operation_limit, preview["remaining_capacity"])
+        operation = await create_generation_operation(
+            db,
+            tenant_id=ctx.tenant_id,
+            actor_id=ctx.user_id,
+            product_id=product_id,
+            correlation_id=request.state.correlation_id,
+            idempotency_key=idempotency_key,
+        )
+        await db.flush()
+        response = VariantGenerationAccepted(operation_id=operation.id, status=operation.status)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response, code=202)
