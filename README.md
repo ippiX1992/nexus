@@ -26,7 +26,7 @@ El cierre no elimina la deuda residual: permanecen dos vulnerabilidades npm mode
 
 M3.0 implementa 12 tablas con FORCE RLS, 27 paths/40 operaciones API, 18 permisos, 21 eventos outbox, idempotencia, `If-Match`, entitlements, auditoría, administración web y E2E real. Product y su Variant default se crean atómicamente; SKU e identificadores permanecen reservados tras archive; Category usa closure table y Product–Store no equivale a publicación.
 
-La evidencia local registra 71 pruebas backend aprobadas, cobertura de 80.97%, Ruff y mypy aprobados, 20 pruebas frontend aprobadas y 1 omitida, pruebas PostgreSQL/RLS/concurrencia/migraciones y 2 flujos E2E en Chromium real. El workflow ampliado se denomina `Nexus Modules 1-2 and Catalog Foundation Quality Gate`; su validación GitHub-hosted está pendiente porque esta entrega no realiza push.
+La evidencia local registra 71 pruebas backend aprobadas, cobertura de 80.97%, Ruff y mypy aprobados, 20 pruebas frontend aprobadas y 1 omitida, pruebas PostgreSQL/RLS/concurrencia/migraciones y 2 flujos E2E en Chromium real. El workflow ampliado se denomina `Nexus Modules 1-2 and Catalog Foundation Quality Gate`; la rama `feature/catalog-core` fue publicada y ese workflow quedó aprobado en GitHub-hosted. Pull Request, merge a `main` y tag final quedan pendientes.
 
 Los incrementos M3.1–M3.7 continúan pendientes. No están implementados Options, Attributes, Metafields, Collections, Tags, media, imports, Search, publicación, Pricing ni Inventory.
 

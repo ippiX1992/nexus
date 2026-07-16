@@ -25,7 +25,7 @@ Los Módulos 1 y 2 permanecen cerrados. Catalog se construirá sobre sus contrat
 
 M3.0 fue autorizado e implementado como un vertical más amplio que la estimación original de Foundation: incluye Product Type, Product/Variant, Identifier, Brand, traducción/SEO básicos, Taxonomy/Category closure y assignments Product–Category/Product–Store. La evidencia normativa está en [M3.0 — Catalog Foundation](03-catalog-foundation.md).
 
-La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. GitHub-hosted permanece pendiente al no existir push autorizado.
+La implementación mantiene 12 tablas con FORCE RLS, 18 permisos, 21 eventos y 27 paths/40 operaciones. El gate local supera 80% de cobertura e incluye PostgreSQL real, migraciones, concurrencia y Chromium real. La rama fue publicada y el quality gate GitHub-hosted quedó aprobado (4/4 jobs en verde sobre `47fad54`); Pull Request, merge a `main` y tag final permanecen pendientes.
 
 Esta ampliación consume parte del alcance originalmente atribuido a M3.1, M3.3, M3.4 y M3.5. Antes de iniciar M3.1 se debe rebaselinar su contenido para no duplicar funcionalidades; esa replanificación no está autorizada en M3.0.
 
@@ -807,7 +807,7 @@ Estimación relativa para un equipo familiarizado con el baseline. No es comprom
 
 | Incremento | Resultado vertical | Tamaño | Dependencias / gate de salida |
 |---|---|---|---|
-| M3.0 Foundation | **IMPLEMENTADO — RC local**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted pendiente |
+| M3.0 Foundation | **IMPLEMENTADO — RC publicado**: foundation + vertical Product/Variant, identifiers, Brand, Category, localización básica y Store assignment | Ejecutado | Gate local verde; GitHub-hosted verde (4/4 jobs sobre `47fad54`); PR/merge/tag final pendientes |
 | M3.1 Product–Variant | **PENDIENTE DE REBASELINE**: sólo capacidades no entregadas en M3.0 | Por estimar | Aprobación explícita de nuevo alcance; no duplicar M3.0 |
 | M3.2 Options–Attributes | Options/Values/combinations, typed attributes, schema governance | L (3–4) | Preview/quota, no combinations duplicadas |
 | M3.3 Classification | Brand, Taxonomy/Category closure, manual Collections, tags | L (2–3) | Cycle/concurrency tests y UI de árbol |
@@ -838,6 +838,12 @@ Módulo 3 no se considera cerrado hasta que:
 
 ## 22. Estado de detención
 
-M3.0 queda como Release Candidate local. El siguiente paso operativo, sólo con autorización, es publicar la rama y validar el workflow GitHub-hosted ampliado.
+Actualizado al 2026-07-15: M3.0 queda como Release Candidate **publicado**. La rama `feature/catalog-core`
+fue publicada y el workflow `Nexus Modules 1-2 and Catalog Foundation Quality Gate` quedó aprobado en
+GitHub-hosted (4/4 jobs en verde sobre `47fad54`; también sobre el tag
+`module-3-catalog-foundation-v0.1.0-rc.1`, mismo commit). El siguiente paso operativo, sólo con
+autorización explícita, es abrir el Pull Request `feature/catalog-core → main`, integrarlo y cortar el
+tag final.
 
-No se inicia M3.1, no se crea tag y no se hace push en esta entrega. El Módulo 3 permanece EN PROGRESO.
+No se inicia M3.1. No se crea tag final todavía — solo existe el RC
+`module-3-catalog-foundation-v0.1.0-rc.1`. El Módulo 3 permanece EN PROGRESO.

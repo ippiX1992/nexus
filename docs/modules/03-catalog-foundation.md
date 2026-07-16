@@ -4,7 +4,7 @@
 > Estado del incremento: **Incremento M3.0: RELEASE CANDIDATE**.
 > Rama: `feature/catalog-core`.
 > Fecha de evidencia local: `2026-07-14`.
-> GitHub-hosted: pendiente; no se realizó push por instrucción expresa.
+> GitHub-hosted: rama publicada y quality gate aprobado (workflow `Nexus Modules 1-2 and Catalog Foundation Quality Gate`, run sobre `feature/catalog-core` @ `47fad54`, 4/4 jobs en verde). Pull Request, merge a `main` y tag final quedan pendientes.
 
 ## 1. Alcance entregado
 

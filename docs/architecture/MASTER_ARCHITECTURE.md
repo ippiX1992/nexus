@@ -1312,11 +1312,11 @@ Este cierre no declara resueltos los riesgos residuales: dos vulnerabilidades np
 
 ## 29. Estado arquitectónico de M3.0 Catalog Foundation
 
-Estado permitido al 2026-07-14:
+Estado permitido al 2026-07-14, actualizado al 2026-07-15:
 
 - **Módulo 3: EN PROGRESO**;
 - **Incremento M3.0: RELEASE CANDIDATE**;
-- GitHub-hosted: pendiente por ausencia deliberada de push;
+- GitHub-hosted: rama `feature/catalog-core` publicada y quality gate aprobado (4/4 jobs en verde sobre `47fad54`). Pull Request, merge a `main` y tag final quedan pendientes;
 - M3.1–M3.7: pendientes y no autorizados.
 
 M3.0 materializa el bounded context `app/modules/catalog` con 12 tablas tenant-aware, Product/Variant default, identifiers, Brands, Taxonomy/Category closure, traducción/SEO básicos y assignments Product–Category/Product–Store. Se apoya en RBAC, RLS, idempotency, audit, entitlements y outbox existentes; Platform Kernel no adquiere dependencias hacia Catalog.
