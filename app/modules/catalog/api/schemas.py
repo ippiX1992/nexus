@@ -1,0 +1,309 @@
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class CatalogSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductTypeCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+
+
+class ProductTypeUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10_000)
+
+
+class ProductTypeResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    description: str | None
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class ProductTypePage(BaseModel):
+    items: list[ProductTypeResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class BrandCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    slug: str = Field(min_length=1, max_length=160)
+
+
+class BrandUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    slug: str | None = Field(default=None, min_length=1, max_length=160)
+
+
+class BrandResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    slug: str
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class BrandPage(BaseModel):
+    items: list[BrandResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class ProductTranslationInput(BaseModel):
+    locale: str = Field(min_length=2, max_length=35)
+    name: str = Field(min_length=1, max_length=300)
+    short_description: str | None = Field(default=None, max_length=1000)
+    long_description: str | None = Field(default=None, max_length=100_000)
+    slug: str = Field(min_length=1, max_length=200)
+
+
+class ProductCreate(BaseModel):
+    product_type_id: UUID
+    brand_id: UUID | None = None
+    code: str | None = Field(default=None, min_length=1, max_length=160)
+    sku: str = Field(min_length=1, max_length=160)
+    translation: ProductTranslationInput | None = None
+
+
+class ProductUpdate(BaseModel):
+    brand_id: UUID | None = None
+    code: str | None = Field(default=None, min_length=1, max_length=160)
+
+
+class ProductResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    product_type_id: UUID
+    brand_id: UUID | None
+    code: str | None
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class ProductSummary(ProductResponse):
+    name: str | None = None
+    default_sku: str | None = None
+
+
+class ProductPage(BaseModel):
+    items: list[ProductSummary]
+    next_cursor: str | None
+    has_more: bool
+
+
+class VariantCreate(BaseModel):
+    sku: str = Field(min_length=1, max_length=160)
+
+
+class VariantUpdate(BaseModel):
+    sku: str | None = Field(default=None, min_length=1, max_length=160)
+
+
+class VariantResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    product_id: UUID
+    sku: str
+    is_default: bool
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class VariantPage(BaseModel):
+    items: list[VariantResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class ProductTranslationPut(BaseModel):
+    name: str = Field(min_length=1, max_length=300)
+    short_description: str | None = Field(default=None, max_length=1000)
+    long_description: str | None = Field(default=None, max_length=100_000)
+    slug: str = Field(min_length=1, max_length=200)
+
+
+class ProductTranslationResponse(CatalogSchema):
+    id: UUID
+    product_id: UUID
+    locale: str
+    name: str
+    short_description: str | None
+    long_description: str | None
+    slug: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductSeoPut(BaseModel):
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=500)
+    canonical_path: str | None = Field(default=None, max_length=500)
+    robots_index: bool = True
+    robots_follow: bool = True
+
+
+class ProductSeoResponse(CatalogSchema):
+    id: UUID
+    product_id: UUID
+    locale: str
+    title: str | None
+    description: str | None
+    canonical_path: str | None
+    robots_index: bool
+    robots_follow: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class IdentifierCreate(BaseModel):
+    identifier_type: Literal["ean", "upc", "isbn", "mpn", "external"]
+    value: str = Field(min_length=1, max_length=255)
+    source_system: str | None = Field(default=None, max_length=100)
+    is_primary: bool = False
+
+
+class IdentifierResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    variant_id: UUID
+    identifier_type: str
+    value: str
+    source_system: str | None
+    is_primary: bool
+    created_at: datetime
+    archived_at: datetime | None
+
+
+class TaxonomyCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+
+
+class TaxonomyResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class TaxonomyPage(BaseModel):
+    items: list[TaxonomyResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class CategoryCreate(BaseModel):
+    parent_id: UUID | None = None
+    code: str = Field(min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=250)
+    slug: str = Field(min_length=1, max_length=200)
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class CategoryUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=250)
+    slug: str | None = Field(default=None, min_length=1, max_length=200)
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class CategoryMove(BaseModel):
+    parent_id: UUID | None = None
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class CategoryResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    taxonomy_id: UUID
+    parent_id: UUID | None
+    code: str
+    name: str
+    slug: str
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class ProductCategoryAssignment(BaseModel):
+    category_id: UUID
+    is_primary: bool = False
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class ProductCategoriesPut(BaseModel):
+    assignments: list[ProductCategoryAssignment] = Field(max_length=500)
+
+
+class ProductCategoryResponse(CatalogSchema):
+    product_id: UUID
+    category_id: UUID
+    taxonomy_id: UUID
+    is_primary: bool
+    position: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductStorePut(BaseModel):
+    status: Literal["draft", "active", "suspended"] = "draft"
+    version: int | None = Field(default=None, ge=1)
+
+
+class ProductStoreResponse(CatalogSchema):
+    id: UUID
+    product_id: UUID
+    store_id: UUID
+    status: str
+    eligible: bool
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class ProductDetail(BaseModel):
+    product: ProductResponse
+    variants: list[VariantResponse]
+    translations: list[ProductTranslationResponse]
+    seo: list[ProductSeoResponse]
+    categories: list[ProductCategoryResponse]
+    stores: list[ProductStoreResponse]
+
+
+class CatalogUsageResponse(BaseModel):
+    products: int
+    product_limit: int
