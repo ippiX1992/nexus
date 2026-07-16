@@ -1,7 +1,7 @@
 # Catalog Core — Target and Implemented Event Contracts
 
 > Estado: envelope y 21 eventos de M3.0 implementados; contratos restantes son objetivo futuro.
-> Incremento: **M3.0 RELEASE CANDIDATE**; Módulo 3 EN PROGRESO.
+> Incremento: **M3.0 Catalog Foundation: CERRADO**; Módulo 3 EN PROGRESO.
 > Transporte: outbox/inbox del Platform Kernel.
 > Semántica: entrega at-least-once, consumers idempotentes, sin orden global.
 

@@ -1,7 +1,7 @@
 # Catalog Core — Domain Architecture
 
 > Estado: diseño aprobado; **Módulo 3 EN PROGRESO**.
-> Implementación: **M3.0 Catalog Foundation RELEASE CANDIDATE**; M3.1–M3.7 pendientes.
+> Implementación: **M3.0 Catalog Foundation: CERRADO**; M3.1–M3.7 pendientes.
 > Alcance: Módulo 3 — Catalog Core.
 > Dependencias cerradas: Módulo 1 — Identity and Multi-Tenant; Módulo 2 — Platform Kernel.
 
