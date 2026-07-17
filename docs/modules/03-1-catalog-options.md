@@ -1,8 +1,12 @@
 # M3.1 — Options y Variant Combinations
 
 > Estado del módulo: **Módulo 3: EN PROGRESO**.
-> Estado del incremento: **M3.1: RELEASE CANDIDATE local**.
-> Rama: `feature/catalog-options` (local, sin publicar).
+> Estado del incremento: **M3.1: RELEASE CANDIDATE — criterios técnicos locales cumplidos**
+> (cobertura ≥80%, E2E Chromium real, frontend tests de Options, integración Product↔Options,
+> Ruff/mypy/migraciones/RLS/concurrencia/build en verde). **No cerrado**: falta CI GitHub-hosted
+> verde sobre el commit publicado (requiere push adicional, no autorizado en este incremento) y
+> aprobación/merge explícitos. No confundir con M3.0, que sí está formalmente CERRADO.
+> Rama: `feature/catalog-options`, publicada en `origin` (sin PR listo para merge, sin tag).
 > Diseño aprobado: `docs/modules/03-1-catalog-options-plan.md`,
 > `docs/architecture/catalog-options-domain.md`,
 > `docs/architecture/catalog-option-combinations.md`.
@@ -27,7 +31,9 @@ Attributes/Features descriptivos (M3.2, fuera de alcance):
   con índice único parcial `(tenant_id, product_id, combination_fingerprint) WHERE archived_at IS
   NULL AND combination_fingerprint IS NOT NULL`.
 - Creación manual de combinación: `POST /products/{id}/variants` extendido con
-  `option_value_ids` opcional (sin endpoint nuevo, reutiliza el ya existente).
+  `option_value_ids` opcional (reutiliza el endpoint ya existente). Lectura de la combinación de
+  una Variant: `GET /variants/{id}/options` (único endpoint nuevo de este cierre, necesario para
+  que el frontend muestre qué valores tiene cada Variant).
 - Generación en lote durable: preview de solo lectura, `POST .../variant-generation` crea un
   `platform_operations`/`platform_jobs` (reutilizados del Platform Kernel, sin mecanismo nuevo) y
   devuelve `202` sin generar el producto cartesiano dentro del request; un worker
@@ -72,16 +78,18 @@ Validado: `0003 → 0004 → 0003 → 0004` y `base → head`, sin `Base.metadat
 
 ## 4. API real
 
-Extiende `/api/v1/catalog` con 17 operaciones nuevas (15 endpoints del diseño aprobado + 2 de
+Extiende `/api/v1/catalog` con 18 operaciones nuevas (15 endpoints del diseño aprobado + 2 de
 traducción necesarias para cumplir el modelo de dominio, mismo patrón que
-`PUT /products/{id}/translations/{locale}` de M3.0):
+`PUT /products/{id}/translations/{locale}` de M3.0, + 1 endpoint de lectura agregado en el cierre
+local para que el frontend pueda mostrar la combinación de una Variant):
 
 | Recurso | Operaciones |
 |---|---|
 | Options | listar, crear, obtener, actualizar, archivar, traducción |
 | Option Values | listar por Option, crear, actualizar, archivar, traducción |
 | Product Options | listar, reemplazar (`PUT`, mismo patrón que Product–Category) |
-| Variant | `POST /products/{id}/variants` extendido con `option_value_ids` opcional |
+| Variant | `POST /products/{id}/variants` extendido con `option_value_ids` opcional; `GET
+  /variants/{id}/options` para leer su combinación |
 | Generación | preview de solo lectura, solicitud durable (`202` + Operation) |
 | Operations | `GET /operations/{id}` — reutilizado del Platform Kernel, sin cambios |
 
@@ -150,20 +158,27 @@ que ejecuta el worker real (no un mock) y verifica 4 combinaciones creadas de 2�
 ## 9. Frontend
 
 `frontend/app/catalog/options/page.tsx` — listar/crear/archivar Options, expandir y gestionar sus
-Option Values (crear/archivar, con preview de swatch). Enlazado desde `CatalogNav`. Build de
-Next.js y `tsc --noEmit` verificados en verde.
+Option Values (crear/archivar, con preview de swatch). Enlazado desde `CatalogNav`.
+
+`frontend/app/catalog/products/[id]/page.tsx` — extendida con sección "Opciones" (asignar/quitar
+Options del Product, siempre `required=true` según la regla de M3.1), formulario de creación de
+Variant con un selector por Option asignada (envía `option_value_ids`), y visualización de la
+combinación de cada Variant existente (nombre de Option + valor, resuelto vía el nuevo endpoint
+`GET /variants/{id}/options`). Build de Next.js y `tsc --noEmit` verificados en verde.
 
 **No implementado en este incremento** (alcance reducido, documentado explícitamente como
-pendiente, no como completo): pestaña "Opciones" dentro de la ficha de Product, selector de
-combinación en la pestaña Variantes, UI de preview/confirmación/progreso de generación en lote.
+pendiente, no como completo): UI de preview/confirmación/progreso de generación en lote (la
+generación durable solo se puede disparar hoy vía API, no desde el admin).
 `docs/modules/03-1-catalog-options-plan.md` sección 6 mantiene los wireframes textuales completos
 para cuando se retome.
 
 ## 10. Evidencia local
 
-- Pytest: 107 passed (94 M3.0 + 13 tests de dominio M3.1 + integración M3.1).
-- Cobertura total backend: ver informe final (por debajo del 80% requerido al cierre de esta
-  entrega — ver riesgos).
+- Pytest: 108 passed (94 M3.0 + 14 de dominio M3.1 + integración M3.1, incluyendo el nuevo
+  endpoint `GET /variants/{id}/options`).
+- Cobertura total backend: **89.24%**, por encima del 80% requerido. Ver nota crítica abajo:
+  el número real siempre estuvo cerca de este valor — el 77.24% reportado en el cierre anterior
+  era un artefacto de medición de `coverage.py`, no una brecha de pruebas real (sección 13).
 - Ruff: aprobado en `app/`, `tests/`, `scripts/`.
 - mypy: aprobado, `--no-incremental`, 61 archivos fuente.
 - Migraciones: `0003↔0004` y `base→head` verificadas, sin `create_all/drop_all`.
@@ -173,28 +188,55 @@ para cuando se retome.
   existente.
 - Concurrencia real contra PostgreSQL: `code` duplicado de Option y combinación duplicada, ambos
   con exactamente un ganador.
-- Frontend: `20 passed, 1 skipped` (sin regresión; no se agregaron tests unitarios nuevos para la
-  página de Options — riesgo documentado).
-- Next.js build: aprobado, incluye `/catalog/options` como ruta estática.
-- E2E Chromium: **no ejecutado en este incremento** — riesgo documentado, no falso positivo.
+- Frontend: `30 passed, 1 skipped` (10 tests nuevos para las funciones cliente de Options, mismo
+  patrón que `frontend/tests/catalog.test.ts`; sin testing-library instalada, así que no cubren
+  renderizado de componentes, solo el cliente HTTP).
+- Next.js build: aprobado, incluye `/catalog/options` y `/catalog/products/[id]` (con Options
+  integradas) como rutas.
+- E2E Chromium real: **ejecutado**, `frontend/e2e/catalog-options.spec.ts` — flujo completo
+  (registro → tenant → Store activo → Product Type → Product → Option Color → Values Rojo/Negro →
+  asignar Option al Product → crear Variant con combinación → verificar combinación visible) más
+  combinación duplicada (`409` real) y permiso insuficiente de un rol viewer (`403` real), contra
+  un backend y frontend reales levantados en puertos aislados (no contra los contenedores Docker
+  del entorno del usuario).
+- Integración Product ↔ Options: la ficha de Product (`/catalog/products/[id]`) ahora incluye
+  asignación de Options al Product, creación de Variant con selección de valores por Option
+  asignada, y visualización de la combinación de cada Variant existente (vía el nuevo endpoint
+  `GET /variants/{id}/options`).
 
 ## 11. Riesgos y límites conocidos
 
 Además de los ya heredados de M3.0 (sin cambios):
 
-- Cobertura de pytest por debajo de 80% al cierre de esta entrega — concentrada en
-  `app/modules/catalog/api/routes.py` y `application/services.py`, donde M3.1 añadió ~500 líneas
-  con más ramas de error de las que alcanzó a cubrir esta sesión.
-- Sin pruebas E2E Chromium reales para el flujo de Options — solo integración a nivel de API.
-- Sin pestaña de Options/combinaciones en la ficha de Product — solo la página standalone.
 - Worker de generación sin supervisión de proceso — mismo riesgo ya aceptado para el resto de
   jobs de Nexus, documentado, no nuevo.
 - `duplicate_combinations` del preview siempre es `0` — no hay selección de candidatos parcial en
   este incremento, solo "generar todo lo faltante".
 - `enforce_admins=false` en `main` (heredado de M3.0) sigue permitiendo push directo del owner —
   sin cambios en este incremento.
+- El E2E de M3.1 cubre el flujo principal más duplicado y permiso insuficiente; no repite el caso
+  de aislamiento cross-tenant en Chromium porque ya está verificado exhaustivamente a nivel de
+  integración backend real (sección RLS arriba) — cubrirlo también en E2E sería redundante, no
+  una brecha.
 
-## 12. Trabajo pendiente
+## 13. Corrección de medición de cobertura (hallazgo de esta sesión)
+
+`coverage.py` nunca tuvo configurado `concurrency = greenlet` en `pyproject.toml`. SQLAlchemy usa
+la librería `greenlet` internamente para puentear el ORM (fundamentalmente síncrono: flush,
+autoflush, cascadas) hacia el mundo async — cada `await session.flush()` (y operaciones
+equivalentes) cruza un cambio de greenlet. Sin ese ajuste, `coverage.py` pierde el rastro de la
+ejecución después de ese cambio y reporta como "no cubiertas" líneas que en realidad sí se
+ejecutaron — confirmado insertando un `print()` de control: el print se ejecutaba dos veces en
+consola, pero la línea seguía marcada como no cubierta hasta aplicar el fix.
+
+Esto no era específico de M3.1: afectaba a todo el código que pasa por el ORM async en cualquier
+módulo. El 77.24%/77.18%/76.68%/76.86% perseguidos en la sesión anterior de M3.1 eran en su
+mayoría medición incorrecta, no pruebas faltantes reales — la cobertura real ya rondaba el 89%
+antes de escribir una sola línea nueva de test en esta sesión. Corrección aplicada:
+`concurrency = ["greenlet", "thread"]` en `[tool.coverage.run]`. El workflow de CI no necesitó
+cambios porque lee esta configuración de `pyproject.toml` automáticamente.
+
+## 14. Trabajo pendiente
 
 M3.2 (Attributes/Features) y siguientes, según `docs/modules/03-catalog-core-plan.md` sección 20.
 Ninguno de esos incrementos está implementado ni autorizado por esta entrega.
