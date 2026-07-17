@@ -122,6 +122,32 @@ async def test_default_variant_has_no_combination_and_untouched_by_option_assign
     assert default["combination_fingerprint"] is None
 
 
+async def test_variant_option_values_endpoint_lists_combination_and_rejects_missing_variant(client, registration):
+    headers, _ = await catalog_context(client, registration)
+    seed = await seed_product_with_options(client, headers)
+    created = await client.post(
+        f"/api/v1/catalog/products/{seed['product']['id']}/variants",
+        headers={**headers, "Idempotency-Key": str(uuid4())},
+        json={"sku": "SHIRT-RED-S", "option_value_ids": [seed["values"]["red"]["id"], seed["values"]["small"]["id"]]},
+    )
+    assert created.status_code == 201, created.text
+    variant_id = created.json()["id"]
+
+    combination = await client.get(f"/api/v1/catalog/variants/{variant_id}/options", headers=headers)
+    assert combination.status_code == 200, combination.text
+    option_value_ids = {item["option_value_id"] for item in combination.json()}
+    assert option_value_ids == {seed["values"]["red"]["id"], seed["values"]["small"]["id"]}
+
+    default_combination = await client.get(
+        f"/api/v1/catalog/variants/{seed['default_variant']['id']}/options", headers=headers
+    )
+    assert default_combination.status_code == 200
+    assert default_combination.json() == []
+
+    missing = await client.get(f"/api/v1/catalog/variants/{uuid4()}/options", headers=headers)
+    assert missing.status_code == 404
+
+
 async def test_archiving_an_already_archived_option_value_is_a_no_op_not_an_error(client, registration):
     headers, _ = await catalog_context(client, registration)
     option = await create_option(client, headers, code="color")

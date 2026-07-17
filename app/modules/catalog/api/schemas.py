@@ -419,6 +419,14 @@ class ProductOptionResponse(CatalogSchema):
     archived_at: datetime | None
 
 
+class VariantOptionValueResponse(CatalogSchema):
+    tenant_id: UUID
+    variant_id: UUID
+    product_id: UUID
+    option_id: UUID
+    option_value_id: UUID
+
+
 class VariantGenerationPreviewResponse(BaseModel):
     options_considered: list[dict[str, Any]]
     theoretical_total: int

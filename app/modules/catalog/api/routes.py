@@ -60,6 +60,7 @@ from app.modules.catalog.api.schemas import (
     VariantCreate,
     VariantGenerationAccepted,
     VariantGenerationPreviewResponse,
+    VariantOptionValueResponse,
     VariantPage,
     VariantResponse,
     VariantUpdate,
@@ -636,6 +637,21 @@ async def archive_variant(
     except CatalogPolicyError as exc:
         await _mutation_failure(db, exc)
     return await _finish_mutation(db, row, VariantResponse)
+
+
+@router.get("/variants/{variant_id}/options", response_model=list[VariantOptionValueResponse])
+async def list_variant_option_values(
+    variant_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.variant.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[VariantOptionValueResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_variant(ctx.tenant_id, variant_id) is None:
+        raise HTTPException(404, "Variant not found")
+    return [
+        VariantOptionValueResponse.model_validate(row)
+        for row in await repository.list_variant_option_values(ctx.tenant_id, variant_id)
+    ]
 
 
 @router.get("/variants/{variant_id}/identifiers", response_model=list[IdentifierResponse])
