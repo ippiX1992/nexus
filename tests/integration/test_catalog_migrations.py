@@ -291,3 +291,104 @@ def test_catalog_options_migration_round_trip_and_security_contract() -> None:
             "SELECT conname FROM pg_constraint WHERE conrelid='catalog_variant_option_values'::regclass AND contype='u'"
         ).fetchall()
         assert ("uq_catalog_variant_option_one_value_per_option",) in one_value_per_option
+
+
+CATALOG_ATTRIBUTES_TABLES = {
+    "catalog_attributes",
+    "catalog_attribute_translations",
+    "catalog_attribute_options",
+    "catalog_attribute_option_translations",
+    "catalog_attribute_groups",
+    "catalog_attribute_group_translations",
+    "catalog_product_type_attributes",
+    "catalog_product_attribute_values",
+    "catalog_product_attribute_value_options",
+}
+CATALOG_ATTRIBUTES_PERMISSIONS = {
+    "catalog.attribute.read",
+    "catalog.attribute.create",
+    "catalog.attribute.update",
+    "catalog.attribute.archive",
+    "catalog.attribute_option.read",
+    "catalog.attribute_option.create",
+    "catalog.attribute_option.update",
+    "catalog.attribute_option.archive",
+    "catalog.attribute_group.read",
+    "catalog.attribute_group.create",
+    "catalog.attribute_group.update",
+    "catalog.attribute_group.archive",
+    "catalog.product_type_attribute.read",
+    "catalog.product_type_attribute.manage",
+    "catalog.product_attribute_value.read",
+    "catalog.product_attribute_value.manage",
+}
+
+
+def test_catalog_attributes_migration_round_trip_and_security_contract() -> None:
+    alembic("downgrade", "0004")
+    alembic("upgrade", "0005")
+    alembic("downgrade", "0004")
+    try:
+        alembic("upgrade", "0005")
+
+        dsn = URL.replace("postgresql+psycopg://", "postgresql://")
+        with psycopg.connect(dsn) as connection:
+            tables = {
+                row[0]
+                for row in connection.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'")
+            }
+            assert CATALOG_ATTRIBUTES_TABLES <= tables
+
+            for table in CATALOG_ATTRIBUTES_TABLES:
+                policy_count = connection.execute(
+                    "SELECT count(*) FROM pg_policy WHERE polrelid=%s::regclass", (table,)
+                ).fetchone()
+                assert policy_count is not None and policy_count[0] == 4
+                rls = connection.execute(
+                    "SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid=%s::regclass", (table,)
+                ).fetchone()
+                assert rls == (True, True)
+                privileges = connection.execute(
+                    """
+                    SELECT
+                        has_table_privilege('nexus_app', %s, 'SELECT'),
+                        has_table_privilege('nexus_app', %s, 'INSERT'),
+                        has_table_privilege('nexus_app', %s, 'UPDATE'),
+                        has_table_privilege('nexus_app', %s, 'DELETE')
+                    """,
+                    (table, table, table, table),
+                ).fetchone()
+                assert privileges == (True, True, True, True)
+
+            permissions = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT code FROM permissions WHERE code LIKE 'catalog.attribute%' OR code LIKE 'catalog.product_type_attribute%' OR code LIKE 'catalog.product_attribute_value%'"
+                )
+            }
+            assert permissions == CATALOG_ATTRIBUTES_PERMISSIONS
+
+            entitlements = dict(
+                connection.execute(
+                    """
+                    SELECT key, default_value FROM platform_entitlement_definitions
+                    WHERE key IN (
+                        'catalog.product_type_attributes.max_per_product_type',
+                        'catalog.attribute_options.max_per_attribute'
+                    )
+                    """
+                ).fetchall()
+            )
+            assert entitlements == {
+                "catalog.product_type_attributes.max_per_product_type": 60,
+                "catalog.attribute_options.max_per_attribute": 200,
+            }
+
+            single_column_check = connection.execute(
+                "SELECT conname FROM pg_constraint WHERE conrelid='catalog_product_attribute_values'::regclass AND contype='c'"
+            ).fetchall()
+            assert ("ck_catalog_product_attribute_value_single_column",) in single_column_check
+    finally:
+        # Leave the shared test DB at head so every test file that runs after
+        # this one (alphabetically or otherwise) still sees the full schema.
+        alembic("upgrade", "head")
