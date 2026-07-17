@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
@@ -442,3 +443,223 @@ class VariantGenerationPreviewResponse(BaseModel):
 class VariantGenerationAccepted(BaseModel):
     operation_id: UUID
     status: str
+
+
+AttributeDataType = Literal[
+    "TEXT", "LONG_TEXT", "INTEGER", "DECIMAL", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT"
+]
+
+
+class AttributeCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    data_type: AttributeDataType
+    unit: str | None = Field(default=None, max_length=50)
+    is_required: bool = False
+    is_filterable: bool = False
+    is_searchable: bool = False
+    is_comparable: bool = False
+    is_visible_storefront: bool = True
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class AttributeUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    data_type: AttributeDataType | None = None
+    unit: str | None = Field(default=None, max_length=50)
+    is_required: bool | None = None
+    is_filterable: bool | None = None
+    is_searchable: bool | None = None
+    is_comparable: bool | None = None
+    is_visible_storefront: bool | None = None
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class AttributeResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    description: str | None
+    data_type: str
+    unit: str | None
+    is_required: bool
+    is_filterable: bool
+    is_searchable: bool
+    is_comparable: bool
+    is_visible_storefront: bool
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributePage(BaseModel):
+    items: list[AttributeResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class AttributeTranslationPut(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class AttributeTranslationResponse(CatalogSchema):
+    id: UUID
+    attribute_id: UUID
+    locale: str
+    name: str
+    description: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributeOptionCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    label: str = Field(min_length=1, max_length=200)
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class AttributeOptionUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class AttributeOptionResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    attribute_id: UUID
+    code: str
+    label: str
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributeOptionTranslationPut(BaseModel):
+    label: str = Field(min_length=1, max_length=200)
+
+
+class AttributeOptionTranslationResponse(CatalogSchema):
+    id: UUID
+    attribute_option_id: UUID
+    locale: str
+    label: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributeGroupCreate(BaseModel):
+    code: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    position: int = Field(default=0, ge=0, le=1_000_000)
+
+
+class AttributeGroupUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+    position: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class AttributeGroupResponse(CatalogSchema):
+    id: UUID
+    tenant_id: UUID
+    code: str
+    name: str
+    description: str | None
+    position: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributeGroupPage(BaseModel):
+    items: list[AttributeGroupResponse]
+    next_cursor: str | None
+    has_more: bool
+
+
+class AttributeGroupTranslationPut(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class AttributeGroupTranslationResponse(CatalogSchema):
+    id: UUID
+    group_id: UUID
+    locale: str
+    name: str
+    description: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProductTypeAttributeInput(BaseModel):
+    attribute_id: UUID
+    group_id: UUID | None = None
+    position: int = Field(default=0, ge=0, le=1_000_000)
+    required: bool = False
+    visible_override: bool | None = None
+    filterable_override: bool | None = None
+    comparable_override: bool | None = None
+
+
+class ProductTypeAttributesPut(BaseModel):
+    attributes: list[ProductTypeAttributeInput] = Field(max_length=100)
+
+
+class ProductTypeAttributeResponse(CatalogSchema):
+    tenant_id: UUID
+    product_type_id: UUID
+    attribute_id: UUID
+    group_id: UUID | None
+    position: int
+    required: bool
+    visible_override: bool | None
+    filterable_override: bool | None
+    comparable_override: bool | None
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    archived_at: datetime | None
+
+
+class ProductAttributeValueInput(BaseModel):
+    attribute_id: UUID
+    value: Any
+
+
+class ProductAttributeValuesPut(BaseModel):
+    values: list[ProductAttributeValueInput] = Field(max_length=200)
+
+
+class ProductAttributeValueOptionResponse(CatalogSchema):
+    tenant_id: UUID
+    product_id: UUID
+    attribute_id: UUID
+    attribute_option_id: UUID
+
+
+class ProductAttributeValueResponse(CatalogSchema):
+    tenant_id: UUID
+    product_id: UUID
+    attribute_id: UUID
+    value_text: str | None
+    value_long_text: str | None
+    value_integer: int | None
+    value_decimal: Decimal | None
+    value_boolean: bool | None
+    value_date: date | None
+    value_datetime: datetime | None
+    value_option_id: UUID | None
+    version: int
+    created_at: datetime
+    updated_at: datetime

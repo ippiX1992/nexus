@@ -12,6 +12,23 @@ from app.application.authorization import TenantContext
 from app.infrastructure.database import get_session
 from app.infrastructure.tenant_context import set_store_context
 from app.modules.catalog.api.schemas import (
+    AttributeCreate,
+    AttributeGroupCreate,
+    AttributeGroupPage,
+    AttributeGroupResponse,
+    AttributeGroupTranslationPut,
+    AttributeGroupTranslationResponse,
+    AttributeGroupUpdate,
+    AttributeOptionCreate,
+    AttributeOptionResponse,
+    AttributeOptionTranslationPut,
+    AttributeOptionTranslationResponse,
+    AttributeOptionUpdate,
+    AttributePage,
+    AttributeResponse,
+    AttributeTranslationPut,
+    AttributeTranslationResponse,
+    AttributeUpdate,
     BrandCreate,
     BrandPage,
     BrandResponse,
@@ -34,6 +51,9 @@ from app.modules.catalog.api.schemas import (
     OptionValueTranslationPut,
     OptionValueTranslationResponse,
     OptionValueUpdate,
+    ProductAttributeValueOptionResponse,
+    ProductAttributeValueResponse,
+    ProductAttributeValuesPut,
     ProductCategoriesPut,
     ProductCategoryResponse,
     ProductCreate,
@@ -49,6 +69,8 @@ from app.modules.catalog.api.schemas import (
     ProductSummary,
     ProductTranslationPut,
     ProductTranslationResponse,
+    ProductTypeAttributeResponse,
+    ProductTypeAttributesPut,
     ProductTypeCreate,
     ProductTypePage,
     ProductTypeResponse,
@@ -68,6 +90,7 @@ from app.modules.catalog.api.schemas import (
 from app.modules.catalog.application.generation import create_generation_operation
 from app.modules.catalog.application.services import CatalogActor, CatalogService
 from app.modules.catalog.domain.policies import (
+    CatalogAttributesQuotaExceeded,
     CatalogConflict,
     CatalogNotFound,
     CatalogOptionsQuotaExceeded,
@@ -133,10 +156,11 @@ def _next_cursor(rows: list[Any], has_more: bool) -> str | None:
 def _http_error(exc: Exception) -> HTTPException:
     if isinstance(exc, CatalogNotFound):
         return HTTPException(404, str(exc))
-    if isinstance(exc, CatalogOptionsQuotaExceeded):
-        # M3.1 convention: quota errors are 409, never 429 (reserved for transport
-        # rate limiting) -- checked before the generic CatalogQuotaExceeded branch,
-        # which M3.0's own entitlements still use and are tested against as 429.
+    if isinstance(exc, (CatalogOptionsQuotaExceeded, CatalogAttributesQuotaExceeded)):
+        # M3.1/M3.2 convention: quota errors are 409, never 429 (reserved for
+        # transport rate limiting) -- checked before the generic
+        # CatalogQuotaExceeded branch, which M3.0's own entitlements still use
+        # and are tested against as 429.
         return HTTPException(409, str(exc))
     if isinstance(exc, CatalogQuotaExceeded):
         return HTTPException(429, str(exc))
@@ -1282,3 +1306,416 @@ async def request_variant_generation(
     except (CatalogPolicyError, IntegrityError, ValueError) as exc:
         await _creation_failure(db, record, exc)
     return await _finish_create(db, record, response, code=202)
+
+
+# --- M3.2 Attributes and Product Specifications ---
+
+
+@router.get("/attributes", response_model=AttributePage)
+async def list_attributes(
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    cursor: str | None = None,
+    status: str | None = None,
+) -> AttributePage:
+    rows, has_more = await SqlAlchemyCatalogRepository(db).list_resources(
+        "attribute", ctx.tenant_id, limit=limit, cursor=_cursor(cursor), status=status
+    )
+    return AttributePage(
+        items=[AttributeResponse.model_validate(row) for row in rows],
+        next_cursor=_next_cursor(rows, has_more),
+        has_more=has_more,
+    )
+
+
+@router.post("/attributes", response_model=AttributeResponse, status_code=201)
+async def create_attribute(
+    payload: AttributeCreate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    record = await _begin_create(db, ctx, idempotency_key, "POST", "/api/v1/catalog/attributes", payload.model_dump(mode="json"))
+    if isinstance(record, JSONResponse):
+        return record
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.create_attribute(payload.model_dump())
+        await db.flush()
+        response = AttributeResponse.model_validate(row)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response)
+
+
+@router.get("/attributes/{resource_id}", response_model=AttributeResponse)
+async def get_attribute(
+    resource_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AttributeResponse:
+    row = await SqlAlchemyCatalogRepository(db).get_attribute(ctx.tenant_id, resource_id)
+    if row is None:
+        raise HTTPException(404, "Attribute not found")
+    return AttributeResponse.model_validate(row)
+
+
+@router.patch("/attributes/{resource_id}", response_model=AttributeResponse)
+async def update_attribute(
+    resource_id: UUID,
+    payload: AttributeUpdate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.update_attribute(resource_id, _expected_version(if_match), payload.model_dump(exclude_unset=True))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeResponse)
+
+
+@router.post("/attributes/{resource_id}/archive", response_model=AttributeResponse)
+async def archive_attribute(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.archive_attribute(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeResponse)
+
+
+@router.post("/attributes/{resource_id}/restore", response_model=AttributeResponse)
+async def restore_attribute(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.restore_attribute(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeResponse)
+
+
+@router.put("/attributes/{resource_id}/translations/{locale}", response_model=AttributeTranslationResponse)
+async def upsert_attribute_translation(
+    resource_id: UUID,
+    locale: str,
+    payload: AttributeTranslationPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AttributeTranslationResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.upsert_attribute_translation(resource_id, locale, payload.model_dump())
+        await db.commit()
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return AttributeTranslationResponse.model_validate(row)
+
+
+@router.get("/attributes/{resource_id}/options", response_model=list[AttributeOptionResponse])
+async def list_attribute_options(
+    resource_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_option.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[AttributeOptionResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_attribute(ctx.tenant_id, resource_id) is None:
+        raise HTTPException(404, "Attribute not found")
+    return [
+        AttributeOptionResponse.model_validate(row)
+        for row in await repository.list_attribute_options(ctx.tenant_id, resource_id)
+    ]
+
+
+@router.post("/attributes/{resource_id}/options", response_model=AttributeOptionResponse, status_code=201)
+async def create_attribute_option(
+    resource_id: UUID,
+    payload: AttributeOptionCreate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_option.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    endpoint = f"/api/v1/catalog/attributes/{resource_id}/options"
+    record = await _begin_create(db, ctx, idempotency_key, "POST", endpoint, payload.model_dump(mode="json"))
+    if isinstance(record, JSONResponse):
+        return record
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.create_attribute_option(resource_id, payload.model_dump())
+        await db.flush()
+        response = AttributeOptionResponse.model_validate(row)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response)
+
+
+@router.patch("/attribute-options/{resource_id}", response_model=AttributeOptionResponse)
+async def update_attribute_option(
+    resource_id: UUID,
+    payload: AttributeOptionUpdate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_option.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeOptionResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.update_attribute_option(resource_id, _expected_version(if_match), payload.model_dump(exclude_unset=True))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeOptionResponse)
+
+
+@router.post("/attribute-options/{resource_id}/archive", response_model=AttributeOptionResponse)
+async def archive_attribute_option(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_option.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeOptionResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.archive_attribute_option(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeOptionResponse)
+
+
+@router.put("/attribute-options/{resource_id}/translations/{locale}", response_model=AttributeOptionTranslationResponse)
+async def upsert_attribute_option_translation(
+    resource_id: UUID,
+    locale: str,
+    payload: AttributeOptionTranslationPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_option.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AttributeOptionTranslationResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.upsert_attribute_option_translation(resource_id, locale, payload.model_dump())
+        await db.commit()
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return AttributeOptionTranslationResponse.model_validate(row)
+
+
+@router.get("/attribute-groups", response_model=AttributeGroupPage)
+async def list_attribute_groups(
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    cursor: str | None = None,
+    status: str | None = None,
+) -> AttributeGroupPage:
+    rows, has_more = await SqlAlchemyCatalogRepository(db).list_resources(
+        "attribute_group", ctx.tenant_id, limit=limit, cursor=_cursor(cursor), status=status
+    )
+    return AttributeGroupPage(
+        items=[AttributeGroupResponse.model_validate(row) for row in rows],
+        next_cursor=_next_cursor(rows, has_more),
+        has_more=has_more,
+    )
+
+
+@router.post("/attribute-groups", response_model=AttributeGroupResponse, status_code=201)
+async def create_attribute_group(
+    payload: AttributeGroupCreate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.create"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key")],
+) -> Any:
+    record = await _begin_create(db, ctx, idempotency_key, "POST", "/api/v1/catalog/attribute-groups", payload.model_dump(mode="json"))
+    if isinstance(record, JSONResponse):
+        return record
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.create_attribute_group(payload.model_dump())
+        await db.flush()
+        response = AttributeGroupResponse.model_validate(row)
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _creation_failure(db, record, exc)
+    return await _finish_create(db, record, response)
+
+
+@router.get("/attribute-groups/{resource_id}", response_model=AttributeGroupResponse)
+async def get_attribute_group(
+    resource_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AttributeGroupResponse:
+    row = await SqlAlchemyCatalogRepository(db).get_attribute_group(ctx.tenant_id, resource_id)
+    if row is None:
+        raise HTTPException(404, "Attribute Group not found")
+    return AttributeGroupResponse.model_validate(row)
+
+
+@router.patch("/attribute-groups/{resource_id}", response_model=AttributeGroupResponse)
+async def update_attribute_group(
+    resource_id: UUID,
+    payload: AttributeGroupUpdate,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeGroupResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.update_attribute_group(resource_id, _expected_version(if_match), payload.model_dump(exclude_unset=True))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeGroupResponse)
+
+
+@router.post("/attribute-groups/{resource_id}/archive", response_model=AttributeGroupResponse)
+async def archive_attribute_group(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeGroupResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.archive_attribute_group(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeGroupResponse)
+
+
+@router.post("/attribute-groups/{resource_id}/restore", response_model=AttributeGroupResponse)
+async def restore_attribute_group(
+    resource_id: UUID,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.archive"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> AttributeGroupResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.restore_attribute_group(resource_id, _expected_version(if_match))
+    except CatalogPolicyError as exc:
+        await _mutation_failure(db, exc)
+    return await _finish_mutation(db, row, AttributeGroupResponse)
+
+
+@router.put("/attribute-groups/{resource_id}/translations/{locale}", response_model=AttributeGroupTranslationResponse)
+async def upsert_attribute_group_translation(
+    resource_id: UUID,
+    locale: str,
+    payload: AttributeGroupTranslationPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.attribute_group.update"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> AttributeGroupTranslationResponse:
+    service, _ = _service(request, ctx, db)
+    try:
+        row = await service.upsert_attribute_group_translation(resource_id, locale, payload.model_dump())
+        await db.commit()
+    except (CatalogPolicyError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return AttributeGroupTranslationResponse.model_validate(row)
+
+
+@router.get("/product-types/{product_type_id}/attributes", response_model=list[ProductTypeAttributeResponse])
+async def list_product_type_attributes(
+    product_type_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_type_attribute.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[ProductTypeAttributeResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_product_type(ctx.tenant_id, product_type_id) is None:
+        raise HTTPException(404, "Product Type not found")
+    return [
+        ProductTypeAttributeResponse.model_validate(row)
+        for row in await repository.list_product_type_attributes(ctx.tenant_id, product_type_id)
+    ]
+
+
+@router.put("/product-types/{product_type_id}/attributes", response_model=list[ProductTypeAttributeResponse])
+async def set_product_type_attributes(
+    product_type_id: UUID,
+    payload: ProductTypeAttributesPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_type_attribute.manage"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> list[ProductTypeAttributeResponse]:
+    service, _ = _service(request, ctx, db)
+    try:
+        rows = await service.set_product_type_attributes(
+            product_type_id, _expected_version(if_match), [item.model_dump() for item in payload.attributes]
+        )
+        await db.commit()
+    except (CatalogPolicyError, IntegrityError) as exc:
+        await _mutation_failure(db, exc)
+    return [ProductTypeAttributeResponse.model_validate(row) for row in rows]
+
+
+@router.get("/products/{product_id}/attributes", response_model=list[ProductAttributeValueResponse])
+async def list_product_attribute_values(
+    product_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_attribute_value.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[ProductAttributeValueResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_product(ctx.tenant_id, product_id) is None:
+        raise HTTPException(404, "Product not found")
+    return [
+        ProductAttributeValueResponse.model_validate(row)
+        for row in await repository.list_product_attribute_values(ctx.tenant_id, product_id)
+    ]
+
+
+@router.get("/products/{product_id}/attribute-value-options", response_model=list[ProductAttributeValueOptionResponse])
+async def list_product_attribute_value_options(
+    product_id: UUID,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_attribute_value.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[ProductAttributeValueOptionResponse]:
+    repository = SqlAlchemyCatalogRepository(db)
+    if await repository.get_product(ctx.tenant_id, product_id) is None:
+        raise HTTPException(404, "Product not found")
+    return [
+        ProductAttributeValueOptionResponse.model_validate(row)
+        for row in await repository.list_product_attribute_value_options(ctx.tenant_id, product_id)
+    ]
+
+
+@router.put("/products/{product_id}/attributes", response_model=list[ProductAttributeValueResponse])
+async def set_product_attribute_values(
+    product_id: UUID,
+    payload: ProductAttributeValuesPut,
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product_attribute_value.manage"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+    if_match: Annotated[str, Header(alias="If-Match")],
+) -> list[ProductAttributeValueResponse]:
+    service, _ = _service(request, ctx, db)
+    try:
+        rows = await service.set_product_attribute_values(
+            product_id, _expected_version(if_match), [item.model_dump() for item in payload.values]
+        )
+        await db.commit()
+    except (CatalogPolicyError, IntegrityError, ValueError) as exc:
+        await _mutation_failure(db, exc)
+    return [ProductAttributeValueResponse.model_validate(row) for row in rows]

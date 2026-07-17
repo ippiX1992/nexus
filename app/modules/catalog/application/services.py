@@ -6,6 +6,7 @@ from uuid import UUID
 from app.application.auth import audit
 from app.modules.catalog.contracts.repositories import CatalogRepository
 from app.modules.catalog.domain.policies import (
+    CatalogAttributesQuotaExceeded,
     CatalogConflict,
     CatalogNotFound,
     CatalogOptionsQuotaExceeded,
@@ -13,21 +14,30 @@ from app.modules.catalog.domain.policies import (
     CatalogQuotaExceeded,
     CatalogVersionConflict,
     CategoryCycle,
+    ensure_attribute_options_supported,
+    ensure_attribute_type_immutable,
+    ensure_attributes_quota,
     ensure_combination_complete,
     ensure_expected_version,
     ensure_options_quota,
     ensure_product_activation,
+    ensure_product_attribute_value_assignable,
     ensure_product_mutable,
     ensure_product_option_retirable,
+    ensure_product_type_attribute_assignable,
     ensure_quota,
     ensure_reference_active,
+    ensure_required_attributes_present,
     ensure_store_assignment,
     ensure_variant_archive,
 )
 from app.modules.catalog.domain.values import (
+    ATTRIBUTE_DATA_TYPES,
     combination_fingerprint,
+    normalize_attribute_value,
     normalize_identifier,
     normalize_locale,
+    normalize_multi_select_values,
     normalize_sku,
     normalize_slug,
     normalize_swatch_hex,
@@ -124,6 +134,20 @@ class CatalogService:
         try:
             ensure_options_quota(key, current, limit)
         except CatalogOptionsQuotaExceeded:
+            await self._audit(
+                "catalog.quota_exceeded",
+                "denied",
+                resource,
+                {"entitlement": key, "current": current, "limit": limit},
+            )
+            raise
+
+    async def _attributes_quota(self, key: str, current: int, limit: int, resource: UUID | None = None) -> None:
+        """Same as _quota but for the M3.2 entitlements, which map to 409 -- see
+        CatalogAttributesQuotaExceeded."""
+        try:
+            ensure_attributes_quota(key, current, limit)
+        except CatalogAttributesQuotaExceeded:
             await self._audit(
                 "catalog.quota_exceeded",
                 "denied",
@@ -1368,3 +1392,445 @@ class CatalogService:
             "warnings": warnings,
             "estimated_work": estimated_work,
         }
+
+    # --- M3.2 Attributes and Product Specifications ---
+
+    async def create_attribute(self, data: dict[str, Any]) -> Any:
+        data_type = data["data_type"]
+        if data_type not in ATTRIBUTE_DATA_TYPES:
+            raise CatalogPolicyError(f"Unsupported attribute data_type: {data_type}")
+        row = await self.repository.create_attribute(
+            self.actor.tenant_id,
+            self.actor.user_id,
+            {
+                "code": normalized_code(data["code"]),
+                "name": data["name"].strip(),
+                "description": data.get("description"),
+                "data_type": data_type,
+                "unit": data.get("unit"),
+                "is_required": data.get("is_required", False),
+                "is_filterable": data.get("is_filterable", False),
+                "is_searchable": data.get("is_searchable", False),
+                "is_comparable": data.get("is_comparable", False),
+                "is_visible_storefront": data.get("is_visible_storefront", True),
+                "position": data.get("position", 0),
+                "status": "active",
+            },
+        )
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute.created.v1", "catalog.attribute", row.id, row.version,
+                {"code": row.code, "name": row.name, "data_type": row.data_type},
+            )
+        )
+        await self._audit("catalog.attribute_created", "success", row.id)
+        return row
+
+    async def update_attribute(self, resource_id: UUID, expected: int, data: dict[str, Any]) -> Any:
+        row = await self.repository.get_attribute(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute", resource_id)
+        await self._version("attribute", row, expected)
+        ensure_reference_active(row.status, "Attribute")
+        ensure_attribute_type_immutable(row.data_type, data.get("data_type"))
+        changed: list[str] = []
+        for field in (
+            "name", "description", "unit", "is_required", "is_filterable",
+            "is_searchable", "is_comparable", "is_visible_storefront", "position",
+        ):
+            if field in data and data[field] is not None:
+                value = data[field].strip() if isinstance(data[field], str) else data[field]
+                if getattr(row, field) != value:
+                    setattr(row, field, value)
+                    changed.append(field)
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        await self.repository.add_event(
+            self._event("catalog.attribute.updated.v1", "catalog.attribute", row.id, row.version, {"changed_fields": changed})
+        )
+        await self._audit("catalog.attribute_updated", "success", row.id, {"changed_fields": changed})
+        return row
+
+    async def archive_attribute(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_attribute(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute", resource_id)
+        await self._version("attribute", row, expected)
+        if row.status != "archived":
+            row.status = "archived"
+            row.archived_at = datetime.now(UTC)
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event("catalog.attribute.archived.v1", "catalog.attribute", row.id, row.version, {"status": row.status})
+            )
+            await self._audit("catalog.attribute_archived", "success", row.id)
+        return row
+
+    async def restore_attribute(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_attribute(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute", resource_id)
+        await self._version("attribute", row, expected)
+        if row.status == "archived":
+            row.status = "active"
+            row.archived_at = None
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event("catalog.attribute.restored.v1", "catalog.attribute", row.id, row.version, {"status": row.status})
+            )
+            await self._audit("catalog.attribute_restored", "success", row.id)
+        return row
+
+    async def upsert_attribute_translation(self, attribute_id: UUID, locale_value: str, data: dict[str, Any]) -> Any:
+        attribute = await self.repository.get_attribute(self.actor.tenant_id, attribute_id, lock=True)
+        if attribute is None:
+            await self._missing("attribute", attribute_id)
+        ensure_reference_active(attribute.status, "Attribute")
+        locale = normalize_locale(locale_value)
+        row = await self.repository.upsert_attribute_translation(
+            self.actor.tenant_id, attribute.id, locale,
+            {"name": data["name"].strip(), "description": data.get("description")},
+        )
+        attribute.updated_by = self.actor.user_id
+        attribute.version += 1
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute.updated.v1", "catalog.attribute", attribute.id, attribute.version,
+                {"changed_fields": ["translations"], "locales": [locale]},
+            )
+        )
+        await self._audit("catalog.attribute_translation_updated", "success", attribute.id, {"locale": locale})
+        return row
+
+    async def create_attribute_option(self, attribute_id: UUID, data: dict[str, Any]) -> Any:
+        attribute = await self.repository.get_attribute(self.actor.tenant_id, attribute_id, lock=True)
+        if attribute is None:
+            await self._missing("attribute", attribute_id)
+        ensure_reference_active(attribute.status, "Attribute")
+        ensure_attribute_options_supported(attribute.data_type)
+        limit = await self.repository.entitlement_limit(self.actor.tenant_id, "catalog.attribute_options.max_per_attribute")
+        current = await self.repository.count_attribute_options(self.actor.tenant_id, attribute.id)
+        await self._attributes_quota("catalog.attribute_options.max_per_attribute", current, limit, attribute.id)
+        row = await self.repository.create_attribute_option(
+            self.actor.tenant_id,
+            self.actor.user_id,
+            {
+                "attribute_id": attribute.id,
+                "code": normalized_code(data["code"]),
+                "label": data["label"].strip(),
+                "position": data.get("position", 0),
+                "status": "active",
+            },
+        )
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute_option.created.v1", "catalog.attribute", attribute.id, attribute.version,
+                {"attribute_option_id": str(row.id), "code": row.code, "label": row.label},
+            )
+        )
+        await self._audit("catalog.attribute_option_created", "success", row.id, {"attribute_id": str(attribute.id)})
+        return row
+
+    async def update_attribute_option(self, resource_id: UUID, expected: int, data: dict[str, Any]) -> Any:
+        row = await self.repository.get_attribute_option(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute_option", resource_id)
+        await self._version("attribute_option", row, expected)
+        ensure_reference_active(row.status, "Attribute Option")
+        changed: list[str] = []
+        for field in ("label", "position"):
+            if field in data and data[field] is not None:
+                value = data[field].strip() if isinstance(data[field], str) else data[field]
+                if getattr(row, field) != value:
+                    setattr(row, field, value)
+                    changed.append(field)
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute_option.updated.v1", "catalog.attribute", row.attribute_id, row.version,
+                {"attribute_option_id": str(row.id), "changed_fields": changed},
+            )
+        )
+        await self._audit("catalog.attribute_option_updated", "success", row.id, {"changed_fields": changed})
+        return row
+
+    async def archive_attribute_option(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_attribute_option(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute_option", resource_id)
+        await self._version("attribute_option", row, expected)
+        if row.status != "archived":
+            row.status = "archived"
+            row.archived_at = datetime.now(UTC)
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event(
+                    "catalog.attribute_option.archived.v1", "catalog.attribute", row.attribute_id, row.version,
+                    {"attribute_option_id": str(row.id), "status": row.status},
+                )
+            )
+            await self._audit("catalog.attribute_option_archived", "success", row.id)
+        return row
+
+    async def upsert_attribute_option_translation(self, attribute_option_id: UUID, locale_value: str, data: dict[str, Any]) -> Any:
+        value = await self.repository.get_attribute_option(self.actor.tenant_id, attribute_option_id, lock=True)
+        if value is None:
+            await self._missing("attribute_option", attribute_option_id)
+        ensure_reference_active(value.status, "Attribute Option")
+        locale = normalize_locale(locale_value)
+        row = await self.repository.upsert_attribute_option_translation(
+            self.actor.tenant_id, value.id, locale, {"label": data["label"].strip()}
+        )
+        value.updated_by = self.actor.user_id
+        value.version += 1
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute_option.updated.v1", "catalog.attribute", value.attribute_id, value.version,
+                {"attribute_option_id": str(value.id), "changed_fields": ["translations"], "locales": [locale]},
+            )
+        )
+        await self._audit("catalog.attribute_option_translation_updated", "success", value.id, {"locale": locale})
+        return row
+
+    async def create_attribute_group(self, data: dict[str, Any]) -> Any:
+        row = await self.repository.create_attribute_group(
+            self.actor.tenant_id,
+            self.actor.user_id,
+            {
+                "code": normalized_code(data["code"]),
+                "name": data["name"].strip(),
+                "description": data.get("description"),
+                "position": data.get("position", 0),
+                "status": "active",
+            },
+        )
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event("catalog.attribute_group.created.v1", "catalog.attribute_group", row.id, row.version, {"code": row.code})
+        )
+        await self._audit("catalog.attribute_group_created", "success", row.id)
+        return row
+
+    async def update_attribute_group(self, resource_id: UUID, expected: int, data: dict[str, Any]) -> Any:
+        row = await self.repository.get_attribute_group(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute_group", resource_id)
+        await self._version("attribute_group", row, expected)
+        ensure_reference_active(row.status, "Attribute Group")
+        changed: list[str] = []
+        for field in ("name", "description", "position"):
+            if field in data and data[field] is not None:
+                value = data[field].strip() if isinstance(data[field], str) else data[field]
+                if getattr(row, field) != value:
+                    setattr(row, field, value)
+                    changed.append(field)
+        row.updated_by = self.actor.user_id
+        row.version += 1
+        await self.repository.add_event(
+            self._event("catalog.attribute_group.updated.v1", "catalog.attribute_group", row.id, row.version, {"changed_fields": changed})
+        )
+        await self._audit("catalog.attribute_group_updated", "success", row.id, {"changed_fields": changed})
+        return row
+
+    async def archive_attribute_group(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_attribute_group(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute_group", resource_id)
+        await self._version("attribute_group", row, expected)
+        if row.status != "archived":
+            row.status = "archived"
+            row.archived_at = datetime.now(UTC)
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event("catalog.attribute_group.archived.v1", "catalog.attribute_group", row.id, row.version, {"status": row.status})
+            )
+            await self._audit("catalog.attribute_group_archived", "success", row.id)
+        return row
+
+    async def restore_attribute_group(self, resource_id: UUID, expected: int) -> Any:
+        row = await self.repository.get_attribute_group(self.actor.tenant_id, resource_id, lock=True)
+        if row is None:
+            await self._missing("attribute_group", resource_id)
+        await self._version("attribute_group", row, expected)
+        if row.status == "archived":
+            row.status = "active"
+            row.archived_at = None
+            row.updated_by = self.actor.user_id
+            row.version += 1
+            await self.repository.add_event(
+                self._event("catalog.attribute_group.restored.v1", "catalog.attribute_group", row.id, row.version, {"status": row.status})
+            )
+            await self._audit("catalog.attribute_group_restored", "success", row.id)
+        return row
+
+    async def upsert_attribute_group_translation(self, group_id: UUID, locale_value: str, data: dict[str, Any]) -> Any:
+        group = await self.repository.get_attribute_group(self.actor.tenant_id, group_id, lock=True)
+        if group is None:
+            await self._missing("attribute_group", group_id)
+        ensure_reference_active(group.status, "Attribute Group")
+        locale = normalize_locale(locale_value)
+        row = await self.repository.upsert_attribute_group_translation(
+            self.actor.tenant_id, group.id, locale,
+            {"name": data["name"].strip(), "description": data.get("description")},
+        )
+        group.updated_by = self.actor.user_id
+        group.version += 1
+        await self.repository.flush()
+        await self.repository.add_event(
+            self._event(
+                "catalog.attribute_group.updated.v1", "catalog.attribute_group", group.id, group.version,
+                {"changed_fields": ["translations"], "locales": [locale]},
+            )
+        )
+        await self._audit("catalog.attribute_group_translation_updated", "success", group.id, {"locale": locale})
+        return row
+
+    async def set_product_type_attributes(
+        self, product_type_id: UUID, expected: int, assignments: list[dict[str, Any]]
+    ) -> list[Any]:
+        product_type = await self.repository.get_product_type(self.actor.tenant_id, product_type_id, lock=True)
+        if product_type is None:
+            await self._missing("product_type", product_type_id)
+        await self._version("product_type", product_type, expected)
+        seen: set[UUID] = set()
+        normalized: list[dict[str, Any]] = []
+        for item in assignments:
+            attribute_id = item["attribute_id"]
+            if attribute_id in seen:
+                raise CatalogConflict("Duplicate Attribute in product type attribute assignment")
+            seen.add(attribute_id)
+            attribute = await self.repository.get_attribute(self.actor.tenant_id, attribute_id)
+            if attribute is None:
+                await self._missing("attribute", attribute_id)
+            ensure_product_type_attribute_assignable(attribute.status)
+            group_id = item.get("group_id")
+            if group_id is not None:
+                group = await self.repository.get_attribute_group(self.actor.tenant_id, group_id)
+                if group is None:
+                    await self._missing("attribute_group", group_id)
+                ensure_reference_active(group.status, "Attribute Group")
+            normalized.append(
+                {
+                    "attribute_id": attribute.id,
+                    "group_id": group_id,
+                    "position": item.get("position", 0),
+                    "required": item.get("required", False),
+                    "visible_override": item.get("visible_override"),
+                    "filterable_override": item.get("filterable_override"),
+                    "comparable_override": item.get("comparable_override"),
+                }
+            )
+        limit = await self.repository.entitlement_limit(
+            self.actor.tenant_id, "catalog.product_type_attributes.max_per_product_type"
+        )
+        await self._attributes_quota(
+            "catalog.product_type_attributes.max_per_product_type", len(normalized) - 1, limit, product_type.id
+        )
+        existing = await self.repository.list_product_type_attributes(self.actor.tenant_id, product_type.id)
+        existing_ids = {row.attribute_id for row in existing}
+        await self.repository.replace_product_type_attributes(self.actor.tenant_id, product_type.id, normalized)
+        product_type.updated_by = self.actor.user_id
+        product_type.version += 1
+        await self.repository.add_event(
+            self._event(
+                "catalog.product_type.attributes_changed.v1", "catalog.product_type", product_type.id, product_type.version,
+                {"attribute_ids": [str(i) for i in seen]},
+            )
+        )
+        await self._audit(
+            "catalog.product_type_attributes_changed", "success", product_type.id,
+            {"attached": [str(i) for i in seen - existing_ids], "detached": [str(i) for i in existing_ids - seen]},
+        )
+        return await self.repository.list_product_type_attributes(self.actor.tenant_id, product_type.id)
+
+    async def set_product_attribute_values(
+        self, product_id: UUID, expected: int, values: list[dict[str, Any]]
+    ) -> list[Any]:
+        product = await self.repository.get_product(self.actor.tenant_id, product_id, lock=True)
+        if product is None:
+            await self._missing("product", product_id)
+        await self._version("product", product, expected)
+        ensure_product_mutable(product.status)
+
+        assignments = [
+            item for item in await self.repository.list_product_type_attributes(self.actor.tenant_id, product.product_type_id)
+            if item.archived_at is None
+        ]
+        assignment_by_attribute = {item.attribute_id: item for item in assignments}
+
+        rows: list[dict[str, Any]] = []
+        multi_select: list[dict[str, Any]] = []
+        provided_attribute_ids: set[UUID] = set()
+        for item in values:
+            attribute_id = item["attribute_id"]
+            if attribute_id in provided_attribute_ids:
+                raise CatalogConflict("Duplicate Attribute in product specification values")
+            provided_attribute_ids.add(attribute_id)
+            assignment = assignment_by_attribute.get(attribute_id)
+            attribute = await self.repository.get_attribute(self.actor.tenant_id, attribute_id)
+            if attribute is None:
+                await self._missing("attribute", attribute_id)
+            ensure_product_attribute_value_assignable(attribute.status, assignment is not None)
+
+            row: dict[str, Any] = {
+                "attribute_id": attribute.id,
+                "value_text": None,
+                "value_long_text": None,
+                "value_integer": None,
+                "value_decimal": None,
+                "value_boolean": None,
+                "value_date": None,
+                "value_datetime": None,
+                "value_option_id": None,
+                "updated_by": self.actor.user_id,
+            }
+            if attribute.data_type == "MULTI_SELECT":
+                try:
+                    option_ids = normalize_multi_select_values(item.get("value"))
+                except ValueError as exc:
+                    raise CatalogPolicyError(str(exc)) from exc
+                for option_id in option_ids:
+                    option = await self.repository.get_attribute_option(self.actor.tenant_id, option_id)
+                    if option is None or option.attribute_id != attribute.id:
+                        raise CatalogPolicyError("MULTI_SELECT value references an Attribute Option that does not belong to this Attribute")
+                    ensure_reference_active(option.status, "Attribute Option")
+                    multi_select.append({"attribute_id": attribute.id, "attribute_option_id": option_id})
+            else:
+                try:
+                    column, python_value = normalize_attribute_value(attribute.data_type, item.get("value"))
+                except ValueError as exc:
+                    raise CatalogPolicyError(str(exc)) from exc
+                if column == "value_option_id":
+                    option = await self.repository.get_attribute_option(self.actor.tenant_id, python_value)
+                    if option is None or option.attribute_id != attribute.id:
+                        raise CatalogPolicyError("SELECT value references an Attribute Option that does not belong to this Attribute")
+                    ensure_reference_active(option.status, "Attribute Option")
+                row[column] = python_value
+            rows.append(row)
+
+        required_attribute_ids = frozenset(item.attribute_id for item in assignments if item.required)
+        ensure_required_attributes_present(required_attribute_ids, frozenset(provided_attribute_ids))
+
+        await self.repository.replace_product_attribute_values(self.actor.tenant_id, product.id, rows, multi_select)
+        product.updated_by = self.actor.user_id
+        product.version += 1
+        await self.repository.add_event(
+            self._event(
+                "catalog.product.attribute_values_changed.v1", "catalog.product", product.id, product.version,
+                {"attribute_ids": [str(i) for i in provided_attribute_ids]},
+            )
+        )
+        await self._audit(
+            "catalog.product_attribute_values_changed", "success", product.id,
+            {"attribute_ids": [str(i) for i in provided_attribute_ids]},
+        )
+        return await self.repository.list_product_attribute_values(self.actor.tenant_id, product.id)
