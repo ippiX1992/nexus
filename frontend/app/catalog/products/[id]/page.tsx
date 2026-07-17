@@ -2,20 +2,28 @@
 import{FormEvent,useEffect,useState}from"react";import{useParams}from"next/navigation";
 import{CatalogNav}from"@/components/CatalogNav";import{Shell}from"@/components/Shell";
 import{activeStore,listStores,selectStore,Store}from"@/lib/platform";
-import{Category,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,catalogUpdate,Option,OptionValue,ProductDetail,ProductOption,Taxonomy,technicalError,Variant,VariantOptionValue}from"@/lib/catalog";
+import{Attribute,AttributeOption,Category,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,catalogUpdate,Option,OptionValue,ProductAttributeValue,ProductAttributeValueOption,ProductDetail,ProductOption,ProductTypeAttribute,Taxonomy,technicalError,Variant,VariantOptionValue}from"@/lib/catalog";
 
-export default function Page(){const params=useParams<{id:string}>(),productId=params.id;const[detail,setDetail]=useState<ProductDetail|null>(null),[permissions,setPermissions]=useState<string[]>([]),[stores,setStores]=useState<Store[]>([]),[storeId,setStoreId]=useState(activeStore()??""),[categories,setCategories]=useState<Category[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);const[options,setOptions]=useState<Option[]>([]),[productOptions,setProductOptions]=useState<ProductOption[]>([]),[valuesByOption,setValuesByOption]=useState<Record<string,OptionValue[]>>({});const canUpdate=permissions.includes("catalog.product.update"),canVariant=permissions.includes("catalog.variant.update"),canCreateVariant=permissions.includes("catalog.variant.create"),canArchive=permissions.includes("catalog.product.archive"),canAssign=permissions.includes("catalog.assignment.manage"),canCategory=permissions.includes("catalog.assignment.manage"),canManageProductOptions=permissions.includes("catalog.product_option.manage");
+export default function Page(){const params=useParams<{id:string}>(),productId=params.id;const[detail,setDetail]=useState<ProductDetail|null>(null),[permissions,setPermissions]=useState<string[]>([]),[stores,setStores]=useState<Store[]>([]),[storeId,setStoreId]=useState(activeStore()??""),[categories,setCategories]=useState<Category[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);const[options,setOptions]=useState<Option[]>([]),[productOptions,setProductOptions]=useState<ProductOption[]>([]),[valuesByOption,setValuesByOption]=useState<Record<string,OptionValue[]>>({});const[attributes,setAttributes]=useState<Attribute[]>([]),[productTypeAttributes,setProductTypeAttributes]=useState<ProductTypeAttribute[]>([]),[attributeOptions,setAttributeOptions]=useState<Record<string,AttributeOption[]>>({}),[attributeValues,setAttributeValues]=useState<ProductAttributeValue[]>([]),[attributeValueOptions,setAttributeValueOptions]=useState<ProductAttributeValueOption[]>([]);const canUpdate=permissions.includes("catalog.product.update"),canVariant=permissions.includes("catalog.variant.update"),canCreateVariant=permissions.includes("catalog.variant.create"),canArchive=permissions.includes("catalog.product.archive"),canAssign=permissions.includes("catalog.assignment.manage"),canCategory=permissions.includes("catalog.assignment.manage"),canManageProductOptions=permissions.includes("catalog.product_option.manage"),canManageSpecs=permissions.includes("catalog.product_attribute_value.manage");
 
 async function load(){
  setLoading(true);
  try{
-  const[value,ctx,storeRows,taxonomyPage,optionPage]=await Promise.all([catalogGet<ProductDetail>(`/products/${productId}`),catalogContext(),listStores(),catalogPage<Taxonomy>("/taxonomies"),catalogPage<Option>("/options")]);
+  const[value,ctx,storeRows,taxonomyPage,optionPage,attributePage]=await Promise.all([catalogGet<ProductDetail>(`/products/${productId}`),catalogContext(),listStores(),catalogPage<Taxonomy>("/taxonomies"),catalogPage<Option>("/options"),catalogPage<Attribute>("/attributes")]);
   const categoryRows=(await Promise.all(taxonomyPage.items.map(item=>catalogGet<Category[]>(`/taxonomies/${item.id}/categories`)))).flat();
   const activeOptions=optionPage.items.filter(item=>item.status!=="archived");
   const assigned=await catalogGet<ProductOption[]>(`/products/${productId}/options`);
   const activeAssigned=assigned.filter(item=>!item.archived_at);
   const valuePairs=await Promise.all(activeAssigned.map(async item=>[item.option_id,await catalogGet<OptionValue[]>(`/options/${item.option_id}/values`)] as const));
-  setDetail(value);setPermissions(ctx.permissions);setStores(storeRows);setCategories(categoryRows);setOptions(activeOptions);setProductOptions(activeAssigned);setValuesByOption(Object.fromEntries(valuePairs));setError("");
+
+  const activeAttributes=attributePage.items.filter(item=>item.status!=="archived");
+  const typeAttributes=(await catalogGet<ProductTypeAttribute[]>(`/product-types/${value.product.product_type_id}/attributes`)).filter(item=>!item.archived_at);
+  const selectable=typeAttributes.filter(entry=>{const attribute=activeAttributes.find(a=>a.id===entry.attribute_id);return attribute&&(attribute.data_type==="SELECT"||attribute.data_type==="MULTI_SELECT")});
+  const attributeOptionPairs=await Promise.all(selectable.map(async entry=>[entry.attribute_id,await catalogGet<AttributeOption[]>(`/attributes/${entry.attribute_id}/options`)] as const));
+  const[specValues,specValueOptions]=await Promise.all([catalogGet<ProductAttributeValue[]>(`/products/${productId}/attributes`),catalogGet<ProductAttributeValueOption[]>(`/products/${productId}/attribute-value-options`)]);
+
+  setDetail(value);setPermissions(ctx.permissions);setStores(storeRows);setCategories(categoryRows);setOptions(activeOptions);setProductOptions(activeAssigned);setValuesByOption(Object.fromEntries(valuePairs));
+  setAttributes(activeAttributes);setProductTypeAttributes(typeAttributes);setAttributeOptions(Object.fromEntries(attributeOptionPairs));setAttributeValues(specValues);setAttributeValueOptions(specValueOptions);setError("");
  }catch(e){setError(technicalError(e))}finally{setLoading(false)}
 }
 useEffect(()=>{load()},[productId]);
@@ -50,6 +58,32 @@ async function removeProductOption(optionId:string){
  if(!detail)return;
  const next=productOptions.filter(item=>item.option_id!==optionId).map(item=>({option_id:item.option_id,position:item.position}));
  try{await catalogUpdate(`/products/${productId}/options`,{options:next},detail.product.version,"PUT");await load()}catch(e){setError(technicalError(e))}
+}
+
+async function saveSpecifications(event:FormEvent<HTMLFormElement>){
+ event.preventDefault();
+ if(!detail)return;
+ const element=event.currentTarget,form=new FormData(element);
+ const values:{attribute_id:string;value:unknown}[]=[];
+ for(const entry of productTypeAttributes){
+  const attribute=attributes.find(a=>a.id===entry.attribute_id);
+  if(!attribute)continue;
+  if(attribute.data_type==="MULTI_SELECT"){
+   const selected=form.getAll(`spec-${attribute.id}`).map(String).filter(Boolean);
+   if(selected.length>0)values.push({attribute_id:attribute.id,value:selected});
+   continue;
+  }
+  const raw=form.get(`spec-${attribute.id}`);
+  if(attribute.data_type==="BOOLEAN"){values.push({attribute_id:attribute.id,value:raw==="on"});continue}
+  if(raw===null||raw==="")continue;
+  if(attribute.data_type==="INTEGER"){values.push({attribute_id:attribute.id,value:parseInt(String(raw),10)});continue}
+  if(attribute.data_type==="DATETIME"){values.push({attribute_id:attribute.id,value:`${raw}:00Z`});continue}
+  values.push({attribute_id:attribute.id,value:String(raw)});
+ }
+ try{
+  await catalogUpdate(`/products/${productId}/attributes`,{values},detail.product.version,"PUT");
+  await load();
+ }catch(e){setError(technicalError(e))}
 }
 
 return <Shell title="Product detail"><CatalogNav/>{loading&&!detail?<p>Cargando…</p>:detail&&<>
@@ -87,6 +121,34 @@ return <Shell title="Product detail"><CatalogNav/>{loading&&!detail?<p>Cargando�
   <button>Crear Variant</button>
  </form>}
  {detail.variants.map(variant=><VariantEditor key={variant.id} variant={variant} editable={canVariant&&variant.status!=="archived"} canArchive={permissions.includes("catalog.variant.archive")} options={options} valuesByOption={valuesByOption} onSave={updateVariant} onArchive={archiveVariant}/>) }
+
+ <h2>Especificaciones</h2>
+ {productTypeAttributes.length===0?<p>El Product Type de este Product no tiene Attributes asignados.</p>:<form className="tile" onSubmit={saveSpecifications}>
+  {productTypeAttributes.map(entry=>{
+   const attribute=attributes.find(a=>a.id===entry.attribute_id);
+   if(!attribute)return null;
+   const existing=attributeValues.find(v=>v.attribute_id===attribute.id);
+   const label=`${attribute.name}${attribute.unit?` (${attribute.unit})`:""}${entry.required?" *":""}`;
+   if(attribute.data_type==="BOOLEAN")return <label key={attribute.id}><input type="checkbox" name={`spec-${attribute.id}`} defaultChecked={existing?.value_boolean===true}/> {label}</label>;
+   if(attribute.data_type==="LONG_TEXT")return <label key={attribute.id}>{label}<textarea name={`spec-${attribute.id}`} defaultValue={existing?.value_long_text??""}/></label>;
+   if(attribute.data_type==="INTEGER")return <label key={attribute.id}>{label}<input type="number" step="1" name={`spec-${attribute.id}`} defaultValue={existing?.value_integer??""}/></label>;
+   if(attribute.data_type==="DECIMAL")return <label key={attribute.id}>{label}<input type="number" step="any" name={`spec-${attribute.id}`} defaultValue={existing?.value_decimal??""}/></label>;
+   if(attribute.data_type==="DATE")return <label key={attribute.id}>{label}<input type="date" name={`spec-${attribute.id}`} defaultValue={existing?.value_date??""}/></label>;
+   if(attribute.data_type==="DATETIME")return <label key={attribute.id}>{label}<input type="datetime-local" name={`spec-${attribute.id}`} defaultValue={existing?.value_datetime?.slice(0,16)??""}/></label>;
+   if(attribute.data_type==="SELECT")return <label key={attribute.id}>{label}<select name={`spec-${attribute.id}`} defaultValue={existing?.value_option_id??""}>
+    <option value="">Sin valor</option>
+    {(attributeOptions[attribute.id]??[]).filter(option=>option.status!=="archived").map(option=><option key={option.id} value={option.id}>{option.label}</option>)}
+   </select></label>;
+   if(attribute.data_type==="MULTI_SELECT"){
+    const selectedIds=new Set(attributeValueOptions.filter(v=>v.attribute_id===attribute.id).map(v=>v.attribute_option_id));
+    return <fieldset key={attribute.id}><legend>{label}</legend>
+     {(attributeOptions[attribute.id]??[]).filter(option=>option.status!=="archived").map(option=><label key={option.id}><input type="checkbox" name={`spec-${attribute.id}`} value={option.id} defaultChecked={selectedIds.has(option.id)}/> {option.label}</label>)}
+    </fieldset>;
+   }
+   return <label key={attribute.id}>{label}<input name={`spec-${attribute.id}`} defaultValue={existing?.value_text??""}/></label>;
+  })}
+  {canManageSpecs&&<button>Guardar especificaciones</button>}
+ </form>}
 
  <h2>Category assignment</h2>
  {detail.categories.map(item=><p key={item.category_id}>{categories.find(category=>category.id===item.category_id)?.name??item.category_id}{item.is_primary?" · primary":""}</p>)}
