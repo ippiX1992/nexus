@@ -1,15 +1,18 @@
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -539,7 +542,306 @@ class VariantOptionValueModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class AttributeModel(CatalogResourceMixin, Base):
+    __tablename__ = "catalog_attributes"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attributes_tenant_id"),
+        UniqueConstraint("tenant_id", "code", name="uq_catalog_attributes_tenant_code"),
+        CheckConstraint("status IN ('active','archived')", name="ck_catalog_attribute_status"),
+        CheckConstraint(
+            "data_type IN ('TEXT','LONG_TEXT','INTEGER','DECIMAL','BOOLEAN','DATE','DATETIME','SELECT','MULTI_SELECT')",
+            name="ck_catalog_attribute_data_type",
+        ),
+        CheckConstraint("version > 0", name="ck_catalog_attribute_version"),
+        Index("ix_catalog_attributes_tenant_status_position", "tenant_id", "status", "position", "id"),
+    )
+    code: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(2000))
+    data_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    unit: Mapped[str | None] = mapped_column(String(50))
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_filterable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_searchable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_comparable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_visible_storefront: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+
+
+class AttributeTranslationModel(Base):
+    __tablename__ = "catalog_attribute_translations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id"],
+            ["catalog_attributes.tenant_id", "catalog_attributes.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_attribute_translations_tenant_attribute",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attribute_translations_tenant_id"),
+        UniqueConstraint(
+            "tenant_id", "attribute_id", "locale", name="uq_catalog_attribute_translation_attribute_locale"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    attribute_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    locale: Mapped[str] = mapped_column(String(35), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class AttributeOptionModel(CatalogResourceMixin, Base):
+    __tablename__ = "catalog_attribute_options"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id"],
+            ["catalog_attributes.tenant_id", "catalog_attributes.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_attribute_options_tenant_attribute",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attribute_options_tenant_id"),
+        UniqueConstraint(
+            "tenant_id", "attribute_id", "id", name="uq_catalog_attribute_options_tenant_attribute_id"
+        ),
+        UniqueConstraint(
+            "tenant_id", "attribute_id", "code", name="uq_catalog_attribute_option_tenant_attribute_code"
+        ),
+        CheckConstraint("status IN ('active','archived')", name="ck_catalog_attribute_option_status"),
+        CheckConstraint("version > 0", name="ck_catalog_attribute_option_version"),
+        Index(
+            "ix_catalog_attribute_options_tenant_attribute_status",
+            "tenant_id",
+            "attribute_id",
+            "status",
+            "position",
+            "id",
+        ),
+    )
+    attribute_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    code: Mapped[str] = mapped_column(String(100), nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+
+
+class AttributeOptionTranslationModel(Base):
+    __tablename__ = "catalog_attribute_option_translations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_option_id"],
+            ["catalog_attribute_options.tenant_id", "catalog_attribute_options.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_attribute_option_translations_tenant_option",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attribute_option_translations_tenant_id"),
+        UniqueConstraint(
+            "tenant_id",
+            "attribute_option_id",
+            "locale",
+            name="uq_catalog_attribute_option_translation_option_locale",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    attribute_option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    locale: Mapped[str] = mapped_column(String(35), nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class AttributeGroupModel(CatalogResourceMixin, Base):
+    __tablename__ = "catalog_attribute_groups"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attribute_groups_tenant_id"),
+        UniqueConstraint("tenant_id", "code", name="uq_catalog_attribute_groups_tenant_code"),
+        CheckConstraint("status IN ('active','archived')", name="ck_catalog_attribute_group_status"),
+        CheckConstraint("version > 0", name="ck_catalog_attribute_group_version"),
+        Index("ix_catalog_attribute_groups_tenant_status_position", "tenant_id", "status", "position", "id"),
+    )
+    code: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(2000))
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+
+
+class AttributeGroupTranslationModel(Base):
+    __tablename__ = "catalog_attribute_group_translations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "group_id"],
+            ["catalog_attribute_groups.tenant_id", "catalog_attribute_groups.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_attribute_group_translations_tenant_group",
+        ),
+        UniqueConstraint("tenant_id", "id", name="uq_catalog_attribute_group_translations_tenant_id"),
+        UniqueConstraint(
+            "tenant_id", "group_id", "locale", name="uq_catalog_attribute_group_translation_group_locale"
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    group_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    locale: Mapped[str] = mapped_column(String(35), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(2000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ProductTypeAttributeModel(Base):
+    __tablename__ = "catalog_product_type_attributes"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "product_type_id"],
+            ["catalog_product_types.tenant_id", "catalog_product_types.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_type_attributes_tenant_product_type",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id"],
+            ["catalog_attributes.tenant_id", "catalog_attributes.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_type_attributes_tenant_attribute",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "group_id"],
+            ["catalog_attribute_groups.tenant_id", "catalog_attribute_groups.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_type_attributes_tenant_group",
+        ),
+        CheckConstraint("position >= 0", name="ck_catalog_product_type_attribute_position"),
+        Index(
+            "ix_catalog_product_type_attributes_type",
+            "tenant_id",
+            "product_type_id",
+            "position",
+            "attribute_id",
+        ),
+    )
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
+    product_type_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    attribute_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    group_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    visible_override: Mapped[bool | None] = mapped_column(Boolean)
+    filterable_override: Mapped[bool | None] = mapped_column(Boolean)
+    comparable_override: Mapped[bool | None] = mapped_column(Boolean)
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ProductAttributeValueModel(Base):
+    __tablename__ = "catalog_product_attribute_values"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "product_id"],
+            ["catalog_products.tenant_id", "catalog_products.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_attribute_values_tenant_product",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id"],
+            ["catalog_attributes.tenant_id", "catalog_attributes.id"],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_attribute_values_tenant_attribute",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id", "value_option_id"],
+            [
+                "catalog_attribute_options.tenant_id",
+                "catalog_attribute_options.attribute_id",
+                "catalog_attribute_options.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_attribute_values_tenant_option",
+        ),
+        Index(
+            "ix_catalog_product_attribute_values_attribute",
+            "tenant_id",
+            "attribute_id",
+            "product_id",
+        ),
+        CheckConstraint(
+            "(CASE WHEN value_text IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_long_text IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_integer IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_decimal IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_boolean IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_date IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_datetime IS NOT NULL THEN 1 ELSE 0 END"
+            " + CASE WHEN value_option_id IS NOT NULL THEN 1 ELSE 0 END) <= 1",
+            name="ck_catalog_product_attribute_value_single_column",
+        ),
+    )
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
+    product_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    attribute_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    value_text: Mapped[str | None] = mapped_column(String(500))
+    value_long_text: Mapped[str | None] = mapped_column(Text)
+    value_integer: Mapped[int | None] = mapped_column(BigInteger)
+    value_decimal: Mapped[Decimal | None] = mapped_column(Numeric(20, 6))
+    value_boolean: Mapped[bool | None] = mapped_column(Boolean)
+    value_date: Mapped[date | None] = mapped_column(Date)
+    value_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    value_option_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class ProductAttributeValueOptionModel(Base):
+    __tablename__ = "catalog_product_attribute_value_options"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "product_id", "attribute_id"],
+            [
+                "catalog_product_attribute_values.tenant_id",
+                "catalog_product_attribute_values.product_id",
+                "catalog_product_attribute_values.attribute_id",
+            ],
+            ondelete="CASCADE",
+            name="fk_catalog_product_attribute_value_options_tenant_value",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "attribute_id", "attribute_option_id"],
+            [
+                "catalog_attribute_options.tenant_id",
+                "catalog_attribute_options.attribute_id",
+                "catalog_attribute_options.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_catalog_product_attribute_value_options_tenant_option",
+        ),
+        Index(
+            "ix_catalog_product_attribute_value_options_option",
+            "tenant_id",
+            "attribute_option_id",
+            "product_id",
+        ),
+    )
+    tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True)
+    product_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    attribute_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    attribute_option_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 __all__ = [
+    "AttributeGroupModel",
+    "AttributeGroupTranslationModel",
+    "AttributeModel",
+    "AttributeOptionModel",
+    "AttributeOptionTranslationModel",
+    "AttributeTranslationModel",
     "BrandModel",
     "CategoryClosureModel",
     "CategoryModel",
@@ -547,6 +849,8 @@ __all__ = [
     "OptionTranslationModel",
     "OptionValueModel",
     "OptionValueTranslationModel",
+    "ProductAttributeValueModel",
+    "ProductAttributeValueOptionModel",
     "ProductCategoryModel",
     "ProductIdentifierModel",
     "ProductModel",
@@ -554,6 +858,7 @@ __all__ = [
     "ProductSeoModel",
     "ProductStoreModel",
     "ProductTranslationModel",
+    "ProductTypeAttributeModel",
     "ProductTypeModel",
     "ProductVariantModel",
     "TaxonomyModel",
