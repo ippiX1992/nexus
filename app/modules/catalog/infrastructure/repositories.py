@@ -6,6 +6,12 @@ from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.catalog.infrastructure.models import (
+    AttributeGroupModel,
+    AttributeGroupTranslationModel,
+    AttributeModel,
+    AttributeOptionModel,
+    AttributeOptionTranslationModel,
+    AttributeTranslationModel,
     BrandModel,
     CategoryClosureModel,
     CategoryModel,
@@ -13,6 +19,8 @@ from app.modules.catalog.infrastructure.models import (
     OptionTranslationModel,
     OptionValueModel,
     OptionValueTranslationModel,
+    ProductAttributeValueModel,
+    ProductAttributeValueOptionModel,
     ProductCategoryModel,
     ProductIdentifierModel,
     ProductModel,
@@ -20,6 +28,7 @@ from app.modules.catalog.infrastructure.models import (
     ProductSeoModel,
     ProductStoreModel,
     ProductTranslationModel,
+    ProductTypeAttributeModel,
     ProductTypeModel,
     ProductVariantModel,
     TaxonomyModel,
@@ -39,6 +48,8 @@ RESOURCE_MODELS: dict[str, Any] = {
     "brand": BrandModel,
     "taxonomy": TaxonomyModel,
     "option": OptionModel,
+    "attribute": AttributeModel,
+    "attribute_group": AttributeGroupModel,
 }
 
 
@@ -747,6 +758,280 @@ class SqlAlchemyCatalogRepository:
             for key, value in data.items():
                 setattr(row, key, value)
         return row
+
+    async def get_attribute(self, tenant_id: UUID, resource_id: UUID, *, lock: bool = False) -> AttributeModel | None:
+        return await self._get(AttributeModel, tenant_id, resource_id, lock)
+
+    async def get_attribute_by_code(self, tenant_id: UUID, code: str) -> AttributeModel | None:
+        return await self.session.scalar(
+            select(AttributeModel).where(AttributeModel.tenant_id == tenant_id, AttributeModel.code == code)
+        )
+
+    async def create_attribute(self, tenant_id: UUID, actor_id: UUID, data: dict[str, Any]) -> AttributeModel:
+        row = AttributeModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
+        self.session.add(row)
+        return row
+
+    async def list_attribute_translations(
+        self, tenant_id: UUID, attribute_id: UUID
+    ) -> list[AttributeTranslationModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(AttributeTranslationModel).where(
+                        AttributeTranslationModel.tenant_id == tenant_id,
+                        AttributeTranslationModel.attribute_id == attribute_id,
+                    ).order_by(AttributeTranslationModel.locale)
+                )
+            ).all()
+        )
+
+    async def upsert_attribute_translation(
+        self, tenant_id: UUID, attribute_id: UUID, locale: str, data: dict[str, Any]
+    ) -> AttributeTranslationModel:
+        row = await self.session.scalar(
+            select(AttributeTranslationModel).where(
+                AttributeTranslationModel.tenant_id == tenant_id,
+                AttributeTranslationModel.attribute_id == attribute_id,
+                AttributeTranslationModel.locale == locale,
+            ).with_for_update()
+        )
+        if row is None:
+            row = AttributeTranslationModel(tenant_id=tenant_id, attribute_id=attribute_id, locale=locale, **data)
+            self.session.add(row)
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+        return row
+
+    async def get_attribute_option(
+        self, tenant_id: UUID, resource_id: UUID, *, lock: bool = False
+    ) -> AttributeOptionModel | None:
+        return await self._get(AttributeOptionModel, tenant_id, resource_id, lock)
+
+    async def list_attribute_options(self, tenant_id: UUID, attribute_id: UUID) -> list[AttributeOptionModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(AttributeOptionModel).where(
+                        AttributeOptionModel.tenant_id == tenant_id,
+                        AttributeOptionModel.attribute_id == attribute_id,
+                    ).order_by(AttributeOptionModel.position, AttributeOptionModel.id)
+                )
+            ).all()
+        )
+
+    async def count_attribute_options(self, tenant_id: UUID, attribute_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count()).select_from(AttributeOptionModel).where(
+                    AttributeOptionModel.tenant_id == tenant_id, AttributeOptionModel.attribute_id == attribute_id
+                )
+            )
+            or 0
+        )
+
+    async def create_attribute_option(
+        self, tenant_id: UUID, actor_id: UUID, data: dict[str, Any]
+    ) -> AttributeOptionModel:
+        row = AttributeOptionModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
+        self.session.add(row)
+        return row
+
+    async def list_attribute_option_translations(
+        self, tenant_id: UUID, attribute_option_id: UUID
+    ) -> list[AttributeOptionTranslationModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(AttributeOptionTranslationModel).where(
+                        AttributeOptionTranslationModel.tenant_id == tenant_id,
+                        AttributeOptionTranslationModel.attribute_option_id == attribute_option_id,
+                    ).order_by(AttributeOptionTranslationModel.locale)
+                )
+            ).all()
+        )
+
+    async def upsert_attribute_option_translation(
+        self, tenant_id: UUID, attribute_option_id: UUID, locale: str, data: dict[str, Any]
+    ) -> AttributeOptionTranslationModel:
+        row = await self.session.scalar(
+            select(AttributeOptionTranslationModel).where(
+                AttributeOptionTranslationModel.tenant_id == tenant_id,
+                AttributeOptionTranslationModel.attribute_option_id == attribute_option_id,
+                AttributeOptionTranslationModel.locale == locale,
+            ).with_for_update()
+        )
+        if row is None:
+            row = AttributeOptionTranslationModel(
+                tenant_id=tenant_id, attribute_option_id=attribute_option_id, locale=locale, **data
+            )
+            self.session.add(row)
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+        return row
+
+    async def get_attribute_group(
+        self, tenant_id: UUID, resource_id: UUID, *, lock: bool = False
+    ) -> AttributeGroupModel | None:
+        return await self._get(AttributeGroupModel, tenant_id, resource_id, lock)
+
+    async def create_attribute_group(
+        self, tenant_id: UUID, actor_id: UUID, data: dict[str, Any]
+    ) -> AttributeGroupModel:
+        row = AttributeGroupModel(tenant_id=tenant_id, created_by=actor_id, updated_by=actor_id, **data)
+        self.session.add(row)
+        return row
+
+    async def list_attribute_group_translations(
+        self, tenant_id: UUID, group_id: UUID
+    ) -> list[AttributeGroupTranslationModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(AttributeGroupTranslationModel).where(
+                        AttributeGroupTranslationModel.tenant_id == tenant_id,
+                        AttributeGroupTranslationModel.group_id == group_id,
+                    ).order_by(AttributeGroupTranslationModel.locale)
+                )
+            ).all()
+        )
+
+    async def upsert_attribute_group_translation(
+        self, tenant_id: UUID, group_id: UUID, locale: str, data: dict[str, Any]
+    ) -> AttributeGroupTranslationModel:
+        row = await self.session.scalar(
+            select(AttributeGroupTranslationModel).where(
+                AttributeGroupTranslationModel.tenant_id == tenant_id,
+                AttributeGroupTranslationModel.group_id == group_id,
+                AttributeGroupTranslationModel.locale == locale,
+            ).with_for_update()
+        )
+        if row is None:
+            row = AttributeGroupTranslationModel(tenant_id=tenant_id, group_id=group_id, locale=locale, **data)
+            self.session.add(row)
+        else:
+            for key, value in data.items():
+                setattr(row, key, value)
+        return row
+
+    async def get_product_type_attribute(
+        self, tenant_id: UUID, product_type_id: UUID, attribute_id: UUID, *, lock: bool = False
+    ) -> ProductTypeAttributeModel | None:
+        statement = select(ProductTypeAttributeModel).where(
+            ProductTypeAttributeModel.tenant_id == tenant_id,
+            ProductTypeAttributeModel.product_type_id == product_type_id,
+            ProductTypeAttributeModel.attribute_id == attribute_id,
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
+    async def list_product_type_attributes(
+        self, tenant_id: UUID, product_type_id: UUID
+    ) -> list[ProductTypeAttributeModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(ProductTypeAttributeModel).where(
+                        ProductTypeAttributeModel.tenant_id == tenant_id,
+                        ProductTypeAttributeModel.product_type_id == product_type_id,
+                    ).order_by(ProductTypeAttributeModel.position, ProductTypeAttributeModel.attribute_id)
+                )
+            ).all()
+        )
+
+    async def count_product_type_attributes(self, tenant_id: UUID, product_type_id: UUID) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count()).select_from(ProductTypeAttributeModel).where(
+                    ProductTypeAttributeModel.tenant_id == tenant_id,
+                    ProductTypeAttributeModel.product_type_id == product_type_id,
+                )
+            )
+            or 0
+        )
+
+    async def replace_product_type_attributes(
+        self, tenant_id: UUID, product_type_id: UUID, assignments: list[dict[str, Any]]
+    ) -> None:
+        await self.session.execute(
+            delete(ProductTypeAttributeModel).where(
+                ProductTypeAttributeModel.tenant_id == tenant_id,
+                ProductTypeAttributeModel.product_type_id == product_type_id,
+            )
+        )
+        self.session.add_all(
+            [
+                ProductTypeAttributeModel(tenant_id=tenant_id, product_type_id=product_type_id, **item)
+                for item in assignments
+            ]
+        )
+
+    async def get_product_attribute_value(
+        self, tenant_id: UUID, product_id: UUID, attribute_id: UUID, *, lock: bool = False
+    ) -> ProductAttributeValueModel | None:
+        statement = select(ProductAttributeValueModel).where(
+            ProductAttributeValueModel.tenant_id == tenant_id,
+            ProductAttributeValueModel.product_id == product_id,
+            ProductAttributeValueModel.attribute_id == attribute_id,
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
+    async def list_product_attribute_values(
+        self, tenant_id: UUID, product_id: UUID
+    ) -> list[ProductAttributeValueModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(ProductAttributeValueModel).where(
+                        ProductAttributeValueModel.tenant_id == tenant_id,
+                        ProductAttributeValueModel.product_id == product_id,
+                    )
+                )
+            ).all()
+        )
+
+    async def list_product_attribute_value_options(
+        self, tenant_id: UUID, product_id: UUID
+    ) -> list[ProductAttributeValueOptionModel]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(ProductAttributeValueOptionModel).where(
+                        ProductAttributeValueOptionModel.tenant_id == tenant_id,
+                        ProductAttributeValueOptionModel.product_id == product_id,
+                    )
+                )
+            ).all()
+        )
+
+    async def replace_product_attribute_values(
+        self,
+        tenant_id: UUID,
+        product_id: UUID,
+        rows: list[dict[str, Any]],
+        multi_select: list[dict[str, Any]],
+    ) -> None:
+        await self.session.execute(
+            delete(ProductAttributeValueModel).where(
+                ProductAttributeValueModel.tenant_id == tenant_id,
+                ProductAttributeValueModel.product_id == product_id,
+            )
+        )
+        self.session.add_all(
+            [ProductAttributeValueModel(tenant_id=tenant_id, product_id=product_id, **item) for item in rows]
+        )
+        await self.session.flush()
+        self.session.add_all(
+            [
+                ProductAttributeValueOptionModel(tenant_id=tenant_id, product_id=product_id, **item)
+                for item in multi_select
+            ]
+        )
 
     async def add_event(self, envelope: EventEnvelope) -> None:
         payload = envelope.to_dict()

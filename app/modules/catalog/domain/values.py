@@ -3,12 +3,18 @@ import hashlib
 import json
 import re
 import unicodedata
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
+from typing import Any
 from uuid import UUID
 
 from app.modules.platform.domain.values import normalize_code, validate_locale
 
 IDENTIFIER_TYPES = frozenset({"ean", "upc", "isbn", "mpn", "external"})
+ATTRIBUTE_DATA_TYPES = frozenset(
+    {"TEXT", "LONG_TEXT", "INTEGER", "DECIMAL", "BOOLEAN", "DATE", "DATETIME", "SELECT", "MULTI_SELECT"}
+)
+ATTRIBUTE_OPTION_DATA_TYPES = frozenset({"SELECT", "MULTI_SELECT"})
 _HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 _SLUG_SEPARATOR = re.compile(r"[\s_]+")
 _SLUG_HYPHENS = re.compile(r"-+")
@@ -102,6 +108,89 @@ def derive_variant_sku(base: str, value_codes: list[str]) -> tuple[str, str]:
     suffix = "-".join(sorted(code.strip().upper() for code in value_codes))
     candidate = f"{base.strip().upper()}-{suffix}" if suffix else base.strip().upper()
     return normalize_sku(candidate)
+
+
+_SCALAR_VALUE_COLUMNS = {
+    "TEXT": "value_text",
+    "LONG_TEXT": "value_long_text",
+    "INTEGER": "value_integer",
+    "DECIMAL": "value_decimal",
+    "BOOLEAN": "value_boolean",
+    "DATE": "value_date",
+    "DATETIME": "value_datetime",
+}
+
+
+def normalize_attribute_value(data_type: str, raw: Any) -> tuple[str, Any]:
+    """Coerce a raw JSON value to the column/Python type its Attribute's
+    data_type demands, returning (column_name, python_value). Raises
+    ValueError on any type mismatch -- this is the single place that decides
+    whether a value "looks like" the declared type; it does not check
+    whether a SELECT/MULTI_SELECT option actually belongs to the Attribute
+    or the tenant, which the database's composite foreign keys enforce
+    structurally instead.
+    """
+    if data_type not in ATTRIBUTE_DATA_TYPES:
+        raise ValueError(f"Unsupported attribute data_type: {data_type}")
+
+    if data_type == "TEXT":
+        text = unicodedata.normalize("NFKC", str(raw)).strip()
+        if not text or len(text) > 500:
+            raise ValueError("TEXT value must contain 1 to 500 characters")
+        return "value_text", text
+    if data_type == "LONG_TEXT":
+        text = unicodedata.normalize("NFKC", str(raw)).strip()
+        if not text:
+            raise ValueError("LONG_TEXT value must not be empty")
+        return "value_long_text", text
+    if data_type == "INTEGER":
+        if isinstance(raw, bool) or not isinstance(raw, int):
+            raise ValueError("INTEGER value must be a whole number")
+        return "value_integer", raw
+    if data_type == "DECIMAL":
+        try:
+            decimal_value = Decimal(str(raw))
+        except (InvalidOperation, ValueError, TypeError) as exc:
+            raise ValueError("DECIMAL value must be a valid number") from exc
+        return "value_decimal", decimal_value
+    if data_type == "BOOLEAN":
+        if not isinstance(raw, bool):
+            raise ValueError("BOOLEAN value must be true or false")
+        return "value_boolean", raw
+    if data_type == "DATE":
+        try:
+            parsed_date = date.fromisoformat(str(raw))
+        except ValueError as exc:
+            raise ValueError("DATE value must be an ISO-8601 date (YYYY-MM-DD)") from exc
+        return "value_date", parsed_date
+    if data_type == "DATETIME":
+        try:
+            parsed_datetime = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("DATETIME value must be an ISO-8601 datetime") from exc
+        if parsed_datetime.tzinfo is None:
+            raise ValueError("DATETIME value must include a timezone offset")
+        return "value_datetime", parsed_datetime
+    if data_type == "SELECT":
+        try:
+            option_id = raw if isinstance(raw, UUID) else UUID(str(raw))
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise ValueError("SELECT value must be a single Attribute Option id") from exc
+        return "value_option_id", option_id
+
+    raise ValueError("MULTI_SELECT values are stored as a set of options, not a scalar column")
+
+
+def normalize_multi_select_values(raw: Any) -> list[UUID]:
+    if not isinstance(raw, list) or not raw:
+        raise ValueError("MULTI_SELECT value must be a non-empty list of Attribute Option ids")
+    try:
+        option_ids = [item if isinstance(item, UUID) else UUID(str(item)) for item in raw]
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise ValueError("MULTI_SELECT value must contain valid Attribute Option ids") from exc
+    if len(set(option_ids)) != len(option_ids):
+        raise ValueError("MULTI_SELECT value must not repeat the same Attribute Option")
+    return option_ids
 
 
 def combination_fingerprint(pairs: list[tuple[UUID, UUID]]) -> str | None:

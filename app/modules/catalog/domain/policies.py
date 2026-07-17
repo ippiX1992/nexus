@@ -105,3 +105,46 @@ def ensure_generation_within_limits(estimated_work: int, per_operation_limit: in
         raise CatalogOptionsQuotaExceeded("catalog.combination_generation.max_per_operation", per_operation_limit)
     if estimated_work > remaining_capacity:
         raise CatalogOptionsQuotaExceeded("catalog.variant_combinations.max_per_product", remaining_capacity)
+
+
+class CatalogAttributesQuotaExceeded(CatalogQuotaExceeded):
+    """Same 409-not-429 convention as CatalogOptionsQuotaExceeded, kept as its
+    own subclass for the same reason: M3.0's pre-existing 429 quota tests
+    must stay untouched, and M3.2 is a separate increment from M3.1."""
+
+
+def ensure_attributes_quota(entitlement: str, current: int, limit: int) -> None:
+    if current >= limit:
+        raise CatalogAttributesQuotaExceeded(entitlement, limit)
+
+
+def ensure_attribute_type_immutable(current_data_type: str, requested_data_type: str | None) -> None:
+    if requested_data_type is not None and requested_data_type != current_data_type:
+        raise CatalogPolicyError(
+            "Attribute data_type cannot change after creation; archive it and create a new Attribute instead"
+        )
+
+
+def ensure_attribute_options_supported(data_type: str) -> None:
+    if data_type not in ("SELECT", "MULTI_SELECT"):
+        raise CatalogPolicyError("Attribute Options only apply to SELECT and MULTI_SELECT Attributes")
+
+
+def ensure_product_type_attribute_assignable(attribute_status: str) -> None:
+    if attribute_status == "archived":
+        raise CatalogPolicyError("An archived Attribute cannot be assigned to a Product Type")
+
+
+def ensure_product_attribute_value_assignable(attribute_status: str, is_type_assignable: bool) -> None:
+    if attribute_status == "archived":
+        raise CatalogPolicyError("An archived Attribute cannot receive new values")
+    if not is_type_assignable:
+        raise CatalogPolicyError("This Attribute is not assigned to the Product's Product Type")
+
+
+def ensure_required_attributes_present(
+    required_attribute_ids: frozenset[UUID], provided_attribute_ids: frozenset[UUID]
+) -> None:
+    missing = required_attribute_ids - provided_attribute_ids
+    if missing:
+        raise CatalogPolicyError("Missing a value for a required Attribute")

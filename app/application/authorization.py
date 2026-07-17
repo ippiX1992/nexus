@@ -27,14 +27,23 @@ CATALOG_OPTIONS_PERMISSIONS = (
     "catalog.variant_combination.read", "catalog.variant_combination.create",
     "catalog.variant_combination.generate", "catalog.variant_combination.archive",
 )
+CATALOG_ATTRIBUTES_PERMISSIONS = (
+    "catalog.attribute.read", "catalog.attribute.create", "catalog.attribute.update", "catalog.attribute.archive",
+    "catalog.attribute_option.read", "catalog.attribute_option.create", "catalog.attribute_option.update", "catalog.attribute_option.archive",
+    "catalog.attribute_group.read", "catalog.attribute_group.create", "catalog.attribute_group.update", "catalog.attribute_group.archive",
+    "catalog.product_type_attribute.read", "catalog.product_type_attribute.manage",
+    "catalog.product_attribute_value.read", "catalog.product_attribute_value.manage",
+)
 PERMISSIONS = (
     "tenant.read", "tenant.update", "member.read", "member.invite", "member.update", "member.remove",
     "role.read", "role.create", "role.update", "role.delete", "audit.read", "security.manage",
-    *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS,
+    *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS, *CATALOG_ATTRIBUTES_PERMISSIONS,
 )
 
 CATALOG_READ_PERMISSIONS = {
-    permission for permission in (*CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS) if permission.endswith(".read")
+    permission
+    for permission in (*CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS, *CATALOG_ATTRIBUTES_PERMISSIONS)
+    if permission.endswith(".read")
 }
 CATALOG_EDITOR_PERMISSIONS = {
     "catalog.product.read", "catalog.product.create", "catalog.product.update",
@@ -45,6 +54,11 @@ CATALOG_EDITOR_PERMISSIONS = {
     "catalog.option_value.read", "catalog.option_value.create", "catalog.option_value.update",
     "catalog.product_option.read", "catalog.product_option.manage",
     "catalog.variant_combination.read", "catalog.variant_combination.create", "catalog.variant_combination.generate",
+    "catalog.attribute.read", "catalog.attribute.create", "catalog.attribute.update",
+    "catalog.attribute_option.read", "catalog.attribute_option.create", "catalog.attribute_option.update",
+    "catalog.attribute_group.read", "catalog.attribute_group.create", "catalog.attribute_group.update",
+    "catalog.product_type_attribute.read", "catalog.product_type_attribute.manage",
+    "catalog.product_attribute_value.read", "catalog.product_attribute_value.manage",
 }
 
 ROLE_PERMISSIONS = {
@@ -55,6 +69,7 @@ ROLE_PERMISSIONS = {
         *(permission for permission in PLATFORM_PERMISSIONS if not permission.endswith(".archive") and permission != "entitlement.manage"),
         *(permission for permission in CATALOG_PERMISSIONS if permission != "catalog.product_type.manage"),
         *CATALOG_OPTIONS_PERMISSIONS,
+        *CATALOG_ATTRIBUTES_PERMISSIONS,
     },
     "editor": {
         "tenant.read", "member.read", "role.read", "store.read", "site.read", "channel.read",
