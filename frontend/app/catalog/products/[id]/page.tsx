@@ -1,6 +1,6 @@
 "use client";
 import{FormEvent,useEffect,useState}from"react";import{useParams}from"next/navigation";
-import{CatalogNav}from"@/components/CatalogNav";import{Shell}from"@/components/Shell";
+import{Shell}from"@/components/Shell";
 import{activeStore,listStores,selectStore,Store}from"@/lib/platform";
 import{Attribute,AttributeOption,Category,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,catalogUpdate,Option,OptionValue,ProductAttributeValue,ProductAttributeValueOption,ProductDetail,ProductOption,ProductTypeAttribute,Taxonomy,technicalError,Variant,VariantOptionValue}from"@/lib/catalog";
 
@@ -86,7 +86,7 @@ async function saveSpecifications(event:FormEvent<HTMLFormElement>){
  }catch(e){setError(technicalError(e))}
 }
 
-return <Shell title="Product detail"><CatalogNav/>{loading&&!detail?<p>Cargando…</p>:detail&&<>
+return <Shell title="Product detail">{loading&&!detail?<p>Cargando…</p>:detail&&<>
  <div className="tile">
   <strong>{detail.translations[0]?.name??detail.product.code??detail.product.id}</strong>
   <p>{detail.product.status} · v{detail.product.version} · activo no significa publicado</p>

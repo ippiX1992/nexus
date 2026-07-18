@@ -1,7 +1,6 @@
 "use client";
 import{FormEvent,useEffect,useState}from"react";
-import{CatalogNav}from"@/components/CatalogNav";
-import{Shell}from"@/components/Shell";
+import{AdminShell}from"@/components/admin/AdminShell";
 import{Attribute,AttributeDataType,AttributeOption,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,catalogUpdate,technicalError}from"@/lib/catalog";
 
 const DATA_TYPES:AttributeDataType[]=["TEXT","LONG_TEXT","INTEGER","DECIMAL","BOOLEAN","DATE","DATETIME","SELECT","MULTI_SELECT"];
@@ -76,7 +75,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <Shell title="Attributes"><CatalogNav/>
+ return <AdminShell title="Attributes" description="Características informativas de un producto (Potencia, Material). Para combinaciones de Variant, ver Options.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Attribute</strong>
    <label>Código<input name="code" required/></label>
@@ -113,5 +112,5 @@ export default function Page(){
    </div>
   )}
   {error&&<p className="error" role="alert">{error}</p>}
- </Shell>;
+ </AdminShell>;
 }

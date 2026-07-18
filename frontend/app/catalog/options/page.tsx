@@ -1,7 +1,6 @@
 "use client";
 import{FormEvent,useEffect,useState}from"react";
-import{CatalogNav}from"@/components/CatalogNav";
-import{Shell}from"@/components/Shell";
+import{AdminShell}from"@/components/admin/AdminShell";
 import{Option,OptionValue,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,technicalError}from"@/lib/catalog";
 
 export default function Page(){
@@ -60,7 +59,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <Shell title="Options"><CatalogNav/>
+ return <AdminShell title="Options" description="Dimensiones que generan combinaciones de Variant (Color, Talla). Para atributos descriptivos, ver Attributes.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Option</strong>
    <label>Código<input name="code" required/></label>
@@ -92,5 +91,5 @@ export default function Page(){
    </div>
   )}
   {error&&<p className="error" role="alert">{error}</p>}
- </Shell>;
+ </AdminShell>;
 }

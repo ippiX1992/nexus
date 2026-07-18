@@ -1,1 +1,1 @@
-"use client";import{Shell}from"@/components/Shell";import{PlatformNav}from"@/components/PlatformNav";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Environments"><PlatformNav/><PlatformCollection kind="environments"/></Shell>}
+"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Environments"><PlatformCollection kind="environments"/></Shell>}

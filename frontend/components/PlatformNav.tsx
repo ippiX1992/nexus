@@ -1,2 +1,0 @@
-import Link from"next/link";
-export function PlatformNav(){return <nav className="nav" aria-label="Platform"><Link href="/platform/stores">Stores</Link><Link href="/platform/sites">Sites</Link><Link href="/platform/channels">Channels</Link><Link href="/platform/environments">Environments</Link><Link href="/platform/markets">Markets</Link><Link href="/platform/usage">Uso y cuotas</Link><Link href="/platform/operations">Operations</Link></nav>}

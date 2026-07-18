@@ -1,7 +1,6 @@
 "use client";
 import{FormEvent,useEffect,useState}from"react";
-import{CatalogNav}from"@/components/CatalogNav";
-import{Shell}from"@/components/Shell";
+import{AdminShell}from"@/components/admin/AdminShell";
 import{Attribute,catalogCommand,catalogContext,catalogCreate,catalogGet,catalogPage,catalogUpdate,ProductType,ProductTypeAttribute,technicalError}from"@/lib/catalog";
 
 export default function Page(){
@@ -71,7 +70,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <Shell title="Product Types"><CatalogNav/>
+ return <AdminShell title="Product Types" description="Define qué Attributes aplican a cada tipo de producto.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Product Type</strong>
    <label>Código<input name="code" required/></label>
@@ -106,5 +105,5 @@ export default function Page(){
    </div>
   )}
   {error&&<p className="error" role="alert">{error}</p>}
- </Shell>;
+ </AdminShell>;
 }

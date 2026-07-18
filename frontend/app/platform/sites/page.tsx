@@ -1,1 +1,1 @@
-"use client";import{Shell}from"@/components/Shell";import{PlatformNav}from"@/components/PlatformNav";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Sites"><PlatformNav/><PlatformCollection kind="sites"/></Shell>}
+"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Sites"><PlatformCollection kind="sites"/></Shell>}
