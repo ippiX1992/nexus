@@ -34,16 +34,34 @@ CATALOG_ATTRIBUTES_PERMISSIONS = (
     "catalog.product_type_attribute.read", "catalog.product_type_attribute.manage",
     "catalog.product_attribute_value.read", "catalog.product_attribute_value.manage",
 )
+PRICING_PERMISSIONS = (
+    "pricing.price_list.read", "pricing.price_list.create", "pricing.price_list.update", "pricing.price_list.archive",
+    "pricing.price_list_entry.read", "pricing.price_list_entry.manage",
+    "pricing.assignment.read", "pricing.assignment.manage",
+    "pricing.variant_override.read", "pricing.variant_override.manage",
+    "pricing.price.resolve",
+)
 PERMISSIONS = (
     "tenant.read", "tenant.update", "member.read", "member.invite", "member.update", "member.remove",
     "role.read", "role.create", "role.update", "role.delete", "audit.read", "security.manage",
     *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS, *CATALOG_ATTRIBUTES_PERMISSIONS,
+    *PRICING_PERMISSIONS,
 )
 
 CATALOG_READ_PERMISSIONS = {
     permission
     for permission in (*CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS, *CATALOG_ATTRIBUTES_PERMISSIONS)
     if permission.endswith(".read")
+}
+PRICING_READ_PERMISSIONS = {
+    permission for permission in PRICING_PERMISSIONS if permission.endswith(".read")
+} | {"pricing.price.resolve"}
+PRICING_EDITOR_PERMISSIONS = {
+    "pricing.price_list.read", "pricing.price_list.create", "pricing.price_list.update",
+    "pricing.price_list_entry.read", "pricing.price_list_entry.manage",
+    "pricing.assignment.read", "pricing.assignment.manage",
+    "pricing.variant_override.read", "pricing.variant_override.manage",
+    "pricing.price.resolve",
 }
 CATALOG_EDITOR_PERMISSIONS = {
     "catalog.product.read", "catalog.product.create", "catalog.product.update",
@@ -70,18 +88,20 @@ ROLE_PERMISSIONS = {
         *(permission for permission in CATALOG_PERMISSIONS if permission != "catalog.product_type.manage"),
         *CATALOG_OPTIONS_PERMISSIONS,
         *CATALOG_ATTRIBUTES_PERMISSIONS,
+        *PRICING_PERMISSIONS,
     },
     "editor": {
         "tenant.read", "member.read", "role.read", "store.read", "site.read", "channel.read",
         "environment.read", "market.read", "operation.read", "entitlement.read", *CATALOG_EDITOR_PERMISSIONS,
+        *PRICING_EDITOR_PERMISSIONS,
     },
     "analyst": {
         "tenant.read", "audit.read", "store.read", "site.read", "channel.read", "environment.read",
-        "market.read", "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS,
+        "market.read", "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS, *PRICING_READ_PERMISSIONS,
     },
     "viewer": {
         "tenant.read", "store.read", "site.read", "channel.read", "environment.read", "market.read",
-        "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS,
+        "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS, *PRICING_READ_PERMISSIONS,
     },
 }
 

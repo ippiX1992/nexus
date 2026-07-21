@@ -32,7 +32,7 @@ test("Options, Variant combinations, duplicate rejection and insufficient permis
     page.getByRole("button",{name:"Entrar"}).click(),
   ]);
 
-  await page.getByRole("link",{name:"Platform",exact:true}).click();
+  await page.getByRole("link",{name:"Stores",exact:true}).click();
   await page.getByRole("link",{name:"Crear store"}).click();
   await page.getByLabel("Código").fill(`store-${marker}`);
   await page.getByLabel("Nombre").fill("Options Store");
@@ -42,7 +42,6 @@ test("Options, Variant combinations, duplicate rejection and insufficient permis
   await page.getByRole("button",{name:"Activar"}).click();
   await expect(page.getByText("active",{exact:true})).toBeVisible();
 
-  await page.getByRole("link",{name:"Catalog",exact:true}).click();
   await page.getByRole("link",{name:"Product Types",exact:true}).click();
   const typeForm=page.locator("form").filter({hasText:"Crear Product Type"});
   await typeForm.getByLabel("Código").fill(`type-${marker}`);

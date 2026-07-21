@@ -14,7 +14,14 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/catalog/attribute-groups", label: "Attribute Groups" },
     ],
   },
-  { label: "Commerce", items: [], comingSoon: true },
+  {
+    label: "Commerce",
+    items: [
+      { href: "/commerce/price-lists", label: "Price Lists" },
+      { href: "/commerce/pricing-rules", label: "Reglas de precio" },
+      { href: "/commerce/price-history", label: "Historial de precios" },
+    ],
+  },
   { label: "Content", items: [], comingSoon: true },
   {
     label: "Platform",

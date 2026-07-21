@@ -32,7 +32,7 @@ test("Attributes, Product Type assignment, specifications persistence, and negat
     page.getByRole("button",{name:"Entrar"}).click(),
   ]);
 
-  await page.getByRole("link",{name:"Platform",exact:true}).click();
+  await page.getByRole("link",{name:"Stores",exact:true}).click();
   await page.getByRole("link",{name:"Crear store"}).click();
   await page.getByLabel("Código").fill(`store-${marker}`);
   await page.getByLabel("Nombre").fill("Attributes Store");
@@ -42,7 +42,6 @@ test("Attributes, Product Type assignment, specifications persistence, and negat
   await page.getByRole("button",{name:"Activar"}).click();
   await expect(page.getByText("active",{exact:true})).toBeVisible();
 
-  await page.getByRole("link",{name:"Catalog",exact:true}).click();
   await page.getByRole("link",{name:"Attribute Groups",exact:true}).click();
   const groupForm=page.locator("form").filter({hasText:"Crear Attribute Group"});
   await groupForm.getByLabel("Código").fill(`general-${marker}`);

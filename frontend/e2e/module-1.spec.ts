@@ -45,10 +45,10 @@ test("registro, contexto, seguridad, sesiones, autorización y logout",async({pa
     page.waitForURL("**/dashboard"),
     page.getByRole("button",{name:"Entrar"}).click(),
   ]);
-  await expect(page.getByRole("heading",{name:"Centro de identidad"})).toBeVisible();
-  await expect(page.getByText("owner",{exact:true})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Panel general"})).toBeVisible();
+  await expect(page.getByText("Playwright User",{exact:true})).toBeVisible();
 
-  await page.getByRole("link",{name:"Platform"}).click();
+  await page.getByRole("link",{name:"Stores",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Stores"})).toBeVisible();
   await page.getByRole("link",{name:"Crear store"}).click();
   await page.getByLabel("Código").fill("main");
@@ -100,8 +100,12 @@ test("registro, contexto, seguridad, sesiones, autorización y logout",async({pa
   await expect(page.getByRole("heading",{name:"Sesiones activas"})).toBeVisible();
   await expect(page.getByText("Esta sesión",{exact:true})).toBeVisible();
 
+  // "Cerrar sesión" lives inside the Topbar's user menu now (deliberately
+  // de-emphasized, see components/admin/Topbar.tsx), so the menu must be
+  // opened first.
+  await page.getByRole("button",{name:"Playwright User"}).click();
   const logoutResponse=page.waitForResponse(response=>response.url().endsWith("/auth/logout")&&response.request().method()==="POST");
-  await page.getByRole("button",{name:"Cerrar sesión"}).click();
+  await page.getByRole("menuitem",{name:"Cerrar sesión"}).click();
   expect((await logoutResponse).status()).toBe(204);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading",{name:"Bienvenido a Nexus"})).toBeVisible();

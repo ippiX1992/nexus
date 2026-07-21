@@ -32,7 +32,7 @@ test("Catalog Foundation owner flow and viewer isolation",async({page})=>{
     page.getByRole("button",{name:"Entrar"}).click(),
   ]);
 
-  await page.getByRole("link",{name:"Platform",exact:true}).click();
+  await page.getByRole("link",{name:"Stores",exact:true}).click();
   await page.getByRole("link",{name:"Crear store"}).click();
   await page.getByLabel("Código").fill(`store-${marker}`);
   await page.getByLabel("Nombre").fill("Catalog Store");
@@ -42,7 +42,7 @@ test("Catalog Foundation owner flow and viewer isolation",async({page})=>{
   await page.getByRole("button",{name:"Activar"}).click();
   await expect(page.getByText("active",{exact:true})).toBeVisible();
 
-  await page.getByRole("link",{name:"Catalog",exact:true}).click();
+  await page.getByRole("link",{name:"Products",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Products"})).toBeVisible();
   await page.getByRole("link",{name:"Product Types",exact:true}).click();
   const typeForm=page.locator("form").filter({hasText:"Crear Product Type"});
