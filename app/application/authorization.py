@@ -41,11 +41,20 @@ PRICING_PERMISSIONS = (
     "pricing.variant_override.read", "pricing.variant_override.manage",
     "pricing.price.resolve",
 )
+INVENTORY_PERMISSIONS = (
+    "inventory.warehouse.read", "inventory.warehouse.create", "inventory.warehouse.update", "inventory.warehouse.archive",
+    "inventory.location.read", "inventory.location.create", "inventory.location.update", "inventory.location.archive",
+    "inventory.stock.read", "inventory.stock.adjust", "inventory.stock.recount",
+    "inventory.transfer.read", "inventory.transfer.manage",
+    "inventory.reservation.read", "inventory.reservation.manage",
+    "inventory.fulfillment_scope.read", "inventory.fulfillment_scope.manage",
+    "inventory.allocation.read",
+)
 PERMISSIONS = (
     "tenant.read", "tenant.update", "member.read", "member.invite", "member.update", "member.remove",
     "role.read", "role.create", "role.update", "role.delete", "audit.read", "security.manage",
     *PLATFORM_PERMISSIONS, *CATALOG_PERMISSIONS, *CATALOG_OPTIONS_PERMISSIONS, *CATALOG_ATTRIBUTES_PERMISSIONS,
-    *PRICING_PERMISSIONS,
+    *PRICING_PERMISSIONS, *INVENTORY_PERMISSIONS,
 )
 
 CATALOG_READ_PERMISSIONS = {
@@ -63,6 +72,10 @@ PRICING_EDITOR_PERMISSIONS = {
     "pricing.variant_override.read", "pricing.variant_override.manage",
     "pricing.price.resolve",
 }
+INVENTORY_READ_PERMISSIONS = {
+    permission for permission in INVENTORY_PERMISSIONS if permission.endswith(".read")
+} | {"inventory.allocation.read"}
+INVENTORY_EDITOR_PERMISSIONS = set(INVENTORY_PERMISSIONS) - {"inventory.warehouse.archive", "inventory.location.archive"}
 CATALOG_EDITOR_PERMISSIONS = {
     "catalog.product.read", "catalog.product.create", "catalog.product.update",
     "catalog.variant.read", "catalog.variant.create", "catalog.variant.update",
@@ -89,19 +102,22 @@ ROLE_PERMISSIONS = {
         *CATALOG_OPTIONS_PERMISSIONS,
         *CATALOG_ATTRIBUTES_PERMISSIONS,
         *PRICING_PERMISSIONS,
+        *INVENTORY_PERMISSIONS,
     },
     "editor": {
         "tenant.read", "member.read", "role.read", "store.read", "site.read", "channel.read",
         "environment.read", "market.read", "operation.read", "entitlement.read", *CATALOG_EDITOR_PERMISSIONS,
-        *PRICING_EDITOR_PERMISSIONS,
+        *PRICING_EDITOR_PERMISSIONS, *INVENTORY_EDITOR_PERMISSIONS,
     },
     "analyst": {
         "tenant.read", "audit.read", "store.read", "site.read", "channel.read", "environment.read",
         "market.read", "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS, *PRICING_READ_PERMISSIONS,
+        *INVENTORY_READ_PERMISSIONS,
     },
     "viewer": {
         "tenant.read", "store.read", "site.read", "channel.read", "environment.read", "market.read",
         "operation.read", "entitlement.read", *CATALOG_READ_PERMISSIONS, *PRICING_READ_PERMISSIONS,
+        *INVENTORY_READ_PERMISSIONS,
     },
 }
 
