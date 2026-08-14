@@ -1,32 +1,35 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { catalogContext, catalogPage, Product, technicalError } from "@/lib/catalog";
 
+// The "search" filter comes from the Topbar search box, which navigates to
+// /catalog/products?search=... . We read it from window.location on the client
+// instead of next/navigation's useSearchParams so the page does NOT need a
+// Suspense boundary -- with the Suspense+useSearchParams pattern the fallback
+// could stick on a direct URL load. Reading it in an effect keeps this a plain
+// client page that renders immediately like every other catalog list.
 export default function Page() {
-  return (
-    <Suspense fallback={<AdminShell title="Products">Cargando…</AdminShell>}>
-      <ProductsList />
-    </Suspense>
-  );
-}
-
-function ProductsList() {
-  const searchParams = useSearchParams();
-  const search = searchParams.get("search") ?? "";
   const [items, setItems] = useState<Product[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [cursor, setCursor] = useState<string | undefined>();
+  const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load(next?: string, append = false) {
+  useEffect(() => {
+    const current = new URLSearchParams(window.location.search).get("search") ?? "";
+    setSearch(current);
+    load(current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function load(term: string, next?: string, append = false) {
     setLoading(true);
     try {
-      const query = `?limit=25${next ? `&cursor=${encodeURIComponent(next)}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`;
+      const query = `?limit=25${next ? `&cursor=${encodeURIComponent(next)}` : ""}${term ? `&search=${encodeURIComponent(term)}` : ""}`;
       const [page, ctx] = await Promise.all([catalogPage<Product>(`/products${query}`), catalogContext()]);
       setItems((previous) => (append ? [...previous, ...page.items] : page.items));
       setCursor(page.next_cursor);
@@ -38,10 +41,6 @@ function ProductsList() {
       setLoading(false);
     }
   }
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
 
   return (
     <AdminShell
@@ -76,7 +75,7 @@ function ProductsList() {
         ))
       )}
       {cursor && (
-        <button className="compact" disabled={loading} onClick={() => load(cursor, true)}>
+        <button className="compact" disabled={loading} onClick={() => load(search, cursor, true)}>
           {loading ? "Cargando…" : "Cargar más"}
         </button>
       )}

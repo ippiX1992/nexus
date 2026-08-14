@@ -4,6 +4,7 @@ import{useParams}from"next/navigation";
 import{AdminShell}from"@/components/admin/AdminShell";
 import{EmptyState}from"@/components/admin/EmptyState";
 import{api}from"@/lib/api";
+import{variantLabels}from"@/lib/catalog";
 import{activeStore,listStores,Store}from"@/lib/platform";
 import{
  Assignment,
@@ -31,6 +32,7 @@ export default function Page(){
  const[storeId,setStoreId]=useState(activeStore()??"");
  const[channels,setChannels]=useState<ScopeOption[]>([]);
  const[markets,setMarkets]=useState<ScopeOption[]>([]);
+ const[names,setNames]=useState<Map<string,string>>(new Map());
  const[error,setError]=useState("");
  const[loading,setLoading]=useState(true);
 
@@ -40,18 +42,21 @@ export default function Page(){
  async function load(){
   setLoading(true);
   try{
-   const[list,entryPage,assignmentPage,ctx,storeList]=await Promise.all([
+   const[list,entryPage,assignmentPage,ctx,storeList,labels]=await Promise.all([
     pricingGet<PriceList>(`/price-lists/${priceListId}`),
     pricingPage<PriceListEntry>(`/price-lists/${priceListId}/entries`),
     pricingPage<Assignment>(`/assignments?price_list_id=${priceListId}`),
     api("/me/context"),
     listStores(),
+    variantLabels().catch(()=>new Map<string,string>()),
    ]);
    setPriceList(list);setEntries(entryPage.items);setAssignments(assignmentPage.items);
-   setPermissions(ctx.permissions);setStores(storeList);setError("");
+   setPermissions(ctx.permissions);setStores(storeList);setNames(labels);setError("");
   }catch(e){setError(technicalError(e))}finally{setLoading(false)}
  }
  useEffect(()=>{load()},[priceListId]);
+
+ const variantName=(id:string)=>names.get(id)??id;
 
  useEffect(()=>{
   if(!storeId){setChannels([]);setMarkets([]);return}
@@ -120,7 +125,7 @@ export default function Page(){
   {entries.length===0?<EmptyState title="Sin precios todavía" description="Agrega el primer Variant para empezar esta Price List."/>:entries.map(entry=>
    <div className="row" key={entry.id}>
     <span>
-     <strong>{entry.variant_id}</strong><br/>
+     <strong>{variantName(entry.variant_id)}</strong><br/>
      Base {entry.unit_amount}{entry.compare_at_amount?` · Comparación ${entry.compare_at_amount}`:""}{entry.msrp_amount?` · MSRP ${entry.msrp_amount}`:""}{entry.cost_amount?` · Costo ${entry.cost_amount}`:""} · v{entry.version}
     </span>
    </div>

@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import select
@@ -12,8 +12,11 @@ from app.modules.platform.application.messaging import (
     OutboxDispatcher,
 )
 from app.modules.platform.infrastructure.models import (
+    MarketLocaleModel,
     OutboxEventModel,
     ResourceScopeModel,
+    StoreCurrencyModel,
+    StoreLocaleModel,
 )
 
 pytestmark = pytest.mark.integration
@@ -83,6 +86,110 @@ async def test_sites_channels_environments_markets_and_operations(client, regist
     operations = await client.get("/api/v1/operations", headers=headers)
     assert operations.status_code == 200 and len(operations.json()) >= 4
     assert (await client.get(f"/api/v1/operations/{operations.json()[0]['id']}", headers=headers)).status_code == 200
+
+
+async def test_secondary_store_resources_are_independently_editable(client, registration):
+    headers, _ = await platform_context(client, registration)
+    primary = (await create_store(client, headers, code="primary", name="Primary", slug="primary")).json()
+    secondary = (await create_store(client, headers, code="secondary", name="Secondary", slug="secondary")).json()
+
+    async def create_children(store_id, suffix):
+        common = {**headers, "Idempotency-Key": str(uuid4())}
+        site = await client.post(
+            f"/api/v1/stores/{store_id}/sites",
+            headers=common,
+            json={
+                "code": "web",
+                "name": f"Site {suffix}",
+                "slug": f"site-{suffix}",
+                "site_type": "commerce",
+                "primary_domain_placeholder": f"{suffix}.example.com",
+            },
+        )
+        channel = await client.post(
+            f"/api/v1/stores/{store_id}/channels",
+            headers={**headers, "Idempotency-Key": str(uuid4())},
+            json={"code": "web", "name": f"Channel {suffix}", "channel_type": "web"},
+        )
+        environment = await client.post(
+            f"/api/v1/stores/{store_id}/environments",
+            headers={**headers, "Idempotency-Key": str(uuid4())},
+            json={"code": "staging", "name": f"Environment {suffix}", "environment_type": "staging"},
+        )
+        market = await client.post(
+            f"/api/v1/stores/{store_id}/markets",
+            headers={**headers, "Idempotency-Key": str(uuid4())},
+            json={"code": "ec", "name": f"Market {suffix}", "country_code": "EC", "currency_code": "USD", "default_locale": "es-EC", "timezone": "America/Guayaquil"},
+        )
+        assert [site.status_code, channel.status_code, environment.status_code, market.status_code] == [201, 201, 201, 201]
+        return site.json(), channel.json(), environment.json(), market.json()
+
+    primary_children = await create_children(primary["id"], "primary")
+    secondary_children = await create_children(secondary["id"], "secondary")
+
+    renamed_store = await client.patch(
+        f"/api/v1/stores/{secondary['id']}",
+        headers=headers,
+        json={
+            "name": "Secondary renamed",
+            "slug": "secondary-renamed",
+            "default_locale": "en-US",
+            "default_currency": "EUR",
+        },
+    )
+    assert renamed_store.status_code == 200
+    assert renamed_store.json()["name"] == "Secondary renamed"
+    assert renamed_store.json()["default_locale"] == "en-US"
+    assert renamed_store.json()["default_currency"] == "EUR"
+
+    async with SessionFactory() as db:
+        await set_tenant_context(db, UUID(secondary["tenant_id"]))
+        locale = await db.scalar(
+            select(StoreLocaleModel).where(
+                StoreLocaleModel.store_id == UUID(secondary["id"]), StoreLocaleModel.is_default.is_(True)
+            )
+        )
+        currency = await db.scalar(
+            select(StoreCurrencyModel).where(
+                StoreCurrencyModel.store_id == UUID(secondary["id"]), StoreCurrencyModel.is_default.is_(True)
+            )
+        )
+        assert locale is not None and locale.locale_code == "en-US"
+        assert currency is not None and currency.currency_code == "EUR"
+
+    paths = ("sites", "channels", "environments", "markets")
+    for path, primary_child, secondary_child in zip(paths, primary_children, secondary_children, strict=True):
+        payload = {"name": f"Updated {path}"}
+        if path == "sites":
+            payload["primary_domain_placeholder"] = None
+        if path == "markets":
+            payload["default_locale"] = "en-US"
+        updated = await client.patch(
+            f"/api/v1/{path}/{secondary_child['id']}", headers=headers, json=payload
+        )
+        assert updated.status_code == 200
+        assert updated.json()["name"] == f"Updated {path}"
+        if path == "sites":
+            assert updated.json()["primary_domain_placeholder"] is None
+        primary_list = await client.get(f"/api/v1/stores/{primary['id']}/{path}", headers=headers)
+        secondary_list = await client.get(f"/api/v1/stores/{secondary['id']}/{path}", headers=headers)
+        assert {item["id"] for item in primary_list.json()} == {primary_child["id"]}
+        assert {item["id"] for item in secondary_list.json()} == {secondary_child["id"]}
+        assert primary_list.json()[0]["name"].endswith("primary")
+        assert secondary_list.json()[0]["name"] == f"Updated {path}"
+
+    async with SessionFactory() as db:
+        await set_tenant_context(db, UUID(secondary["tenant_id"]))
+        market_locale = await db.scalar(
+            select(MarketLocaleModel).where(
+                MarketLocaleModel.market_id == UUID(secondary_children[3]["id"]),
+                MarketLocaleModel.is_default.is_(True),
+            )
+        )
+        assert market_locale is not None and market_locale.locale_code == "en-US"
+
+    unchanged_primary = await client.get(f"/api/v1/stores/{primary['id']}", headers=headers)
+    assert unchanged_primary.json()["name"] == "Primary"
 
 
 async def test_quota_usage_cross_tenant_and_readiness(client, registration):

@@ -2,15 +2,20 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { api } from "@/lib/api";
+import type { Store } from "@/lib/platform";
 
 export function Topbar({
   tenantName,
-  storeName,
+  stores,
+  activeStoreId,
+  onStoreChange,
   userName,
   onToggleSidebar,
 }: {
   tenantName?: string;
-  storeName?: string | null;
+  stores: Store[];
+  activeStoreId: string;
+  onStoreChange: (storeId: string) => void;
   userName?: string;
   onToggleSidebar: () => void;
 }) {
@@ -47,13 +52,22 @@ export function Topbar({
         ☰
       </button>
 
-      <div className="hidden min-w-0 items-center gap-2 text-xs text-muted lg:flex">
-        <span className="truncate rounded-md bg-white/5 px-2 py-1" title="Tenant activo">
+      <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
+        <span className="hidden truncate rounded-md bg-white/5 px-2 py-1 lg:inline" title="Tenant activo">
           {tenantName ?? "…"}
         </span>
-        <span className="truncate rounded-md bg-white/5 px-2 py-1" title="Store activo">
-          {storeName ?? "Sin Store"}
-        </span>
+        <select
+          aria-label="Store global activo"
+          title="Store activo"
+          value={activeStoreId}
+          onChange={(event) => onStoreChange(event.target.value)}
+          className="max-w-52 rounded-md border border-line bg-bg px-2 py-1 text-xs text-text"
+        >
+          <option value="">Sin Store</option>
+          {stores.filter((store) => store.status !== "archived").map((store) => (
+            <option key={store.id} value={store.id}>{store.name}</option>
+          ))}
+        </select>
         <span className="hidden truncate rounded-md bg-white/5 px-2 py-1 text-muted/60 xl:inline" title="Environment activo (pendiente)">
           Environment: —
         </span>

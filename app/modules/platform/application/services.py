@@ -3,6 +3,9 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy import update as sql_update
+
 from app.application.auth import audit
 from app.modules.platform.contracts.events import EventActor, EventEnvelope
 from app.modules.platform.contracts.repositories import PlatformRepository
@@ -87,6 +90,61 @@ class PlatformService:
         if scope is None:
             raise PlatformPolicyError("Store scope is missing")
         return store, scope
+
+    async def _sync_default_locale(self, kind: str, resource_id: UUID, locale: str) -> None:
+        model: Any = StoreLocaleModel if kind == "store" else MarketLocaleModel
+        resource_column = getattr(model, "store_id" if kind == "store" else "market_id")
+        await self.audit_session.execute(
+            sql_update(model)
+            .where(model.tenant_id == self.actor.tenant_id, resource_column == resource_id, model.is_default.is_(True))
+            .values(is_default=False)
+        )
+        existing = await self.audit_session.scalar(
+            select(model).where(
+                model.tenant_id == self.actor.tenant_id,
+                resource_column == resource_id,
+                model.locale_code == locale,
+            )
+        )
+        if existing is not None:
+            existing.is_default = True
+        else:
+            values = {"tenant_id": self.actor.tenant_id, "locale_code": locale, "is_default": True}
+            values["store_id" if kind == "store" else "market_id"] = resource_id
+            await self.repository.add(model(**values))
+
+    async def _sync_default_currency(self, store_id: UUID, money: MoneyConfiguration) -> None:
+        await self.audit_session.execute(
+            sql_update(StoreCurrencyModel)
+            .where(
+                StoreCurrencyModel.tenant_id == self.actor.tenant_id,
+                StoreCurrencyModel.store_id == store_id,
+                StoreCurrencyModel.is_default.is_(True),
+            )
+            .values(is_default=False)
+        )
+        existing = await self.audit_session.scalar(
+            select(StoreCurrencyModel).where(
+                StoreCurrencyModel.tenant_id == self.actor.tenant_id,
+                StoreCurrencyModel.store_id == store_id,
+                StoreCurrencyModel.currency_code == money.currency_code,
+            )
+        )
+        if existing is not None:
+            existing.minor_unit = money.minor_unit
+            existing.rounding_mode = money.rounding_mode
+            existing.is_default = True
+        else:
+            await self.repository.add(
+                StoreCurrencyModel(
+                    tenant_id=self.actor.tenant_id,
+                    store_id=store_id,
+                    currency_code=money.currency_code,
+                    minor_unit=money.minor_unit,
+                    rounding_mode=money.rounding_mode,
+                    is_default=True,
+                )
+            )
 
     async def create_store(self, data: dict[str, Any]) -> StoreModel:
         await self._quota("stores.max", "store")
@@ -177,13 +235,21 @@ class PlatformService:
         safe = {"name", "slug", "primary_domain_placeholder", "default_locale", "default_currency", "timezone"}
         before = {key: getattr(resource, key) for key in data if key in safe and hasattr(resource, key)}
         for key, value in data.items():
-            if key not in safe or value is None or not hasattr(resource, key):
+            if key not in safe or not hasattr(resource, key):
+                continue
+            if value is None:
+                if key == "primary_domain_placeholder":
+                    setattr(resource, key, None)
                 continue
             if key == "slug": value = normalize_code(value)
             if key == "default_locale": value = validate_locale(value)
             if key == "default_currency": value = MoneyConfiguration.from_currency(value).currency_code
             if key == "timezone": value = validate_timezone(value)
             setattr(resource, key, value.strip() if isinstance(value, str) else value)
+        if kind in {"store", "market"} and data.get("default_locale") is not None:
+            await self._sync_default_locale(kind, resource.id, resource.default_locale)
+        if kind == "store" and data.get("default_currency") is not None:
+            await self._sync_default_currency(resource.id, MoneyConfiguration.from_currency(resource.default_currency))
         resource.updated_by = self.actor.user_id
         await self.repository.add_event(self._event(f"platform.{kind}.updated.v1", kind, resource.id, resource.id if kind == "store" else resource.store_id, {"changes": sorted(before)}))
         await audit(self.audit_session, f"platform.{kind}_updated", "success", self.actor.user_id, self.actor.tenant_id, resource=str(resource.id), metadata={"before": before, "correlation_id": str(self.actor.correlation_id)})

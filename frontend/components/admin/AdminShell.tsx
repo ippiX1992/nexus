@@ -2,14 +2,14 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { activeStore, listStores } from "@/lib/platform";
+import { ACTIVE_STORE_CHANGED, activeStore, listStores, selectStore, type Store } from "@/lib/platform";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { PageHeader } from "./PageHeader";
 import { breadcrumbsForPath, type NavItem } from "./nav";
 
-type Identity = { tenantName?: string; storeName?: string | null; userName?: string };
+type Identity = { tenantName?: string; userName?: string; stores: Store[]; activeStoreId: string };
 
 export function AdminShell({
   title,
@@ -27,7 +27,7 @@ export function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [identity, setIdentity] = useState<Identity>({});
+  const [identity, setIdentity] = useState<Identity>({ stores: [], activeStoreId: "" });
 
   useEffect(() => {
     let active = true;
@@ -41,9 +41,10 @@ export function AdminShell({
         ]);
         if (!active) return;
         const tenantName = tenants.find((tenant: { id: string }) => tenant.id === context.tenant_id)?.name;
-        const storeId = activeStore();
-        const storeName = storeId ? stores.find((store) => store.id === storeId)?.name ?? null : null;
-        setIdentity({ tenantName, storeName, userName: user.full_name });
+        const storedId = activeStore() ?? "";
+        const activeStoreId = stores.some((store) => store.id === storedId && store.status !== "archived") ? storedId : "";
+        if (storedId && !activeStoreId) selectStore(null);
+        setIdentity({ tenantName, userName: user.full_name, stores, activeStoreId });
       } catch {
         router.replace("/");
       }
@@ -52,6 +53,20 @@ export function AdminShell({
       active = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    const handleStoreChange = (event: Event) => {
+      const storeId = (event as CustomEvent<{ storeId: string | null }>).detail.storeId ?? "";
+      setIdentity((current) => ({ ...current, activeStoreId: storeId }));
+    };
+    window.addEventListener(ACTIVE_STORE_CHANGED, handleStoreChange);
+    return () => window.removeEventListener(ACTIVE_STORE_CHANGED, handleStoreChange);
+  }, []);
+
+  function changeStore(storeId: string) {
+    selectStore(storeId || null);
+    window.location.reload();
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -67,7 +82,9 @@ export function AdminShell({
       <div className="flex min-h-screen flex-col md:pl-60">
         <Topbar
           tenantName={identity.tenantName}
-          storeName={identity.storeName}
+          stores={identity.stores}
+          activeStoreId={identity.activeStoreId}
+          onStoreChange={changeStore}
           userName={identity.userName}
           onToggleSidebar={() => setSidebarOpen((value) => !value)}
         />

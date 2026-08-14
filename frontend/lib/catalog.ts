@@ -31,3 +31,25 @@ export function catalogGet<T>(path:string):Promise<T>{return api(`/catalog${path
 export function catalogCreate<T>(path:string,payload:unknown,method="POST"):Promise<T>{return api(`/catalog${path}`,{method,headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify(payload)})}
 export function catalogUpdate<T>(path:string,payload:unknown,version:number,method="PATCH"):Promise<T>{return api(`/catalog${path}`,{method,headers:{"If-Match":String(version)},body:JSON.stringify(payload)})}
 export function catalogCommand<T>(path:string,version:number,method="POST"):Promise<T>{return api(`/catalog${path}`,{method,headers:{"If-Match":String(version)}})}
+
+// Resolve variant ids -> "Product name · SKU" for modules that key on variant
+// (Pricing, Inventory). The proper long-term solution is a batched backend
+// lookup (GET /catalog/variants?ids=...); this frontend resolver fetches the
+// product list and each product's variants so those admin screens can show a
+// human label instead of a raw UUID. Adequate for tenant-scale catalogs shown
+// in the admin; if it becomes a hot path, promote it to a backend read model.
+export async function variantLabels():Promise<Map<string,string>>{
+ const labels=new Map<string,string>();
+ const page=await catalogPage<Product>("/products?limit=100");
+ // The list endpoint carries the translated product name; the detail endpoint
+ // is only used to reach each product's variant ids. Take the name from the
+ // list so labels read as "Product name · SKU", not the internal code.
+ const nameById=new Map(page.items.map(p=>[p.id,p.name??p.code??p.id]));
+ const details=await Promise.all(page.items.map(p=>catalogGet<ProductDetail>(`/products/${p.id}`).catch(()=>null)));
+ for(const detail of details){
+  if(!detail)continue;
+  const name=nameById.get(detail.product.id)??detail.product.code??detail.product.id;
+  for(const variant of detail.variants)labels.set(variant.id,`${name} · ${variant.sku}`);
+ }
+ return labels;
+}

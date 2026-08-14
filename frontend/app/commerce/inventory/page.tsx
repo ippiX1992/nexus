@@ -3,6 +3,7 @@ import{FormEvent,useEffect,useState}from"react";
 import{AdminShell}from"@/components/admin/AdminShell";
 import{EmptyState}from"@/components/admin/EmptyState";
 import{api}from"@/lib/api";
+import{variantLabels}from"@/lib/catalog";
 import{
  LedgerEntry,
  Location,
@@ -19,6 +20,7 @@ export default function Page(){
  const[levels,setLevels]=useState<StockLevel[]>([]);
  const[ledger,setLedger]=useState<LedgerEntry[]>([]);
  const[permissions,setPermissions]=useState<string[]>([]);
+ const[names,setNames]=useState<Map<string,string>>(new Map());
  const[variantFilter,setVariantFilter]=useState("");
  const[error,setError]=useState("");
  const[loading,setLoading]=useState(true);
@@ -30,20 +32,22 @@ export default function Page(){
   setLoading(true);
   try{
    const query=variantId?`?variant_id=${variantId}`:"";
-   const[levelPage,ledgerPage,warehousePage,locationPage,ctx]=await Promise.all([
+   const[levelPage,ledgerPage,warehousePage,locationPage,ctx,labels]=await Promise.all([
     inventoryPage<StockLevel>(`/stock${query}`),
     inventoryPage<LedgerEntry>(`/ledger${query}`),
     inventoryPage<Warehouse>("/warehouses"),
     inventoryPage<Location>("/locations"),
     api("/me/context"),
+    variantLabels().catch(()=>new Map<string,string>()),
    ]);
    setLevels(levelPage.items);setLedger(ledgerPage.items);setWarehouses(warehousePage.items);
-   setLocations(locationPage.items);setPermissions(ctx.permissions);setError("");
+   setLocations(locationPage.items);setPermissions(ctx.permissions);setNames(labels);setError("");
   }catch(e){setError(technicalError(e))}finally{setLoading(false)}
  }
  useEffect(()=>{load()},[]);
 
  const locationName=(id:string)=>locations.find(l=>l.id===id)?.name??id;
+ const variantName=(id:string)=>names.get(id)??id;
 
  async function submitMovement(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
@@ -93,8 +97,8 @@ export default function Page(){
   {loading?<p>Cargando…</p>:levels.length===0?<EmptyState title="Sin stock todavía" description="Registra una recepción para crear el primer nivel de stock."/>:levels.map(level=>
    <div className="row" key={level.id}>
     <span>
-     <strong>{locationName(level.location_id)}</strong><br/>
-     Variant {level.variant_id}<br/>
+     <strong>{variantName(level.variant_id)}</strong><br/>
+     {locationName(level.location_id)}<br/>
      on_hand {level.on_hand} · reservado {level.reserved} · disponible {level.available} · incoming {level.incoming}
     </span>
    </div>
