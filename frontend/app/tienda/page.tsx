@@ -25,35 +25,34 @@ export default function StorePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const showFeatured = !search && !loading && !error && items.length >= 3;
+
   return (
-    <>
-      {!search && (
-        <section className="sf-hero">
-          <div className="sf-hero-copy">
-            <h1>Tecnología y hogar para tu día a día</h1>
-            <p>Envíos a todo el Ecuador · Precios y stock actualizados al instante</p>
-          </div>
+    <div className="sf-grid-wrap">
+      {showFeatured && (
+        <section className="sf-featured" aria-label="Destacados">
+          {items.slice(0, 3).map((product, index) => (
+            <ProductCard key={product.slug} product={product} feature={index === 0} />
+          ))}
         </section>
       )}
-      <section className="sf-grid-wrap">
-        <div className="sf-grid-head">
-          <h2>{search ? `Resultados para “${search}”` : "Catálogo"}</h2>
-          {!loading && !error && <span className="sf-muted">{items.length} productos</span>}
+      <div className="sf-grid-head">
+        <h2>{search ? `Resultados para “${search}”` : "Catálogo completo"}</h2>
+        {!loading && !error && <span className="sf-muted">{items.length} productos</span>}
+      </div>
+      {loading ? (
+        <p className="sf-muted">Cargando productos…</p>
+      ) : error ? (
+        <p className="sf-error">No se pudo cargar la tienda: {error}</p>
+      ) : items.length === 0 ? (
+        <p className="sf-muted">No encontramos productos{search ? ` para “${search}”` : ""}.</p>
+      ) : (
+        <div className="sf-grid">
+          {items.map((product) => (
+            <ProductCard key={product.slug} product={product} />
+          ))}
         </div>
-        {loading ? (
-          <p className="sf-muted">Cargando productos…</p>
-        ) : error ? (
-          <p className="sf-error">No se pudo cargar la tienda: {error}</p>
-        ) : items.length === 0 ? (
-          <p className="sf-muted">No encontramos productos{search ? ` para “${search}”` : ""}.</p>
-        ) : (
-          <div className="sf-grid">
-            {items.map((product) => (
-              <ProductCard key={product.slug} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
-    </>
+      )}
+    </div>
   );
 }
