@@ -209,6 +209,17 @@
 .sf-card-media:hover {
   border-color: var(--sf-accent);
 }
+.sf-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #fff;
+}
+.sf-detail-media .sf-img {
+  object-fit: contain;
+  padding: 22px;
+}
 .sf-thumb {
   width: 100%;
   height: 100%;

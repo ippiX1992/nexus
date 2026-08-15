@@ -10,6 +10,7 @@ export type StoreProduct = {
   name: string;
   short_description?: string | null;
   brand?: string | null;
+  image?: string | null;
   sku: string;
   price: string | null;
   compare_at: string | null;

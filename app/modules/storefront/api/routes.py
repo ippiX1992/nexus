@@ -6,6 +6,8 @@ published catalog with prices and stock. Everything is read-only; RLS still
 scopes every row to the resolved tenant, so one storefront can never read
 another tenant's data even though there is no auth.
 """
+import json
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -23,6 +25,19 @@ from app.modules.storefront.api.schemas import (
 from app.modules.storefront.registry import Storefront, resolve
 
 router = APIRouter(prefix="/api/v1/storefront", tags=["storefront"])
+
+# Public product image URLs by SKU, harvested from the source PrestaShop catalog
+# (clickhome.ec) into a static map so the storefront can show real photos. The
+# catalog has no image column of its own; this file is the demo's media source.
+_MEDIA_PATH = Path(__file__).resolve().parents[1] / "clickhome_media.json"
+try:
+    _MEDIA: dict[str, str] = json.loads(_MEDIA_PATH.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    _MEDIA = {}
+
+
+def _image_for(sku: str) -> str | None:
+    return _MEDIA.get(sku)
 
 _DEFAULT_PRICE_LIST = text(
     "SELECT id FROM pricing_price_lists WHERE is_default AND status = 'active' "
@@ -120,6 +135,7 @@ def _to_product(row) -> StorefrontProduct:
         name=row.name,
         short_description=row.short_description,
         brand=row.brand,
+        image=_image_for(row.sku),
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,
@@ -183,6 +199,7 @@ async def product_detail(
         short_description=row.short_description,
         long_description=row.long_description,
         brand=row.brand,
+        image=_image_for(row.sku),
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,

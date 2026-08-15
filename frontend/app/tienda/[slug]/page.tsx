@@ -43,7 +43,12 @@ export default function ProductPage() {
       </Link>
       <div className="sf-detail-grid">
         <div className="sf-detail-media">
-          <Thumb name={product.name} />
+          {product.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="sf-img" src={product.image} alt={product.name} />
+          ) : (
+            <Thumb name={product.name} />
+          )}
         </div>
         <div className="sf-detail-info">
           {product.brand && <span className="sf-brand">{product.brand}</span>}

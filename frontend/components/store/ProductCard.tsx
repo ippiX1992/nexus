@@ -13,7 +13,12 @@ export function ProductCard({ product, feature = false }: { product: StoreProduc
   return (
     <div className={`sf-card${feature ? " sf-card-feat" : ""}`}>
       <Link href={`/tienda/${product.slug}`} className="sf-card-media" aria-label={product.name}>
-        <Thumb name={product.name} />
+        {product.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="sf-img" src={product.image} alt={product.name} loading="lazy" />
+        ) : (
+          <Thumb name={product.name} />
+        )}
         <div className="sf-label">
           <h3 className="sf-label-name">{product.name}</h3>
           <span className="sf-price-pill">{formatPrice(product.price, product.currency)}</span>

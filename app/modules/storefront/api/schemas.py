@@ -17,6 +17,7 @@ class StorefrontProduct(BaseModel):
     name: str
     short_description: str | None = None
     brand: str | None = None
+    image: str | None = None
     sku: str
     price: Decimal | None = None
     compare_at: Decimal | None = None
