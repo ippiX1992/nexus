@@ -53,7 +53,10 @@ function editPayload(kind: Kind, form: FormData) {
 }
 
 export function PlatformCollection({ kind }: { kind: Kind }) {
-  const [store, setStore] = useState(activeStore());
+  // Start null on both server and the client's first (hydration) render so the
+  // markup matches; the stored store lives in sessionStorage (client-only) and
+  // is read in the mount effect below, after hydration.
+  const [store, setStore] = useState<string | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
@@ -75,7 +78,10 @@ export function PlatformCollection({ kind }: { kind: Kind }) {
   }
 
   useEffect(() => {
-    load();
+    const initial = activeStore();
+    setStore(initial);
+    load(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
   function choose(id: string) {
