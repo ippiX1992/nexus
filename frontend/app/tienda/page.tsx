@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
 import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
 
@@ -14,7 +15,7 @@ export default function StorePage() {
   const isHome = !search && !category;
 
   const [items, setItems] = useState<StoreProduct[]>([]);
-  const [featured, setFeatured] = useState<StoreProduct[]>([]);
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [catName, setCatName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -27,11 +28,11 @@ export default function StorePage() {
     (async () => {
       try {
         if (isHome) {
-          const [cats, all] = await Promise.all([storeCategories(), storeProducts("", "", 12)]);
+          const cats = await storeCategories();
           const top = cats.slice(0, 8);
           const perCategory = await Promise.all(top.map((entry) => storeProducts("", entry.slug, 12)));
           if (!alive) return;
-          setFeatured(all.items.slice(0, 3));
+          setCategories(cats);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
           const [page, cats] = await Promise.all([storeProducts(search, category, 60), category ? storeCategories() : Promise.resolve([])]);
@@ -55,32 +56,38 @@ export default function StorePage() {
 
   if (isHome) {
     return (
-      <div className="sf-grid-wrap">
-        {featured.length >= 3 && (
-          <section className="sf-featured" aria-label="Destacados">
-            {featured.map((product, index) => (
-              <ProductCard key={product.slug} product={product} feature={index === 0} />
-            ))}
-          </section>
-        )}
-        {sections.map((section) => (
-          <section className="sf-section" key={section.category.slug}>
-            <div className="sf-section-head">
-              <h2>{section.category.name}</h2>
-              <Link className="sf-seeall" href={`/tienda?category=${section.category.slug}`}>
-                Ver todo ({section.category.product_count}) →
-              </Link>
-            </div>
-            <div className="sf-row">
-              {section.items.map((product) => (
-                <div className="sf-row-item" key={product.slug}>
-                  <ProductCard product={product} />
-                </div>
+      <>
+        <HeroBanner />
+        <div className="sf-grid-wrap">
+          {categories.length > 0 && (
+            <section className="az-tiles" aria-label="Categorías destacadas">
+              {categories.slice(0, 8).map((entry) => (
+                <Link key={entry.slug} href={`/tienda?category=${entry.slug}`} className="az-tile">
+                  <span className="az-tile-name">{entry.name}</span>
+                  <span className="az-tile-count">{entry.product_count} productos →</span>
+                </Link>
               ))}
-            </div>
-          </section>
-        ))}
-      </div>
+            </section>
+          )}
+          {sections.map((section) => (
+            <section className="sf-section" key={section.category.slug}>
+              <div className="sf-section-head">
+                <h2>{section.category.name}</h2>
+                <Link className="sf-seeall" href={`/tienda?category=${section.category.slug}`}>
+                  Ver todo ({section.category.product_count}) →
+                </Link>
+              </div>
+              <div className="sf-row">
+                {section.items.map((product) => (
+                  <div className="sf-row-item" key={product.slug}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </>
     );
   }
 

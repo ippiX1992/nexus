@@ -11,7 +11,9 @@ export function StoreHeader({ storeName }: { storeName: string }) {
   const activeCategory = params.get("category") ?? "";
   const { count, setOpen } = useCart();
   const [query, setQuery] = useState("");
+  const [dept, setDept] = useState("");
   const [categories, setCategories] = useState<StoreCategory[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setQuery(params.get("search") ?? "");
@@ -25,44 +27,76 @@ export function StoreHeader({ storeName }: { storeName: string }) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const term = query.trim();
-    router.push(term ? `/tienda?search=${encodeURIComponent(term)}` : "/tienda");
+    const next = new URLSearchParams();
+    if (query.trim()) next.set("search", query.trim());
+    if (dept) next.set("category", dept);
+    router.push(`/tienda${next.toString() ? `?${next}` : ""}`);
   }
 
   return (
-    <header className="sf-header">
-      <div className="sf-header-inner">
-        <Link href="/tienda" className="sf-logo">
-          <span className="sf-logo-mark">CH</span>
-          {storeName}
+    <header className="az-header">
+      <div className="az-top">
+        <Link href="/tienda" className="az-logo">
+          <span className="az-logo-mark">CH</span>
+          <span className="az-logo-text">{storeName}</span>
         </Link>
-        <form className="sf-search" onSubmit={submit} role="search">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar productos…" aria-label="Buscar productos" />
-          <button type="submit">Buscar</button>
+        <form className="az-search" onSubmit={submit} role="search">
+          <select className="az-search-dept" value={dept} onChange={(event) => setDept(event.target.value)} aria-label="Departamento">
+            <option value="">Todo</option>
+            {categories.map((category) => (
+              <option key={category.slug} value={category.slug}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Buscar en ${storeName}`} aria-label="Buscar productos" />
+          <button type="submit" className="az-search-btn" aria-label="Buscar">
+            🔍
+          </button>
         </form>
-        <button className="sf-cart-btn" onClick={() => setOpen(true)} aria-label={`Abrir carrito, ${count} artículos`}>
-          <span className="sf-cart-icon" aria-hidden="true">🛒</span>
-          {count > 0 && <span className="sf-cart-count">{count}</span>}
+        <button className="az-cart" onClick={() => setOpen(true)} aria-label={`Carrito, ${count} artículos`}>
+          <span className="az-cart-stack">
+            <span className="az-cart-ico" aria-hidden="true">🛒</span>
+            {count > 0 && <span className="az-cart-count">{count}</span>}
+          </span>
+          <span className="az-cart-label">Carrito</span>
         </button>
       </div>
-      {categories.length > 0 && (
-        <nav className="sf-nav" aria-label="Categorías">
-          <div className="sf-nav-inner">
-            <Link href="/tienda" className={`sf-nav-link${!activeCategory ? " active" : ""}`}>
-              Inicio
+      <div className="az-sub">
+        <button className="az-all" onClick={() => setMenuOpen(true)} aria-label="Todas las categorías">
+          <span aria-hidden="true">☰</span> Todos
+        </button>
+        {categories.slice(0, 12).map((category) => (
+          <Link
+            key={category.slug}
+            href={`/tienda?category=${category.slug}`}
+            className={`az-sub-link${activeCategory === category.slug ? " active" : ""}`}
+          >
+            {category.name}
+          </Link>
+        ))}
+      </div>
+
+      <div className={`az-menu-scrim${menuOpen ? " open" : ""}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      <aside className={`az-menu${menuOpen ? " open" : ""}`} aria-label="Todas las categorías" aria-hidden={!menuOpen}>
+        <div className="az-menu-head">
+          <strong>Todas las categorías</strong>
+          <button className="az-menu-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <nav className="az-menu-list">
+          <Link href="/tienda" onClick={() => setMenuOpen(false)}>
+            Inicio
+          </Link>
+          {categories.map((category) => (
+            <Link key={category.slug} href={`/tienda?category=${category.slug}`} onClick={() => setMenuOpen(false)}>
+              {category.name}
+              <span>{category.product_count}</span>
             </Link>
-            {categories.map((category) => (
-              <Link
-                key={category.slug}
-                href={`/tienda?category=${category.slug}`}
-                className={`sf-nav-link${activeCategory === category.slug ? " active" : ""}`}
-              >
-                {category.name}
-              </Link>
-            ))}
-          </div>
+          ))}
         </nav>
-      )}
+      </aside>
     </header>
   );
 }
