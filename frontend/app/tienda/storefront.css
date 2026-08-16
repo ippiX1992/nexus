@@ -1099,6 +1099,42 @@
   flex-direction: column;
   gap: 12px;
 }
+.sf-order-summary {
+  background: #f7f8f8;
+  border: 1px solid var(--az-border);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 0.88rem;
+}
+.sf-sum-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--az-muted);
+  padding: 3px 0;
+}
+.sf-sum-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-top: 1px solid var(--az-border);
+  margin-top: 4px;
+}
+.sf-sum-total {
+  font-size: 1.05rem;
+}
+.sf-sum-total strong {
+  font-size: 1.15rem;
+}
+.sf-free {
+  color: var(--az-green);
+  font-weight: 700;
+}
+.sf-sum-eta {
+  margin: 10px 0 0;
+  color: var(--az-muted);
+  font-size: 0.82rem;
+}
 .sf-checkout-form label {
   display: flex;
   flex-direction: column;

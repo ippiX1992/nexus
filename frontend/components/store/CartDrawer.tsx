@@ -80,6 +80,29 @@ export function CartDrawer() {
           </div>
         ) : stage === "form" ? (
           <form className="sf-checkout-form" onSubmit={submit}>
+            <div className="sf-order-summary">
+              {items.map((line) => (
+                <div className="sf-sum-line" key={line.slug}>
+                  <span>
+                    {line.name} × {line.qty}
+                  </span>
+                  <span>{formatPrice(line.price * line.qty, line.currency)}</span>
+                </div>
+              ))}
+              <div className="sf-sum-row">
+                <span>Subtotal</span>
+                <span>{formatPrice(subtotal, currency)}</span>
+              </div>
+              <div className="sf-sum-row">
+                <span>Envío</span>
+                <span className="sf-free">Gratis</span>
+              </div>
+              <div className="sf-sum-row sf-sum-total">
+                <span>Total</span>
+                <strong>{formatPrice(subtotal, currency)}</strong>
+              </div>
+              <p className="sf-sum-eta">🚚 Entrega estimada: 2–4 días · Envío a todo el Ecuador</p>
+            </div>
             <label>
               Nombre completo
               <input name="name" required minLength={2} autoComplete="name" />
@@ -96,10 +119,6 @@ export function CartDrawer() {
               Dirección de envío (opcional)
               <textarea name="address" rows={2} autoComplete="street-address" />
             </label>
-            <div className="sf-subtotal">
-              <span>Total</span>
-              <strong>{formatPrice(subtotal, currency)}</strong>
-            </div>
             {error && <p className="sf-error" role="alert">{error}</p>}
             <button className="sf-checkout" disabled={placing}>
               {placing ? "Procesando…" : "Confirmar pedido"}

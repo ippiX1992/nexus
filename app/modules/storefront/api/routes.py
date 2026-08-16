@@ -518,6 +518,13 @@ _ADMIN_LIST = text(
     """
 )
 _ADMIN_GET = text("SELECT id, status FROM storefront_orders WHERE order_number = :number LIMIT 1")
+_ADMIN_ORDER = text(
+    """
+    SELECT id, order_number, tracking_number, status, currency, subtotal, item_count,
+           customer_name, customer_email, customer_phone, shipping_address, placed_at
+    FROM storefront_orders WHERE order_number = :number LIMIT 1
+    """
+)
 _ADMIN_ADVANCE = text(
     "UPDATE storefront_orders SET status = :status, version = version + 1, updated_at = now() WHERE id = :id"
 )
@@ -561,3 +568,30 @@ async def admin_advance_order(
     )
     await session.commit()
     return {"order_number": number, "status": nxt}
+
+
+@admin_router.get("/orders/{number}")
+async def admin_order_detail(
+    number: str,
+    context: Annotated[TenantContext, Depends(get_current_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict:
+    order = (await session.execute(_ADMIN_ORDER, {"number": number})).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    items = (await session.execute(_GET_ITEMS, {"order_id": order.id})).all()
+    events = {row.status: row.occurred_at for row in (await session.execute(_GET_EVENTS, {"order_id": order.id})).all()}
+    current, stages = _timeline(order.placed_at, order.status, events)
+    return {
+        "order_number": order.order_number, "tracking_number": order.tracking_number, "status": current,
+        "currency": order.currency, "subtotal": str(order.subtotal), "item_count": order.item_count,
+        "customer_name": order.customer_name, "customer_email": order.customer_email,
+        "customer_phone": order.customer_phone, "shipping_address": order.shipping_address,
+        "placed_at": order.placed_at.isoformat(),
+        "items": [
+            {"sku": i.sku, "name": i.name, "image": _image_for(i.sku), "quantity": i.quantity,
+             "unit_amount": str(i.unit_amount) if i.unit_amount is not None else None, "line_total": str(i.line_total)}
+            for i in items
+        ],
+        "stages": [{"status": s.status, "label": s.label, "at": s.at.isoformat(), "done": s.done} for s in stages],
+    }
