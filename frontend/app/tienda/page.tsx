@@ -1,50 +1,95 @@
 "use client";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProductCard } from "@/components/store/ProductCard";
-import { storeProducts, type StoreProduct } from "@/lib/storefront";
+import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
+
+type Section = { category: StoreCategory; items: StoreProduct[] };
 
 export default function StorePage() {
+  const params = useSearchParams();
+  const search = params.get("search") ?? "";
+  const category = params.get("category") ?? "";
+  const isHome = !search && !category;
+
   const [items, setItems] = useState<StoreProduct[]>([]);
-  const [search, setSearch] = useState("");
+  const [featured, setFeatured] = useState<StoreProduct[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [catName, setCatName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Read ?search from the URL on the client so this stays a plain client page
-  // (no Suspense boundary needed). Re-runs when the querystring changes because
-  // the Topbar search does a full router.push to /tienda?search=...
   useEffect(() => {
-    const term = new URLSearchParams(window.location.search).get("search") ?? "";
-    setSearch(term);
+    let alive = true;
     setLoading(true);
-    storeProducts(term)
-      .then((page) => {
-        setItems(page.items);
-        setError("");
-      })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : "Error"))
-      .finally(() => setLoading(false));
-  }, []);
+    setError("");
+    (async () => {
+      try {
+        if (isHome) {
+          const [cats, all] = await Promise.all([storeCategories(), storeProducts()]);
+          const perCategory = await Promise.all(cats.map((entry) => storeProducts("", entry.slug)));
+          if (!alive) return;
+          setFeatured(all.items.slice(0, 3));
+          setSections(cats.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
+        } else {
+          const [page, cats] = await Promise.all([storeProducts(search, category), category ? storeCategories() : Promise.resolve([])]);
+          if (!alive) return;
+          setItems(page.items);
+          setCatName(cats.find((entry) => entry.slug === category)?.name ?? category);
+        }
+      } catch (caught) {
+        if (alive) setError(caught instanceof Error ? caught.message : "Error");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [search, category, isHome]);
 
-  const showFeatured = !search && !loading && !error && items.length >= 3;
+  if (loading) return <div className="sf-grid-wrap"><p className="sf-muted">Cargando productos…</p></div>;
+  if (error) return <div className="sf-grid-wrap"><p className="sf-error">No se pudo cargar la tienda: {error}</p></div>;
+
+  if (isHome) {
+    return (
+      <div className="sf-grid-wrap">
+        {featured.length >= 3 && (
+          <section className="sf-featured" aria-label="Destacados">
+            {featured.map((product, index) => (
+              <ProductCard key={product.slug} product={product} feature={index === 0} />
+            ))}
+          </section>
+        )}
+        {sections.map((section) => (
+          <section className="sf-section" key={section.category.slug}>
+            <div className="sf-section-head">
+              <h2>{section.category.name}</h2>
+              <Link className="sf-seeall" href={`/tienda?category=${section.category.slug}`}>
+                Ver todo ({section.category.product_count}) →
+              </Link>
+            </div>
+            <div className="sf-row">
+              {section.items.map((product) => (
+                <div className="sf-row-item" key={product.slug}>
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="sf-grid-wrap">
-      {showFeatured && (
-        <section className="sf-featured" aria-label="Destacados">
-          {items.slice(0, 3).map((product, index) => (
-            <ProductCard key={product.slug} product={product} feature={index === 0} />
-          ))}
-        </section>
-      )}
       <div className="sf-grid-head">
-        <h2>{search ? `Resultados para “${search}”` : "Catálogo completo"}</h2>
-        {!loading && !error && <span className="sf-muted">{items.length} productos</span>}
+        <h2>{search ? `Resultados para “${search}”` : catName}</h2>
+        <span className="sf-muted">{items.length} productos</span>
       </div>
-      {loading ? (
-        <p className="sf-muted">Cargando productos…</p>
-      ) : error ? (
-        <p className="sf-error">No se pudo cargar la tienda: {error}</p>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <p className="sf-muted">No encontramos productos{search ? ` para “${search}”` : ""}.</p>
       ) : (
         <div className="sf-grid">

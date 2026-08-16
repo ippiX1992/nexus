@@ -21,6 +21,7 @@ export type StoreProduct = {
 export type StoreProductDetail = StoreProduct & { long_description?: string | null };
 export type StoreMeta = { key: string; name: string; currency: string; locale: string; brand?: string | null; product_count: number };
 export type StoreProductList = { items: StoreProduct[]; total: number };
+export type StoreCategory = { slug: string; name: string; product_count: number };
 
 async function storeFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${API}/storefront${path}`, { credentials: "omit" });
@@ -31,9 +32,15 @@ async function storeFetch<T>(path: string): Promise<T> {
 export function storeMeta() {
   return storeFetch<StoreMeta>(`/${STORE_KEY}`);
 }
-export function storeProducts(search = "") {
-  const q = search ? `?search=${encodeURIComponent(search)}` : "";
-  return storeFetch<StoreProductList>(`/${STORE_KEY}/products${q}`);
+export function storeProducts(search = "", category = "") {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (category) params.set("category", category);
+  const query = params.toString();
+  return storeFetch<StoreProductList>(`/${STORE_KEY}/products${query ? `?${query}` : ""}`);
+}
+export function storeCategories() {
+  return storeFetch<StoreCategory[]>(`/${STORE_KEY}/categories`);
 }
 export function storeProduct(slug: string) {
   return storeFetch<StoreProductDetail>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}`);

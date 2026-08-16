@@ -33,3 +33,9 @@ class StorefrontProductDetail(StorefrontProduct):
 class StorefrontProductList(BaseModel):
     items: list[StorefrontProduct]
     total: int
+
+
+class StorefrontCategory(BaseModel):
+    slug: str
+    name: str
+    product_count: int

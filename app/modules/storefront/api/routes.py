@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database import get_session
 from app.infrastructure.tenant_context import set_tenant_context
 from app.modules.storefront.api.schemas import (
+    StorefrontCategory,
     StorefrontMeta,
     StorefrontProduct,
     StorefrontProductDetail,
@@ -46,6 +47,32 @@ _DEFAULT_PRICE_LIST = text(
 _BRAND = text(
     "SELECT name FROM catalog_brands WHERE status = 'active' ORDER BY created_at LIMIT 1"
 )
+# A product matches :category when the category it is tagged with — or any of
+# that category's ancestors — has the given slug (subtree match via closure).
+_IN_CATEGORY = """
+      AND (:category = '' OR EXISTS (
+        SELECT 1 FROM catalog_product_categories pc
+        JOIN catalog_category_closure cl ON cl.descendant_id = pc.category_id AND cl.tenant_id = pc.tenant_id
+        JOIN catalog_categories cat ON cat.id = cl.ancestor_id AND cat.tenant_id = cat.tenant_id
+        WHERE pc.product_id = p.id AND pc.tenant_id = p.tenant_id AND cat.slug = :category
+      ))
+"""
+
+_CATEGORIES = text(
+    """
+    SELECT cat.slug AS slug, cat.name AS name, count(DISTINCT pc.product_id) AS product_count
+    FROM catalog_categories cat
+    JOIN catalog_category_closure cl ON cl.ancestor_id = cat.id AND cl.tenant_id = cat.tenant_id
+    JOIN catalog_product_categories pc ON pc.category_id = cl.descendant_id AND pc.tenant_id = cat.tenant_id
+    JOIN catalog_products p ON p.id = pc.product_id AND p.tenant_id = cat.tenant_id
+      AND p.status = 'active' AND p.archived_at IS NULL
+    WHERE cat.parent_id IS NULL AND cat.status = 'active'
+    GROUP BY cat.slug, cat.name
+    HAVING count(DISTINCT pc.product_id) > 0
+    ORDER BY count(DISTINCT pc.product_id) DESC, cat.name
+    """
+)
+
 _COUNT = text(
     """
     SELECT count(*)
@@ -57,6 +84,7 @@ _COUNT = text(
     WHERE p.status = 'active' AND p.archived_at IS NULL
       AND (:search = '' OR t.name ILIKE '%' || :search || '%')
     """
+    + _IN_CATEGORY
 )
 _LIST = text(
     """
@@ -82,6 +110,9 @@ _LIST = text(
     ) s ON s.variant_id = v.id
     WHERE p.status = 'active' AND p.archived_at IS NULL
       AND (:search = '' OR t.name ILIKE '%' || :search || '%')
+    """
+    + _IN_CATEGORY
+    + """
     ORDER BY t.name NULLS LAST
     LIMIT :limit OFFSET :offset
     """
@@ -160,19 +191,27 @@ async def meta(key: str, session: Annotated[AsyncSession, Depends(get_session)])
     )
 
 
+@router.get("/{key}/categories", response_model=list[StorefrontCategory])
+async def categories(key: str, session: Annotated[AsyncSession, Depends(get_session)]) -> list[StorefrontCategory]:
+    await _bind(session, key)
+    rows = (await session.execute(_CATEGORIES)).all()
+    return [StorefrontCategory(slug=row.slug, name=row.name, product_count=int(row.product_count)) for row in rows]
+
+
 @router.get("/{key}/products", response_model=StorefrontProductList)
 async def products(
     key: str,
     session: Annotated[AsyncSession, Depends(get_session)],
     search: str = Query("", max_length=120),
+    category: str = Query("", max_length=120),
     limit: int = Query(60, ge=1, le=120),
     offset: int = Query(0, ge=0),
 ) -> StorefrontProductList:
     store = await _bind(session, key)
     price_list_id = await _price_list_id(session)
-    params = {"locale": store.locale, "search": search.strip(), "price_list_id": price_list_id, "limit": limit, "offset": offset}
-    rows = (await session.execute(_LIST, params)).all()
-    total = (await session.execute(_COUNT, {"locale": store.locale, "search": search.strip()})).scalar() or 0
+    filters = {"locale": store.locale, "search": search.strip(), "category": category.strip()}
+    rows = (await session.execute(_LIST, {**filters, "price_list_id": price_list_id, "limit": limit, "offset": offset})).all()
+    total = (await session.execute(_COUNT, filters)).scalar() or 0
     items = []
     for row in rows:
         product = _to_product(row)

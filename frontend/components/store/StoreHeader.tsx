@@ -1,18 +1,26 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { storeCategories, type StoreCategory } from "@/lib/storefront";
 import { useCart } from "./cart";
 
 export function StoreHeader({ storeName }: { storeName: string }) {
   const router = useRouter();
+  const params = useSearchParams();
+  const activeCategory = params.get("category") ?? "";
   const { count, setOpen } = useCart();
   const [query, setQuery] = useState("");
+  const [categories, setCategories] = useState<StoreCategory[]>([]);
 
-  // Prefill the box from the URL without useSearchParams (avoids a Suspense
-  // boundary); this is a client component so window is available in the effect.
   useEffect(() => {
-    setQuery(new URLSearchParams(window.location.search).get("search") ?? "");
+    setQuery(params.get("search") ?? "");
+  }, [params]);
+
+  useEffect(() => {
+    storeCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
   }, []);
 
   function submit(event: FormEvent) {
@@ -25,7 +33,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
     <header className="sf-header">
       <div className="sf-header-inner">
         <Link href="/tienda" className="sf-logo">
-          <span className="sf-logo-mark">◆</span>
+          <span className="sf-logo-mark">CH</span>
           {storeName}
         </Link>
         <form className="sf-search" onSubmit={submit} role="search">
@@ -37,6 +45,24 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           {count > 0 && <span className="sf-cart-count">{count}</span>}
         </button>
       </div>
+      {categories.length > 0 && (
+        <nav className="sf-nav" aria-label="Categorías">
+          <div className="sf-nav-inner">
+            <Link href="/tienda" className={`sf-nav-link${!activeCategory ? " active" : ""}`}>
+              Inicio
+            </Link>
+            {categories.map((category) => (
+              <Link
+                key={category.slug}
+                href={`/tienda?category=${category.slug}`}
+                className={`sf-nav-link${activeCategory === category.slug ? " active" : ""}`}
+              >
+                {category.name}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
