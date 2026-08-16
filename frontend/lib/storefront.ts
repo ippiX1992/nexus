@@ -32,10 +32,11 @@ async function storeFetch<T>(path: string): Promise<T> {
 export function storeMeta() {
   return storeFetch<StoreMeta>(`/${STORE_KEY}`);
 }
-export function storeProducts(search = "", category = "") {
+export function storeProducts(search = "", category = "", limit?: number) {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category) params.set("category", category);
+  if (limit) params.set("limit", String(limit));
   const query = params.toString();
   return storeFetch<StoreProductList>(`/${STORE_KEY}/products${query ? `?${query}` : ""}`);
 }

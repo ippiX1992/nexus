@@ -179,7 +179,7 @@ def _to_product(row) -> StorefrontProduct:
 @router.get("/{key}", response_model=StorefrontMeta)
 async def meta(key: str, session: Annotated[AsyncSession, Depends(get_session)]) -> StorefrontMeta:
     store = await _bind(session, key)
-    count = (await session.execute(_COUNT, {"locale": store.locale, "search": ""})).scalar() or 0
+    count = (await session.execute(_COUNT, {"locale": store.locale, "search": "", "category": ""})).scalar() or 0
     brand = (await session.execute(_BRAND)).scalar()
     return StorefrontMeta(
         key=store.key,

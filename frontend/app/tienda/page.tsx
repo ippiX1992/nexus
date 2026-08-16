@@ -27,13 +27,14 @@ export default function StorePage() {
     (async () => {
       try {
         if (isHome) {
-          const [cats, all] = await Promise.all([storeCategories(), storeProducts()]);
-          const perCategory = await Promise.all(cats.map((entry) => storeProducts("", entry.slug)));
+          const [cats, all] = await Promise.all([storeCategories(), storeProducts("", "", 12)]);
+          const top = cats.slice(0, 8);
+          const perCategory = await Promise.all(top.map((entry) => storeProducts("", entry.slug, 12)));
           if (!alive) return;
           setFeatured(all.items.slice(0, 3));
-          setSections(cats.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
+          setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
-          const [page, cats] = await Promise.all([storeProducts(search, category), category ? storeCategories() : Promise.resolve([])]);
+          const [page, cats] = await Promise.all([storeProducts(search, category, 60), category ? storeCategories() : Promise.resolve([])]);
           if (!alive) return;
           setItems(page.items);
           setCatName(cats.find((entry) => entry.slug === category)?.name ?? category);
