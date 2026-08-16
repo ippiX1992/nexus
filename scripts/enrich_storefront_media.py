@@ -78,7 +78,7 @@ def main() -> None:
     for sku, name in ours:
         match = by_name.get(norm(name))
         if match and str(match.get("img")).isdigit() and int(match["img"]) > 0:
-            media[sku] = f"https://clickhome.ec/{match['id']}-home_default/{match['lr']}.jpg"
+            media[sku] = f"https://clickhome.ec/{match['img']}-home_default/{match['lr']}.jpg"
         else:
             unmatched.append(name)
 

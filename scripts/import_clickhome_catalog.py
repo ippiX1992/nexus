@@ -154,8 +154,10 @@ def main() -> None:
 
         link = first(product.get("link_rewrite"))
         img = product.get("id_default_image")
+        # PrestaShop friendly image URLs key on the IMAGE id (id_default_image),
+        # NOT the product id — using the product id serves another product's photo.
         if str(img).isdigit() and int(img) > 0 and link:
-            media[sku] = f"https://clickhome.ec/{chid}-home_default/{link}.jpg"
+            media[sku] = f"https://clickhome.ec/{img}-home_default/{link}.jpg"
 
         seen_cats: set[str] = set()
         for position, assoc in enumerate(product.get("associations", {}).get("categories", [])):
