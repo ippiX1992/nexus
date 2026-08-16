@@ -1,44 +1,117 @@
 "use client";
-import { useState } from "react";
-import { formatPrice } from "@/lib/storefront";
+import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { createOrder, formatPrice, type StoreOrder } from "@/lib/storefront";
 import { useCart } from "./cart";
+
+type Stage = "cart" | "form" | "done";
 
 export function CartDrawer() {
   const { items, open, setOpen, setQty, remove, clear, subtotal, count } = useCart();
-  const [done, setDone] = useState(false);
+  const [stage, setStage] = useState<Stage>("cart");
+  const [placing, setPlacing] = useState(false);
+  const [error, setError] = useState("");
+  const [order, setOrder] = useState<StoreOrder | null>(null);
   const currency = items[0]?.currency ?? "USD";
+
+  function close() {
+    setOpen(false);
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setPlacing(true);
+    setError("");
+    try {
+      const placed = await createOrder({
+        customer_name: String(form.get("name") || ""),
+        customer_email: String(form.get("email") || "") || undefined,
+        customer_phone: String(form.get("phone") || "") || undefined,
+        shipping_address: String(form.get("address") || "") || undefined,
+        items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
+      });
+      setOrder(placed);
+      clear();
+      setStage("done");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo crear el pedido");
+    } finally {
+      setPlacing(false);
+    }
+  }
+
+  function reset() {
+    setStage("cart");
+    setOrder(null);
+    setError("");
+    setOpen(false);
+  }
 
   return (
     <>
-      <div className={`sf-scrim ${open ? "open" : ""}`} onClick={() => setOpen(false)} aria-hidden="true" />
+      <div className={`sf-scrim ${open ? "open" : ""}`} onClick={close} aria-hidden="true" />
       <aside className={`sf-drawer ${open ? "open" : ""}`} aria-label="Carrito de compras" aria-hidden={!open}>
         <div className="sf-drawer-head">
-          <strong>Tu carrito{count > 0 ? ` (${count})` : ""}</strong>
-          <button className="sf-icon-btn" onClick={() => setOpen(false)} aria-label="Cerrar carrito">
+          <strong>
+            {stage === "form" ? "Datos de envío" : stage === "done" ? "¡Pedido confirmado!" : `Tu carrito${count > 0 ? ` (${count})` : ""}`}
+          </strong>
+          <button className="sf-icon-btn" onClick={close} aria-label="Cerrar carrito">
             ✕
           </button>
         </div>
 
-        {done ? (
+        {stage === "done" && order ? (
           <div className="sf-drawer-done">
             <div className="sf-done-check">✓</div>
-            <h3>¡Pedido confirmado!</h3>
-            <p>Gracias por tu compra en la tienda demo de ClickHome.</p>
-            <button
-              className="sf-checkout"
-              onClick={() => {
-                clear();
-                setDone(false);
-                setOpen(false);
-              }}
-            >
-              Cerrar
+            <h3>Gracias, {order.customer_name.split(" ")[0]}</h3>
+            <p>
+              Pedido <strong>{order.order_number}</strong>
+              <br />
+              Total {formatPrice(order.subtotal, order.currency)} · {order.item_count} artículos
+            </p>
+            <p className="sf-muted">Rastreo: {order.tracking_number}</p>
+            <Link className="sf-checkout" href={`/tienda/pedido/${order.order_number}`} onClick={reset}>
+              Ver seguimiento
+            </Link>
+            <button className="sf-clear" onClick={reset}>
+              Seguir comprando
             </button>
           </div>
+        ) : stage === "form" ? (
+          <form className="sf-checkout-form" onSubmit={submit}>
+            <label>
+              Nombre completo
+              <input name="name" required minLength={2} autoComplete="name" />
+            </label>
+            <label>
+              Correo (opcional)
+              <input name="email" type="email" autoComplete="email" />
+            </label>
+            <label>
+              Teléfono (opcional)
+              <input name="phone" autoComplete="tel" />
+            </label>
+            <label>
+              Dirección de envío (opcional)
+              <textarea name="address" rows={2} autoComplete="street-address" />
+            </label>
+            <div className="sf-subtotal">
+              <span>Total</span>
+              <strong>{formatPrice(subtotal, currency)}</strong>
+            </div>
+            {error && <p className="sf-error" role="alert">{error}</p>}
+            <button className="sf-checkout" disabled={placing}>
+              {placing ? "Procesando…" : "Confirmar pedido"}
+            </button>
+            <button type="button" className="sf-clear" onClick={() => setStage("cart")}>
+              ← Volver al carrito
+            </button>
+          </form>
         ) : items.length === 0 ? (
           <div className="sf-drawer-empty">
             <p>Tu carrito está vacío.</p>
-            <button className="sf-checkout" onClick={() => setOpen(false)}>
+            <button className="sf-checkout" onClick={close}>
               Seguir comprando
             </button>
           </div>
@@ -74,7 +147,7 @@ export function CartDrawer() {
                 <span>Subtotal</span>
                 <strong>{formatPrice(subtotal, currency)}</strong>
               </div>
-              <button className="sf-checkout" onClick={() => setDone(true)}>
+              <button className="sf-checkout" onClick={() => setStage("form")}>
                 Finalizar compra
               </button>
               <button className="sf-clear" onClick={clear}>

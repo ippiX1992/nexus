@@ -992,6 +992,122 @@
   place-items: center;
 }
 
+/* Checkout form */
+.sf-checkout-form {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sf-checkout-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--az-muted);
+}
+.sf-checkout-form input,
+.sf-checkout-form textarea {
+  border: 1px solid var(--az-border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  color: var(--az-text);
+  resize: vertical;
+}
+.sf-checkout-form input:focus,
+.sf-checkout-form textarea:focus {
+  outline: none;
+  border-color: var(--az-link);
+  box-shadow: 0 0 0 1px var(--az-link);
+}
+
+/* Order tracking page */
+.sf-order-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+  align-items: start;
+}
+.sf-order-card {
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 10px;
+  padding: 22px;
+}
+.sf-order-card h1 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+}
+.sf-order-card h2 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+.sf-timeline {
+  margin: 22px 0 10px;
+  display: flex;
+  flex-direction: column;
+}
+.sf-tl-step {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 22px;
+  position: relative;
+}
+.sf-tl-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  bottom: 0;
+  width: 2px;
+  background: var(--az-border);
+}
+.sf-tl-step.done:not(:last-child)::before {
+  background: var(--az-green);
+}
+.sf-tl-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid var(--az-border);
+  background: #fff;
+  flex: none;
+  margin-top: 2px;
+  z-index: 1;
+}
+.sf-tl-step.done .sf-tl-dot {
+  background: var(--az-green);
+  border-color: var(--az-green);
+}
+.sf-tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sf-order-eta {
+  margin: 8px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--az-border);
+}
+.sf-order-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--az-border);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .sf-order-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Footer */
 .sf-footer {
   margin-top: auto;

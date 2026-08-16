@@ -23,9 +23,18 @@ export type StoreMeta = { key: string; name: string; currency: string; locale: s
 export type StoreProductList = { items: StoreProduct[]; total: number };
 export type StoreCategory = { slug: string; name: string; product_count: number; children?: StoreCategory[] };
 
-async function storeFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}/storefront${path}`, { credentials: "omit" });
-  if (!res.ok) throw new Error(`No se pudo cargar la tienda (HTTP ${res.status})`);
+async function storeFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers = options?.body ? { "Content-Type": "application/json" } : undefined;
+  const res = await fetch(`${API}/storefront${path}`, { credentials: "omit", headers, ...options });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = (await res.json()).detail ?? "";
+    } catch {
+      /* non-JSON error */
+    }
+    throw new Error(detail || `No se pudo completar la solicitud (HTTP ${res.status})`);
+  }
   return res.json();
 }
 
@@ -47,6 +56,41 @@ export function storeCategories() {
 }
 export function storeProduct(slug: string) {
   return storeFetch<StoreProductDetail>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}`);
+}
+
+export type OrderLine = { sku: string; name: string; unit_amount: string | null; quantity: number; line_total: string };
+export type StoreOrder = {
+  order_number: string;
+  tracking_number: string;
+  status: string;
+  currency: string;
+  subtotal: string;
+  item_count: number;
+  customer_name: string;
+  placed_at: string;
+  items: OrderLine[];
+};
+export type TrackingStage = { status: string; label: string; at: string; done: boolean };
+export type Tracking = { order_number: string; tracking_number: string; status: string; estimated_delivery: string; stages: TrackingStage[] };
+export type OrderInput = {
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  shipping_address?: string;
+  items: { slug: string; quantity: number }[];
+};
+
+export function productStock(slug: string) {
+  return storeFetch<{ slug: string; available: number; in_stock: boolean }>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}/stock`);
+}
+export function createOrder(payload: OrderInput) {
+  return storeFetch<StoreOrder>(`/${STORE_KEY}/orders`, { method: "POST", body: JSON.stringify(payload) });
+}
+export function getOrder(orderNumber: string) {
+  return storeFetch<StoreOrder>(`/${STORE_KEY}/orders/${encodeURIComponent(orderNumber)}`);
+}
+export function getTracking(orderNumber: string) {
+  return storeFetch<Tracking>(`/${STORE_KEY}/orders/${encodeURIComponent(orderNumber)}/tracking`);
 }
 
 export function formatPrice(value: string | number | null | undefined, currency = "USD") {
