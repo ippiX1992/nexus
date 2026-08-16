@@ -13,11 +13,13 @@ export default function ProductPage() {
   const { add } = useCart();
   const [product, setProduct] = useState<StoreProductDetail | null>(null);
   const [qty, setQty] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setLoading(true);
+    setActiveImage(0);
     storeProduct(slug)
       .then(setProduct)
       .catch((caught) => setError(caught instanceof Error ? caught.message : "Error"))
@@ -36,6 +38,7 @@ export default function ProductPage() {
     );
 
   const price = product.price != null ? Number(product.price) : null;
+  const gallery = product.images && product.images.length ? product.images : product.image ? [product.image] : [];
 
   return (
     <article className="sf-detail">
@@ -43,12 +46,30 @@ export default function ProductPage() {
         ← Volver al catálogo
       </Link>
       <div className="sf-detail-grid">
-        <div className="sf-detail-media">
-          {product.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="sf-img" src={product.image} alt={product.name} />
-          ) : (
-            <Thumb name={product.name} />
+        <div className="sf-detail-gallery">
+          <div className="sf-detail-media">
+            {gallery.length > 0 ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="sf-img" src={gallery[activeImage]} alt={product.name} />
+            ) : (
+              <Thumb name={product.name} />
+            )}
+          </div>
+          {gallery.length > 1 && (
+            <div className="sf-gallery-thumbs">
+              {gallery.map((src, index) => (
+                <button
+                  key={src}
+                  className={`sf-gallery-thumb${index === activeImage ? " active" : ""}`}
+                  onMouseEnter={() => setActiveImage(index)}
+                  onClick={() => setActiveImage(index)}
+                  aria-label={`Foto ${index + 1}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" loading="lazy" />
+                </button>
+              ))}
+            </div>
           )}
         </div>
         <div className="sf-detail-info">

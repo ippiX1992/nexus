@@ -18,7 +18,7 @@ export type StoreProduct = {
   available: number;
   in_stock: boolean;
 };
-export type StoreProductDetail = StoreProduct & { long_description?: string | null };
+export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[] };
 export type StoreMeta = { key: string; name: string; currency: string; locale: string; brand?: string | null; product_count: number };
 export type StoreProductList = { items: StoreProduct[]; total: number };
 export type StoreCategory = { slug: string; name: string; product_count: number; children?: StoreCategory[] };
@@ -32,12 +32,13 @@ async function storeFetch<T>(path: string): Promise<T> {
 export function storeMeta() {
   return storeFetch<StoreMeta>(`/${STORE_KEY}`);
 }
-export function storeProducts(search = "", category = "", limit?: number, offset?: number) {
+export function storeProducts(search = "", category = "", limit?: number, offset?: number, sort?: string) {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category) params.set("category", category);
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));
+  if (sort && sort !== "name") params.set("sort", sort);
   const query = params.toString();
   return storeFetch<StoreProductList>(`/${STORE_KEY}/products${query ? `?${query}` : ""}`);
 }

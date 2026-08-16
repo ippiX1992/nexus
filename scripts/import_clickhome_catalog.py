@@ -155,9 +155,16 @@ def main() -> None:
         link = first(product.get("link_rewrite"))
         img = product.get("id_default_image")
         # PrestaShop friendly image URLs key on the IMAGE id (id_default_image),
-        # NOT the product id — using the product id serves another product's photo.
-        if str(img).isdigit() and int(img) > 0 and link:
-            media[sku] = f"https://clickhome.ec/{img}-home_default/{link}.jpg"
+        # NOT the product id. Store the whole gallery (default first) per SKU.
+        ordered: list[str] = []
+        if str(img).isdigit() and int(img) > 0:
+            ordered.append(str(img))
+        for image in product.get("associations", {}).get("images", []):
+            image_id = str(image.get("id"))
+            if image_id.isdigit() and image_id not in ordered:
+                ordered.append(image_id)
+        if ordered and link:
+            media[sku] = [f"https://clickhome.ec/{image_id}-home_default/{link}.jpg" for image_id in ordered]
 
         seen_cats: set[str] = set()
         for position, assoc in enumerate(product.get("associations", {}).get("categories", [])):

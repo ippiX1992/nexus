@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
@@ -11,9 +11,18 @@ const PAGE = 24;
 
 export default function StorePage() {
   const params = useSearchParams();
+  const router = useRouter();
   const search = params.get("search") ?? "";
   const category = params.get("category") ?? "";
+  const sort = params.get("sort") ?? "name";
   const isHome = !search && !category;
+
+  function changeSort(value: string) {
+    const next = new URLSearchParams(Array.from(params.entries()));
+    if (value === "name") next.delete("sort");
+    else next.set("sort", value);
+    router.push(`/tienda?${next.toString()}`);
+  }
 
   const [items, setItems] = useState<StoreProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,7 +49,7 @@ export default function StorePage() {
           setDeals(dealItems.items);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
-          const [page, cats] = await Promise.all([storeProducts(search, category, PAGE), category ? storeCategories() : Promise.resolve([])]);
+          const [page, cats] = await Promise.all([storeProducts(search, category, PAGE, 0, sort), category ? storeCategories() : Promise.resolve([])]);
           if (!alive) return;
           setItems(page.items);
           setTotal(page.total);
@@ -55,12 +64,12 @@ export default function StorePage() {
     return () => {
       alive = false;
     };
-  }, [search, category, isHome]);
+  }, [search, category, sort, isHome]);
 
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const page = await storeProducts(search, category, PAGE, items.length);
+      const page = await storeProducts(search, category, PAGE, items.length, sort);
       setItems((previous) => [...previous, ...page.items]);
       setTotal(page.total);
     } catch (caught) {
@@ -131,7 +140,17 @@ export default function StorePage() {
     <div className="sf-grid-wrap">
       <div className="sf-grid-head">
         <h2>{search ? `Resultados para “${search}”` : catName}</h2>
-        <span className="sf-muted">{total} productos</span>
+        <div className="az-toolbar">
+          <span className="sf-muted">{total} productos</span>
+          <label className="az-sort">
+            Ordenar:
+            <select value={sort} onChange={(event) => changeSort(event.target.value)}>
+              <option value="name">Relevancia</option>
+              <option value="price_asc">Precio: menor a mayor</option>
+              <option value="price_desc">Precio: mayor a menor</option>
+            </select>
+          </label>
+        </div>
       </div>
       {items.length === 0 ? (
         <p className="sf-muted">No encontramos productos{search ? ` para “${search}”` : ""}.</p>

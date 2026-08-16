@@ -28,6 +28,7 @@ class StorefrontProduct(BaseModel):
 
 class StorefrontProductDetail(StorefrontProduct):
     long_description: str | None = None
+    images: list[str] = []
 
 
 class StorefrontProductList(BaseModel):

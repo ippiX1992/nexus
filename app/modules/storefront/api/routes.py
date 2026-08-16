@@ -32,13 +32,18 @@ router = APIRouter(prefix="/api/v1/storefront", tags=["storefront"])
 # catalog has no image column of its own; this file is the demo's media source.
 _MEDIA_PATH = Path(__file__).resolve().parents[1] / "clickhome_media.json"
 try:
-    _MEDIA: dict[str, str] = json.loads(_MEDIA_PATH.read_text(encoding="utf-8"))
+    _MEDIA: dict[str, list[str]] = json.loads(_MEDIA_PATH.read_text(encoding="utf-8"))
 except FileNotFoundError:
     _MEDIA = {}
 
 
+def _images_for(sku: str) -> list[str]:
+    return _MEDIA.get(sku) or []
+
+
 def _image_for(sku: str) -> str | None:
-    return _MEDIA.get(sku)
+    gallery = _MEDIA.get(sku)
+    return gallery[0] if gallery else None
 
 _DEFAULT_PRICE_LIST = text(
     "SELECT id FROM pricing_price_lists WHERE is_default AND status = 'active' "
@@ -87,7 +92,7 @@ _COUNT = text(
     """
     + _IN_CATEGORY
 )
-_LIST = text(
+_LIST_SELECT = (
     """
     SELECT COALESCE(t.slug, v.sku) AS slug,
            COALESCE(t.name, v.sku) AS name,
@@ -113,11 +118,15 @@ _LIST = text(
       AND (:search = '' OR t.name ILIKE '%' || :search || '%')
     """
     + _IN_CATEGORY
-    + """
-    ORDER BY t.name NULLS LAST
-    LIMIT :limit OFFSET :offset
-    """
 )
+
+# Whitelisted ORDER BY fragments — the `sort` query value only ever indexes this
+# map, never interpolates into SQL, so there is no injection surface.
+_ORDER = {
+    "price_asc": "ORDER BY e.unit_amount ASC NULLS LAST, t.name",
+    "price_desc": "ORDER BY e.unit_amount DESC NULLS LAST, t.name",
+    "name": "ORDER BY t.name NULLS LAST",
+}
 _DETAIL = text(
     """
     SELECT COALESCE(t.slug, v.sku) AS slug,
@@ -214,13 +223,15 @@ async def products(
     session: Annotated[AsyncSession, Depends(get_session)],
     search: str = Query("", max_length=120),
     category: str = Query("", max_length=120),
+    sort: str = Query("name"),
     limit: int = Query(60, ge=1, le=120),
     offset: int = Query(0, ge=0),
 ) -> StorefrontProductList:
     store = await _bind(session, key)
     price_list_id = await _price_list_id(session)
     filters = {"locale": store.locale, "search": search.strip(), "category": category.strip()}
-    rows = (await session.execute(_LIST, {**filters, "price_list_id": price_list_id, "limit": limit, "offset": offset})).all()
+    query = text(_LIST_SELECT + _ORDER.get(sort, _ORDER["name"]) + " LIMIT :limit OFFSET :offset")
+    rows = (await session.execute(query, {**filters, "price_list_id": price_list_id, "limit": limit, "offset": offset})).all()
     total = (await session.execute(_COUNT, filters)).scalar() or 0
     items = []
     for row in rows:
@@ -249,6 +260,7 @@ async def product_detail(
         long_description=row.long_description,
         brand=row.brand,
         image=_image_for(row.sku),
+        images=_images_for(row.sku),
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,
