@@ -41,13 +41,23 @@ async function storeFetch<T>(path: string, options?: RequestInit): Promise<T> {
 export function storeMeta() {
   return storeFetch<StoreMeta>(`/${STORE_KEY}`);
 }
-export function storeProducts(search = "", category = "", limit?: number, offset?: number, sort?: string) {
+export function storeProducts(
+  search = "",
+  category = "",
+  limit?: number,
+  offset?: number,
+  sort?: string,
+  minPrice?: number,
+  maxPrice?: number,
+) {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category) params.set("category", category);
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));
   if (sort && sort !== "name") params.set("sort", sort);
+  if (minPrice) params.set("min_price", String(minPrice));
+  if (maxPrice) params.set("max_price", String(maxPrice));
   const query = params.toString();
   return storeFetch<StoreProductList>(`/${STORE_KEY}/products${query ? `?${query}` : ""}`);
 }

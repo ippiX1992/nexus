@@ -54,6 +54,10 @@ export function StoreHeader({ storeName }: { storeName: string }) {
             🔍
           </button>
         </form>
+        <Link href="/tienda/rastrear" className="az-orders">
+          <span aria-hidden="true">📦</span>
+          <span className="az-orders-label">Pedidos</span>
+        </Link>
         <button className="az-cart" onClick={() => setOpen(true)} aria-label={`Carrito, ${count} artículos`}>
           <span className="az-cart-stack">
             <span className="az-cart-ico" aria-hidden="true">🛒</span>

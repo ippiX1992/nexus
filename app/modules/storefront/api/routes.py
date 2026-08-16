@@ -18,6 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_current_context
+from app.application.authorization import TenantContext
 from app.infrastructure.database import get_session
 from app.infrastructure.tenant_context import set_tenant_context
 from app.modules.storefront.api.schemas import (
@@ -89,6 +91,13 @@ _CATEGORIES = text(
     """
 )
 
+# Optional price band; a bound <= 0 means "no limit" so the same query serves the
+# unfiltered case too.
+_PRICE_FILTER = """
+      AND (:min_price <= 0 OR e.unit_amount >= :min_price)
+      AND (:max_price <= 0 OR e.unit_amount <= :max_price)
+"""
+
 _COUNT = text(
     """
     SELECT count(*)
@@ -97,10 +106,13 @@ _COUNT = text(
       ON v.product_id = p.id AND v.is_default AND v.archived_at IS NULL
     LEFT JOIN catalog_product_translations t
       ON t.product_id = p.id AND t.locale = :locale
+    LEFT JOIN pricing_price_list_entries e
+      ON e.variant_id = v.id AND e.price_list_id = :price_list_id
     WHERE p.status = 'active' AND p.archived_at IS NULL
       AND (:search = '' OR t.name ILIKE '%' || :search || '%')
     """
     + _IN_CATEGORY
+    + _PRICE_FILTER
 )
 _LIST_SELECT = (
     """
@@ -128,6 +140,7 @@ _LIST_SELECT = (
       AND (:search = '' OR t.name ILIKE '%' || :search || '%')
     """
     + _IN_CATEGORY
+    + _PRICE_FILTER
 )
 
 # Whitelisted ORDER BY fragments — the `sort` query value only ever indexes this
@@ -249,17 +262,26 @@ _STAGES: tuple[tuple[str, str, timedelta], ...] = (
 )
 
 
-def _timeline(placed_at: datetime) -> tuple[str, list[TrackingStage]]:
+_STATUS_ORDER = [status for status, _label, _offset in _STAGES]
+_GET_EVENTS = text("SELECT status, occurred_at FROM storefront_order_events WHERE order_id = :order_id")
+
+
+def _timeline(placed_at: datetime, stored_status: str = "placed", event_times: dict | None = None) -> tuple[str, list[TrackingStage]]:
+    # A stage is reached when its estimated time has passed OR an admin has pushed
+    # the stored status to (or past) it — the later of the two wins.
     now = datetime.now(timezone.utc)
-    current = "placed"
-    stages: list[TrackingStage] = []
-    for status, label, offset in _STAGES:
-        at = placed_at + offset
-        done = at <= now
-        if done:
-            current = status
-        stages.append(TrackingStage(status=status, label=label, at=at, done=done))
-    return current, stages
+    event_times = event_times or {}
+    time_index = 0
+    for index, (_status, _label, offset) in enumerate(_STAGES):
+        if placed_at + offset <= now:
+            time_index = index
+    stored_index = _STATUS_ORDER.index(stored_status) if stored_status in _STATUS_ORDER else 0
+    current_index = max(time_index, stored_index)
+    stages = [
+        TrackingStage(status=status, label=label, at=event_times.get(status) or (placed_at + offset), done=index <= current_index)
+        for index, (status, label, offset) in enumerate(_STAGES)
+    ]
+    return _STATUS_ORDER[current_index], stages
 
 
 async def _bind(session: AsyncSession, key: str) -> Storefront:
@@ -294,7 +316,13 @@ def _to_product(row) -> StorefrontProduct:
 @router.get("/{key}", response_model=StorefrontMeta)
 async def meta(key: str, session: Annotated[AsyncSession, Depends(get_session)]) -> StorefrontMeta:
     store = await _bind(session, key)
-    count = (await session.execute(_COUNT, {"locale": store.locale, "search": "", "category": ""})).scalar() or 0
+    price_list_id = await _price_list_id(session)
+    count = (
+        await session.execute(
+            _COUNT,
+            {"locale": store.locale, "search": "", "category": "", "price_list_id": price_list_id, "min_price": 0, "max_price": 0},
+        )
+    ).scalar() or 0
     brand = (await session.execute(_BRAND)).scalar()
     return StorefrontMeta(
         key=store.key,
@@ -329,14 +357,19 @@ async def products(
     search: str = Query("", max_length=120),
     category: str = Query("", max_length=120),
     sort: str = Query("name"),
+    min_price: float = Query(0, ge=0),
+    max_price: float = Query(0, ge=0),
     limit: int = Query(60, ge=1, le=120),
     offset: int = Query(0, ge=0),
 ) -> StorefrontProductList:
     store = await _bind(session, key)
     price_list_id = await _price_list_id(session)
-    filters = {"locale": store.locale, "search": search.strip(), "category": category.strip()}
+    filters = {
+        "locale": store.locale, "search": search.strip(), "category": category.strip(),
+        "price_list_id": price_list_id, "min_price": min_price, "max_price": max_price,
+    }
     query = text(_LIST_SELECT + _ORDER.get(sort, _ORDER["name"]) + " LIMIT :limit OFFSET :offset")
-    rows = (await session.execute(query, {**filters, "price_list_id": price_list_id, "limit": limit, "offset": offset})).all()
+    rows = (await session.execute(query, {**filters, "limit": limit, "offset": offset})).all()
     total = (await session.execute(_COUNT, filters)).scalar() or 0
     items = []
     for row in rows:
@@ -452,7 +485,8 @@ async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depe
     store = await _bind(session, key)
     order = await _load_order(session, number)
     items = (await session.execute(_GET_ITEMS, {"order_id": order.id})).all()
-    current, _ = _timeline(order.placed_at)
+    events = {row.status: row.occurred_at for row in (await session.execute(_GET_EVENTS, {"order_id": order.id})).all()}
+    current, _ = _timeline(order.placed_at, order.status, events)
     return OrderResponse(
         order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
         subtotal=order.subtotal, item_count=order.item_count, customer_name=order.customer_name, placed_at=order.placed_at,
@@ -464,8 +498,66 @@ async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depe
 async def get_tracking(key: str, number: str, session: Annotated[AsyncSession, Depends(get_session)]) -> TrackingResponse:
     await _bind(session, key)
     order = await _load_order(session, number)
-    current, stages = _timeline(order.placed_at)
+    events = {row.status: row.occurred_at for row in (await session.execute(_GET_EVENTS, {"order_id": order.id})).all()}
+    current, stages = _timeline(order.placed_at, order.status, events)
     return TrackingResponse(
         order_number=order.order_number, tracking_number=order.tracking_number, status=current,
         estimated_delivery=order.placed_at + timedelta(days=4), stages=stages,
     )
+
+
+# ── Authenticated admin (tenant from the access token, RLS set by the
+# dependency). Any active member of the tenant can review and advance orders.
+admin_router = APIRouter(prefix="/api/v1/admin/storefront", tags=["storefront-admin"])
+
+_ADMIN_LIST = text(
+    """
+    SELECT order_number, tracking_number, status, currency, subtotal, item_count,
+           customer_name, customer_email, placed_at
+    FROM storefront_orders ORDER BY placed_at DESC LIMIT :limit OFFSET :offset
+    """
+)
+_ADMIN_GET = text("SELECT id, status FROM storefront_orders WHERE order_number = :number LIMIT 1")
+_ADMIN_ADVANCE = text(
+    "UPDATE storefront_orders SET status = :status, version = version + 1, updated_at = now() WHERE id = :id"
+)
+
+
+@admin_router.get("/orders")
+async def admin_orders(
+    context: Annotated[TenantContext, Depends(get_current_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> list[dict]:
+    rows = (await session.execute(_ADMIN_LIST, {"limit": limit, "offset": offset})).all()
+    return [
+        {
+            "order_number": r.order_number, "tracking_number": r.tracking_number, "status": r.status,
+            "currency": r.currency, "subtotal": str(r.subtotal), "item_count": r.item_count,
+            "customer_name": r.customer_name, "customer_email": r.customer_email, "placed_at": r.placed_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@admin_router.post("/orders/{number}/advance")
+async def admin_advance_order(
+    number: str,
+    context: Annotated[TenantContext, Depends(get_current_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict:
+    order = (await session.execute(_ADMIN_GET, {"number": number})).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    index = _STATUS_ORDER.index(order.status) if order.status in _STATUS_ORDER else 0
+    if index >= len(_STATUS_ORDER) - 1:
+        raise HTTPException(status_code=400, detail="El pedido ya está entregado")
+    nxt = _STATUS_ORDER[index + 1]
+    await session.execute(_ADMIN_ADVANCE, {"status": nxt, "id": order.id})
+    await session.execute(
+        _INSERT_EVENT,
+        {"id": uuid4(), "tenant": context.tenant_id, "order_id": order.id, "status": nxt, "note": f"Estado actualizado a {nxt}"},
+    )
+    await session.commit()
+    return {"order_number": number, "status": nxt}

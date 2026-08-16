@@ -11,6 +11,7 @@ from app.modules.catalog.api.routes import router as catalog_router
 from app.modules.inventory.api.routes import router as inventory_router
 from app.modules.platform.api.routes import router as platform_router
 from app.modules.pricing.api.routes import router as pricing_router
+from app.modules.storefront.api.routes import admin_router as storefront_admin_router
 from app.modules.storefront.api.routes import router as storefront_router
 
 settings=get_settings(); app=FastAPI(title=settings.app_name,version="0.2.0")
@@ -23,6 +24,7 @@ app.include_router(catalog_router)
 app.include_router(pricing_router)
 app.include_router(inventory_router)
 app.include_router(storefront_router)
+app.include_router(storefront_admin_router)
 @app.get("/health",tags=["operations"])
 async def health(): return {"status":"ok","service":settings.app_name}
 @app.get("/ready",tags=["operations"])

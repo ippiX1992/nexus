@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/commerce/warehouses", label: "Warehouses" },
       { href: "/commerce/inventory", label: "Inventario" },
       { href: "/commerce/transfers", label: "Transferencias" },
+      { href: "/commerce/orders", label: "Pedidos" },
     ],
   },
   { label: "Content", items: [], comingSoon: true },

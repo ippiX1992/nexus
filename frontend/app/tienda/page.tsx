@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
 import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
@@ -15,12 +15,26 @@ export default function StorePage() {
   const search = params.get("search") ?? "";
   const category = params.get("category") ?? "";
   const sort = params.get("sort") ?? "name";
+  const minPrice = params.get("min") ?? "";
+  const maxPrice = params.get("max") ?? "";
   const isHome = !search && !category;
 
   function changeSort(value: string) {
     const next = new URLSearchParams(Array.from(params.entries()));
     if (value === "name") next.delete("sort");
     else next.set("sort", value);
+    router.push(`/tienda?${next.toString()}`);
+  }
+
+  function applyPrice(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = new URLSearchParams(Array.from(params.entries()));
+    for (const [field, key] of [["min", "min"], ["max", "max"]] as const) {
+      const value = String(form.get(field) || "").trim();
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
     router.push(`/tienda?${next.toString()}`);
   }
 
@@ -49,7 +63,10 @@ export default function StorePage() {
           setDeals(dealItems.items);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
-          const [page, cats] = await Promise.all([storeProducts(search, category, PAGE, 0, sort), category ? storeCategories() : Promise.resolve([])]);
+          const [page, cats] = await Promise.all([
+            storeProducts(search, category, PAGE, 0, sort, Number(minPrice) || 0, Number(maxPrice) || 0),
+            category ? storeCategories() : Promise.resolve([]),
+          ]);
           if (!alive) return;
           setItems(page.items);
           setTotal(page.total);
@@ -64,12 +81,12 @@ export default function StorePage() {
     return () => {
       alive = false;
     };
-  }, [search, category, sort, isHome]);
+  }, [search, category, sort, minPrice, maxPrice, isHome]);
 
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const page = await storeProducts(search, category, PAGE, items.length, sort);
+      const page = await storeProducts(search, category, PAGE, items.length, sort, Number(minPrice) || 0, Number(maxPrice) || 0);
       setItems((previous) => [...previous, ...page.items]);
       setTotal(page.total);
     } catch (caught) {
@@ -138,10 +155,21 @@ export default function StorePage() {
 
   return (
     <div className="sf-grid-wrap">
+      <nav className="sf-crumbs" aria-label="Ruta">
+        <Link href="/tienda">Inicio</Link>
+        <span>›</span>
+        <span>{search ? `Búsqueda: “${search}”` : catName}</span>
+      </nav>
       <div className="sf-grid-head">
         <h2>{search ? `Resultados para “${search}”` : catName}</h2>
         <div className="az-toolbar">
           <span className="sf-muted">{total} productos</span>
+          <form className="az-price" onSubmit={applyPrice}>
+            <input name="min" type="number" min="0" step="0.01" placeholder="Mín" defaultValue={minPrice} aria-label="Precio mínimo" />
+            <span>–</span>
+            <input name="max" type="number" min="0" step="0.01" placeholder="Máx" defaultValue={maxPrice} aria-label="Precio máximo" />
+            <button type="submit">Filtrar</button>
+          </form>
           <label className="az-sort">
             Ordenar:
             <select value={sort} onChange={(event) => changeSort(event.target.value)}>
