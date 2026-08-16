@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "@/components/store/cart";
+import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { formatPrice, storeProduct, type StoreProductDetail } from "@/lib/storefront";
 
@@ -53,6 +54,7 @@ export default function ProductPage() {
         <div className="sf-detail-info">
           {product.brand && <span className="sf-brand">{product.brand}</span>}
           <h1>{product.name}</h1>
+          <Stars seed={product.slug} />
           <div className="sf-detail-price">{formatPrice(product.price, product.currency)}</div>
           <div className={`sf-stock ${product.in_stock ? "in" : "out"}`}>
             {product.in_stock ? `En stock · ${product.available} disponibles` : "Agotado"}

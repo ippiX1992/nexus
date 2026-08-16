@@ -439,6 +439,110 @@
   gap: 14px;
 }
 
+/* Rating stars (placeholder) */
+.az-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.az-stars-track {
+  position: relative;
+  display: inline-block;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #e3e6e6;
+  letter-spacing: 1px;
+}
+.az-stars-track::before {
+  content: "★★★★★";
+}
+.az-stars-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #ffa41c;
+}
+.az-stars-fill::before {
+  content: "★★★★★";
+}
+.az-stars-count {
+  color: var(--az-link);
+  font-size: 0.78rem;
+}
+
+/* Deals band */
+.az-deals {
+  background: linear-gradient(180deg, #fff 0%, #fff 100%);
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 18px;
+  margin-top: 22px;
+}
+.az-deals-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.az-deals-head h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #cc0c39;
+}
+.az-deals-tag {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--az-muted);
+  background: #f0f7ff;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* Load more */
+.az-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 26px;
+}
+.az-more-btn {
+  border: 1px solid var(--az-border);
+  background: #f7f8f8;
+  border-radius: 999px;
+  padding: 11px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--az-text);
+}
+.az-more-btn:hover {
+  background: #eef0f0;
+}
+.az-more-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Flyout submenus */
+.az-menu-group {
+  border-bottom: 1px solid #f0f2f2;
+  padding: 4px 0;
+}
+.az-menu-top {
+  font-weight: 700;
+}
+.az-menu-child {
+  font-size: 0.86rem !important;
+  color: var(--az-muted) !important;
+  padding-left: 34px !important;
+  border-bottom: none !important;
+}
+.az-menu-child:hover {
+  color: var(--az-link) !important;
+}
+
 /* ===== Amazon product card ===== */
 .az-card {
   background: var(--az-surface);

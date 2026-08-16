@@ -7,6 +7,7 @@ import { ProductCard } from "@/components/store/ProductCard";
 import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
 
 type Section = { category: StoreCategory; items: StoreProduct[] };
+const PAGE = 24;
 
 export default function StorePage() {
   const params = useSearchParams();
@@ -15,10 +16,13 @@ export default function StorePage() {
   const isHome = !search && !category;
 
   const [items, setItems] = useState<StoreProduct[]>([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
+  const [deals, setDeals] = useState<StoreProduct[]>([]);
   const [catName, setCatName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,16 +32,18 @@ export default function StorePage() {
     (async () => {
       try {
         if (isHome) {
-          const cats = await storeCategories();
+          const [cats, dealItems] = await Promise.all([storeCategories(), storeProducts("", "", 12)]);
           const top = cats.slice(0, 8);
           const perCategory = await Promise.all(top.map((entry) => storeProducts("", entry.slug, 12)));
           if (!alive) return;
           setCategories(cats);
+          setDeals(dealItems.items);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
-          const [page, cats] = await Promise.all([storeProducts(search, category, 60), category ? storeCategories() : Promise.resolve([])]);
+          const [page, cats] = await Promise.all([storeProducts(search, category, PAGE), category ? storeCategories() : Promise.resolve([])]);
           if (!alive) return;
           setItems(page.items);
+          setTotal(page.total);
           setCatName(cats.find((entry) => entry.slug === category)?.name ?? category);
         }
       } catch (caught) {
@@ -50,6 +56,19 @@ export default function StorePage() {
       alive = false;
     };
   }, [search, category, isHome]);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const page = await storeProducts(search, category, PAGE, items.length);
+      setItems((previous) => [...previous, ...page.items]);
+      setTotal(page.total);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Error");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   if (loading) return <div className="sf-grid-wrap"><p className="sf-muted">Cargando productos…</p></div>;
   if (error) return <div className="sf-grid-wrap"><p className="sf-error">No se pudo cargar la tienda: {error}</p></div>;
@@ -69,6 +88,23 @@ export default function StorePage() {
               ))}
             </section>
           )}
+
+          {deals.length > 0 && (
+            <section className="az-deals">
+              <div className="az-deals-head">
+                <h2>Ofertas del día</h2>
+                <span className="az-deals-tag">Envío a todo el Ecuador</span>
+              </div>
+              <div className="sf-row">
+                {deals.map((product) => (
+                  <div className="sf-row-item" key={product.slug}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {sections.map((section) => (
             <section className="sf-section" key={section.category.slug}>
               <div className="sf-section-head">
@@ -95,16 +131,25 @@ export default function StorePage() {
     <div className="sf-grid-wrap">
       <div className="sf-grid-head">
         <h2>{search ? `Resultados para “${search}”` : catName}</h2>
-        <span className="sf-muted">{items.length} productos</span>
+        <span className="sf-muted">{total} productos</span>
       </div>
       {items.length === 0 ? (
         <p className="sf-muted">No encontramos productos{search ? ` para “${search}”` : ""}.</p>
       ) : (
-        <div className="sf-grid">
-          {items.map((product) => (
-            <ProductCard key={product.slug} product={product} />
-          ))}
-        </div>
+        <>
+          <div className="sf-grid">
+            {items.map((product) => (
+              <ProductCard key={product.slug} product={product} />
+            ))}
+          </div>
+          {items.length < total && (
+            <div className="az-more">
+              <button className="az-more-btn" onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Cargando…" : `Ver más (${items.length}/${total})`}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

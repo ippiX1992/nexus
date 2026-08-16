@@ -86,14 +86,27 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           </button>
         </div>
         <nav className="az-menu-list">
-          <Link href="/tienda" onClick={() => setMenuOpen(false)}>
+          <Link href="/tienda" className="az-menu-top" onClick={() => setMenuOpen(false)}>
             Inicio
           </Link>
           {categories.map((category) => (
-            <Link key={category.slug} href={`/tienda?category=${category.slug}`} onClick={() => setMenuOpen(false)}>
-              {category.name}
-              <span>{category.product_count}</span>
-            </Link>
+            <div className="az-menu-group" key={category.slug}>
+              <Link className="az-menu-top" href={`/tienda?category=${category.slug}`} onClick={() => setMenuOpen(false)}>
+                {category.name}
+                <span>{category.product_count}</span>
+              </Link>
+              {category.children?.map((child) => (
+                <Link
+                  className="az-menu-child"
+                  key={child.slug}
+                  href={`/tienda?category=${child.slug}`}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {child.name}
+                  <span>{child.product_count}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
       </aside>

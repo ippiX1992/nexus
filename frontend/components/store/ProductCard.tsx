@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { formatPrice, type StoreProduct } from "@/lib/storefront";
 import { useCart } from "./cart";
+import { Stars } from "./Stars";
 import { Thumb } from "./Thumb";
 
 // Amazon-style product card: white tile, product image on top, blue title link,
@@ -23,6 +24,7 @@ export function ProductCard({ product }: { product: StoreProduct }) {
       <Link href={`/tienda/${product.slug}`} className="az-card-title">
         {product.name}
       </Link>
+      <Stars seed={product.slug} />
       <div className="az-card-price">{price != null ? formatPrice(product.price, product.currency) : "Consultar"}</div>
       <div className={`az-card-stock ${product.in_stock ? "in" : "out"}`}>{product.in_stock ? "Disponible" : "Agotado"}</div>
       {product.in_stock && price != null && (

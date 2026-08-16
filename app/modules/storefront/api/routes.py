@@ -60,16 +60,17 @@ _IN_CATEGORY = """
 
 _CATEGORIES = text(
     """
-    SELECT cat.slug AS slug, cat.name AS name, count(DISTINCT pc.product_id) AS product_count
+    SELECT cat.slug AS slug, cat.name AS name, parent.slug AS parent_slug,
+           count(DISTINCT pc.product_id) AS product_count
     FROM catalog_categories cat
+    LEFT JOIN catalog_categories parent ON parent.id = cat.parent_id AND parent.tenant_id = cat.tenant_id
     JOIN catalog_category_closure cl ON cl.ancestor_id = cat.id AND cl.tenant_id = cat.tenant_id
     JOIN catalog_product_categories pc ON pc.category_id = cl.descendant_id AND pc.tenant_id = cat.tenant_id
     JOIN catalog_products p ON p.id = pc.product_id AND p.tenant_id = cat.tenant_id
       AND p.status = 'active' AND p.archived_at IS NULL
-    WHERE cat.parent_id IS NULL AND cat.status = 'active'
-    GROUP BY cat.slug, cat.name
+    WHERE cat.status = 'active'
+    GROUP BY cat.slug, cat.name, parent.slug
     HAVING count(DISTINCT pc.product_id) > 0
-    ORDER BY count(DISTINCT pc.product_id) DESC, cat.name
     """
 )
 
@@ -195,7 +196,16 @@ async def meta(key: str, session: Annotated[AsyncSession, Depends(get_session)])
 async def categories(key: str, session: Annotated[AsyncSession, Depends(get_session)]) -> list[StorefrontCategory]:
     await _bind(session, key)
     rows = (await session.execute(_CATEGORIES)).all()
-    return [StorefrontCategory(slug=row.slug, name=row.name, product_count=int(row.product_count)) for row in rows]
+    nodes = {row.slug: StorefrontCategory(slug=row.slug, name=row.name, product_count=int(row.product_count), children=[]) for row in rows}
+    roots: list[StorefrontCategory] = []
+    for row in rows:
+        parent = nodes.get(row.parent_slug) if row.parent_slug else None
+        (parent.children if parent else roots).append(nodes[row.slug])
+    by_size = lambda category: (-category.product_count, category.name)
+    roots.sort(key=by_size)
+    for node in nodes.values():
+        node.children.sort(key=by_size)
+    return roots
 
 
 @router.get("/{key}/products", response_model=StorefrontProductList)

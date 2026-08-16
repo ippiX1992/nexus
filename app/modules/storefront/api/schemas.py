@@ -39,3 +39,7 @@ class StorefrontCategory(BaseModel):
     slug: str
     name: str
     product_count: int
+    children: list["StorefrontCategory"] = []
+
+
+StorefrontCategory.model_rebuild()
