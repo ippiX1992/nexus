@@ -83,6 +83,8 @@ export type StoreOrder = {
   subtotal: string;
   shipping_method?: string;
   shipping_amount?: string;
+  shipping_province?: string | null;
+  shipping_city?: string | null;
   coupon_code?: string | null;
   discount_amount?: string;
   total?: string;
@@ -99,6 +101,8 @@ export type OrderInput = {
   customer_phone?: string;
   shipping_address?: string;
   shipping_method?: string;
+  shipping_province?: string;
+  shipping_city?: string;
   coupon_code?: string;
   items: { slug: string; quantity: number }[];
 };

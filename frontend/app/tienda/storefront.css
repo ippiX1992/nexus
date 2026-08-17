@@ -1200,6 +1200,32 @@
   flex-direction: column;
   gap: 12px;
 }
+.sf-ship-loc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sf-ship-loc label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--az-muted);
+}
+.sf-ship-loc select {
+  border: 1px solid var(--az-border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--az-text);
+  background: #fff;
+}
+.sf-ship-loc select:disabled {
+  background: #f2f2f2;
+  color: var(--az-muted);
+}
 .sf-ship-methods {
   display: flex;
   flex-direction: column;

@@ -252,8 +252,17 @@ _RESERVE = text(
     )
     """
 )
-# Shipping options offered at checkout (amount added to the subtotal).
-_SHIPPING = {"standard": Decimal("0"), "express": Decimal("5")}
+# Flete: $5 (IVA 15% incluido) para todo el Ecuador continental; Galápagos tiene
+# una tarifa distinta. El monto lo decide el servidor según la provincia elegida.
+_IVA_RATE = Decimal("0.15")
+_SHIPPING_CONTINENTAL = Decimal("5")
+_SHIPPING_GALAPAGOS = Decimal("12")
+
+
+def _shipping_for(province: str | None) -> tuple[str, Decimal]:
+    if (province or "").strip().lower() in {"galápagos", "galapagos"}:
+        return "galapagos", _SHIPPING_GALAPAGOS
+    return "continental", _SHIPPING_CONTINENTAL
 
 # Promo codes applied to the subtotal (demo config).
 _COUPONS = {
@@ -278,12 +287,13 @@ _INSERT_ORDER = text(
     """
     INSERT INTO storefront_orders
       (id, tenant_id, order_number, tracking_number, store_key, status, customer_name,
-       customer_email, customer_phone, shipping_address, shipping_method, shipping_amount,
-       coupon_code, discount_amount, currency, subtotal, item_count, placed_at)
+       customer_email, customer_phone, shipping_address, shipping_province, shipping_city,
+       shipping_method, shipping_amount, coupon_code, discount_amount, currency, subtotal,
+       item_count, placed_at)
     VALUES
       (:id, :tenant, :number, :tracking, :store_key, 'placed', :name, :email, :phone, :address,
-       :shipping_method, :shipping_amount, :coupon_code, :discount_amount, :currency, :subtotal,
-       :item_count, now())
+       :province, :city, :shipping_method, :shipping_amount, :coupon_code, :discount_amount,
+       :currency, :subtotal, :item_count, now())
     """
 )
 _INSERT_ITEM = text(
@@ -301,7 +311,8 @@ _INSERT_EVENT = text(
 _GET_ORDER = text(
     """
     SELECT id, order_number, tracking_number, status, currency, subtotal, shipping_method,
-           shipping_amount, coupon_code, discount_amount, item_count, customer_name, placed_at
+           shipping_amount, shipping_province, shipping_city, coupon_code, discount_amount,
+           item_count, customer_name, placed_at
     FROM storefront_orders WHERE order_number = :number LIMIT 1
     """
 )
@@ -582,15 +593,15 @@ async def create_order(
     number = f"CH-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}"
     tracking = f"TRK{secrets.token_hex(5).upper()}"
     item_count = sum(line["quantity"] for line in lines)
-    method = payload.shipping_method if payload.shipping_method in _SHIPPING else "standard"
-    shipping_amount = _SHIPPING[method]
+    method, shipping_amount = _shipping_for(payload.shipping_province)
     coupon_code, discount = _coupon_discount(payload.coupon_code, subtotal)
     await session.execute(
         _INSERT_ORDER,
         {
             "id": order_id, "tenant": store.tenant_id, "number": number, "tracking": tracking, "store_key": store.key,
             "name": payload.customer_name, "email": payload.customer_email, "phone": payload.customer_phone,
-            "address": payload.shipping_address, "shipping_method": method, "shipping_amount": shipping_amount,
+            "address": payload.shipping_address, "province": payload.shipping_province, "city": payload.shipping_city,
+            "shipping_method": method, "shipping_amount": shipping_amount,
             "coupon_code": coupon_code, "discount_amount": discount,
             "currency": store.currency, "subtotal": subtotal, "item_count": item_count,
         },
@@ -606,6 +617,7 @@ async def create_order(
     return OrderResponse(
         order_number=number, tracking_number=tracking, status="placed", currency=store.currency,
         subtotal=subtotal, shipping_method=method, shipping_amount=shipping_amount,
+        shipping_province=payload.shipping_province, shipping_city=payload.shipping_city,
         coupon_code=coupon_code, discount_amount=discount, total=subtotal + shipping_amount - discount,
         item_count=item_count, customer_name=payload.customer_name, placed_at=datetime.now(timezone.utc),
         items=[OrderLine(sku=line["sku"], name=line["name"], unit_amount=line["unit_amount"], quantity=line["quantity"], line_total=line["line_total"]) for line in lines],
@@ -629,6 +641,7 @@ async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depe
     return OrderResponse(
         order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
         subtotal=order.subtotal, shipping_method=order.shipping_method, shipping_amount=order.shipping_amount,
+        shipping_province=order.shipping_province, shipping_city=order.shipping_city,
         coupon_code=order.coupon_code, discount_amount=order.discount_amount,
         total=order.subtotal + order.shipping_amount - order.discount_amount, item_count=order.item_count,
         customer_name=order.customer_name, placed_at=order.placed_at,

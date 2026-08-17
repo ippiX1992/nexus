@@ -41,8 +41,14 @@ export default function OrderPage() {
         <section className="sf-order-card">
           <h1>Pedido {order.order_number}</h1>
           <p className="sf-muted">
-            Rastreo {order.tracking_number} · {order.item_count} artículos · {formatPrice(order.subtotal, order.currency)}
+            Rastreo {order.tracking_number} · {order.item_count} artículos · {formatPrice(order.total ?? order.subtotal, order.currency)}
           </p>
+          {(order.shipping_city || order.shipping_province) && (
+            <p className="sf-muted">
+              📍 Envío a {[order.shipping_city, order.shipping_province].filter(Boolean).join(", ")} · Flete{" "}
+              {formatPrice(order.shipping_amount ?? "0", order.currency)} (IVA 15% incluido)
+            </p>
+          )}
           <div className="sf-timeline">
             {tracking.stages.map((stage) => (
               <div key={stage.status} className={`sf-tl-step${stage.done ? " done" : ""}`}>

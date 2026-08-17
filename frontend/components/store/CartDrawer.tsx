@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { ECUADOR, GALAPAGOS_PROVINCE, PROVINCES } from "@/lib/ecuador";
 import { createOrder, formatPrice, validateCoupon, type CouponInfo, type StoreOrder } from "@/lib/storefront";
 import { useCart } from "./cart";
 
@@ -12,12 +13,16 @@ export function CartDrawer() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<StoreOrder | null>(null);
-  const [shipping, setShipping] = useState<"standard" | "express">("standard");
+  const [province, setProvince] = useState("");
+  const [city, setCity] = useState("");
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<CouponInfo | null>(null);
   const [couponMsg, setCouponMsg] = useState("");
   const currency = items[0]?.currency ?? "USD";
-  const shippingCost = shipping === "express" ? 5 : 0;
+  // Flete: $5 (IVA 15% incluido) en el Ecuador continental; Galápagos, distinto.
+  const isGalapagos = province === GALAPAGOS_PROVINCE;
+  const shippingCost = isGalapagos ? 12 : 5;
+  const shippingIva = shippingCost - shippingCost / 1.15;
   const discount = appliedCoupon
     ? appliedCoupon.discount_type === "percent"
       ? (subtotal * (appliedCoupon.value ?? 0)) / 100
@@ -57,7 +62,8 @@ export function CartDrawer() {
         customer_email: String(form.get("email") || "") || undefined,
         customer_phone: String(form.get("phone") || "") || undefined,
         shipping_address: String(form.get("address") || "") || undefined,
-        shipping_method: shipping,
+        shipping_province: province || undefined,
+        shipping_city: city || undefined,
         coupon_code: appliedCoupon?.code,
         items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
       });
@@ -111,22 +117,41 @@ export function CartDrawer() {
           </div>
         ) : stage === "form" ? (
           <form className="sf-checkout-form" onSubmit={submit}>
-            <div className="sf-ship-methods">
-              <label className={shipping === "standard" ? "active" : ""}>
-                <input type="radio" name="ship" checked={shipping === "standard"} onChange={() => setShipping("standard")} />
-                <span>
-                  <strong>Estándar · Gratis</strong>
-                  <br />
-                  Entrega en 2–4 días
-                </span>
+            <div className="sf-ship-loc">
+              <label>
+                País
+                <select value="Ecuador" disabled>
+                  <option>Ecuador</option>
+                </select>
               </label>
-              <label className={shipping === "express" ? "active" : ""}>
-                <input type="radio" name="ship" checked={shipping === "express"} onChange={() => setShipping("express")} />
-                <span>
-                  <strong>Express · {formatPrice(5, currency)}</strong>
-                  <br />
-                  Entrega en 1–2 días
-                </span>
+              <label>
+                Provincia
+                <select
+                  value={province}
+                  onChange={(event) => {
+                    setProvince(event.target.value);
+                    setCity("");
+                  }}
+                  required
+                >
+                  <option value="">Selecciona…</option>
+                  {PROVINCES.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Ciudad / Cantón
+                <select value={city} onChange={(event) => setCity(event.target.value)} disabled={!province} required>
+                  <option value="">Selecciona…</option>
+                  {(ECUADOR[province] ?? []).map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
             <div className="sf-order-summary">
@@ -143,8 +168,8 @@ export function CartDrawer() {
                 <span>{formatPrice(subtotal, currency)}</span>
               </div>
               <div className="sf-sum-row">
-                <span>Envío</span>
-                <span className={shippingCost === 0 ? "sf-free" : ""}>{shippingCost === 0 ? "Gratis" : formatPrice(shippingCost, currency)}</span>
+                <span>Envío{isGalapagos ? " (Galápagos)" : ""}</span>
+                <span>{formatPrice(shippingCost, currency)}</span>
               </div>
               {discount > 0 && (
                 <div className="sf-sum-row">
@@ -163,7 +188,10 @@ export function CartDrawer() {
                 <span>Total</span>
                 <strong>{formatPrice(total, currency)}</strong>
               </div>
-              <p className="sf-sum-eta">🚚 {shipping === "express" ? "Entrega estimada: 1–2 días" : "Entrega estimada: 2–4 días"} · Envío a todo el Ecuador</p>
+              <p className="sf-sum-eta">
+                🚚 Flete {formatPrice(shippingCost, currency)} · incluye IVA 15% ({formatPrice(shippingIva, currency)})
+                {isGalapagos ? " · tarifa Galápagos" : ""}
+              </p>
             </div>
             <label>
               Nombre completo
