@@ -39,17 +39,9 @@ export function catalogCommand<T>(path:string,version:number,method="POST"):Prom
 // human label instead of a raw UUID. Adequate for tenant-scale catalogs shown
 // in the admin; if it becomes a hot path, promote it to a backend read model.
 export async function variantLabels():Promise<Map<string,string>>{
- const labels=new Map<string,string>();
- const page=await catalogPage<Product>("/products?limit=100");
- // The list endpoint carries the translated product name; the detail endpoint
- // is only used to reach each product's variant ids. Take the name from the
- // list so labels read as "Product name · SKU", not the internal code.
- const nameById=new Map(page.items.map(p=>[p.id,p.name??p.code??p.id]));
- const details=await Promise.all(page.items.map(p=>catalogGet<ProductDetail>(`/products/${p.id}`).catch(()=>null)));
- for(const detail of details){
-  if(!detail)continue;
-  const name=nameById.get(detail.product.id)??detail.product.code??detail.product.id;
-  for(const variant of detail.variants)labels.set(variant.id,`${name} · ${variant.sku}`);
- }
- return labels;
+ // Single batched backend lookup (GET /catalog/variant-labels) returns every
+ // default variant's "Product name · SKU" label — scales to the full catalog
+ // without a detail request per product and without falling back to raw UUIDs.
+ const rows=await api("/catalog/variant-labels") as {variant_id:string;label:string}[];
+ return new Map(rows.map(r=>[r.variant_id,r.label]));
 }

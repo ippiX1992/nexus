@@ -16,6 +16,11 @@ export function StoreHeader({ storeName }: { storeName: string }) {
   const [dept, setDept] = useState("");
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  // ClickHome's real nav curates a handful of departments, not the ~27 flat
+  // categories that hang off "Inicio". We mirror that: show only substantial
+  // departments (or any with subcategories); niche/marketing ones stay findable
+  // via search but out of the menu.
+  const departments = categories.filter((category) => category.product_count >= 15 || (category.children?.length ?? 0) > 0);
 
   useEffect(() => {
     setQuery(params.get("search") ?? "");
@@ -76,7 +81,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
         <button className="az-all" onClick={() => setMenuOpen(true)} aria-label="Todas las categorías">
           <span aria-hidden="true">☰</span> Todos
         </button>
-        {categories.slice(0, 12).map((category) => (
+        {departments.map((category) => (
           <Link
             key={category.slug}
             href={`/tienda?category=${category.slug}`}
@@ -99,7 +104,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           <Link href="/tienda" className="az-menu-top" onClick={() => setMenuOpen(false)}>
             Inicio
           </Link>
-          {categories.map((category) => (
+          {departments.map((category) => (
             <div className="az-menu-group" key={category.slug}>
               <Link className="az-menu-top" href={`/tienda?category=${category.slug}`} onClick={() => setMenuOpen(false)}>
                 {category.name}

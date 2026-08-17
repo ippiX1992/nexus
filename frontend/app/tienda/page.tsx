@@ -56,10 +56,12 @@ export default function StorePage() {
       try {
         if (isHome) {
           const [cats, dealItems] = await Promise.all([storeCategories(), storeProducts("", "", 12)]);
-          const top = cats.slice(0, 8);
+          // Same curation as the header: real departments, not the flat category noise.
+          const departments = cats.filter((entry) => entry.product_count >= 15 || (entry.children?.length ?? 0) > 0);
+          const top = departments.slice(0, 8);
           const perCategory = await Promise.all(top.map((entry) => storeProducts("", entry.slug, 12)));
           if (!alive) return;
-          setCategories(cats);
+          setCategories(departments);
           setDeals(dealItems.items);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {

@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -783,6 +784,31 @@ async def upsert_seo(
     except (CatalogPolicyError, ValueError) as exc:
         await _mutation_failure(db, exc)
     return await _finish_mutation(db, row, ProductSeoResponse)
+
+
+@router.get("/variant-labels")
+async def variant_labels(
+    ctx: Annotated[TenantContext, Depends(require_permission("catalog.product.read"))],
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> list[dict]:
+    # One query for every default variant's human label, so admin screens that key
+    # on variant id (inventory, pricing) don't fall back to raw UUIDs or fan out
+    # into a detail request per product.
+    rows = (
+        await db.execute(
+            text(
+                """
+                SELECT v.id::text AS variant_id, COALESCE(t.name, p.code, v.sku) AS name, v.sku AS sku
+                FROM catalog_product_variants v
+                JOIN catalog_products p ON p.id = v.product_id AND p.tenant_id = v.tenant_id
+                LEFT JOIN catalog_product_translations t
+                  ON t.product_id = p.id AND t.tenant_id = p.tenant_id AND t.locale = 'es-EC'
+                WHERE v.is_default AND v.archived_at IS NULL
+                """
+            )
+        )
+    ).all()
+    return [{"variant_id": row.variant_id, "label": f"{row.name} · {row.sku}"} for row in rows]
 
 
 @router.get("/taxonomies", response_model=TaxonomyPage)
