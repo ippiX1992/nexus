@@ -1,12 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useCart } from "@/components/store/cart";
 import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { useWishlist } from "@/components/store/wishlist";
-import { formatPrice, storeProduct, type StoreProductDetail } from "@/lib/storefront";
+import { createReview, formatPrice, getReviews, storeProduct, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
@@ -16,17 +16,38 @@ export default function ProductPage() {
   const [product, setProduct] = useState<StoreProductDetail | null>(null);
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [reviews, setReviews] = useState<ReviewSummary | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setLoading(true);
     setActiveImage(0);
+    setReviews(null);
     storeProduct(slug)
       .then(setProduct)
       .catch((caught) => setError(caught instanceof Error ? caught.message : "Error"))
       .finally(() => setLoading(false));
+    getReviews(slug).then(setReviews).catch(() => setReviews(null));
   }, [slug]);
+
+  async function submitReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const author = String(form.get("author") || "").trim();
+    const rating = Number(form.get("rating") || 5);
+    if (author.length < 2) return;
+    setReviewBusy(true);
+    try {
+      setReviews(await createReview(slug, { author, rating, comment: String(form.get("comment") || "") || undefined }));
+      event.currentTarget.reset();
+    } catch {
+      /* ignore */
+    } finally {
+      setReviewBusy(false);
+    }
+  }
 
   if (loading) return <p className="sf-muted sf-pad">Cargando…</p>;
   if (error || !product)
@@ -118,6 +139,39 @@ export default function ProductPage() {
           )}
         </div>
       </div>
+
+      <section className="sf-reviews">
+        <h2>Opiniones{reviews && reviews.count > 0 ? ` · ${reviews.average.toFixed(1)} ★ (${reviews.count})` : ""}</h2>
+        {reviews && reviews.count > 0 ? (
+          reviews.items.map((review, index) => (
+            <div className="sf-review" key={index}>
+              <div className="sf-review-head">
+                <strong>{review.author}</strong>
+                <span className="sf-review-stars">
+                  {"★".repeat(review.rating)}
+                  {"☆".repeat(5 - review.rating)}
+                </span>
+              </div>
+              {review.comment && <p>{review.comment}</p>}
+            </div>
+          ))
+        ) : (
+          <p className="sf-muted">Sé el primero en opinar sobre este producto.</p>
+        )}
+        <form className="sf-review-form" onSubmit={submitReview}>
+          <strong>Deja tu opinión</strong>
+          <input name="author" placeholder="Tu nombre" required minLength={2} />
+          <select name="rating" defaultValue="5">
+            <option value="5">★★★★★ (5)</option>
+            <option value="4">★★★★ (4)</option>
+            <option value="3">★★★ (3)</option>
+            <option value="2">★★ (2)</option>
+            <option value="1">★ (1)</option>
+          </select>
+          <textarea name="comment" rows={2} placeholder="Cuéntanos tu experiencia (opcional)" />
+          <button disabled={reviewBusy}>{reviewBusy ? "Enviando…" : "Publicar opinión"}</button>
+        </form>
+      </section>
     </article>
   );
 }

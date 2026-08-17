@@ -23,9 +23,13 @@ from app.application.authorization import TenantContext
 from app.infrastructure.database import get_session
 from app.infrastructure.tenant_context import set_tenant_context
 from app.modules.storefront.api.schemas import (
+    CouponInfo,
     OrderCreate,
     OrderLine,
     OrderResponse,
+    Review,
+    ReviewInput,
+    ReviewSummary,
     StockStatus,
     StorefrontCategory,
     StorefrontMeta,
@@ -56,6 +60,11 @@ def _images_for(sku: str) -> list[str]:
 def _image_for(sku: str) -> str | None:
     gallery = _MEDIA.get(sku)
     return gallery[0] if gallery else None
+
+
+def _image2_for(sku: str) -> str | None:
+    gallery = _MEDIA.get(sku) or []
+    return gallery[1] if len(gallery) > 1 else None
 
 _DEFAULT_PRICE_LIST = text(
     "SELECT id FROM pricing_price_lists WHERE is_default AND status = 'active' "
@@ -222,15 +231,35 @@ _RESERVE = text(
 # Shipping options offered at checkout (amount added to the subtotal).
 _SHIPPING = {"standard": Decimal("0"), "express": Decimal("5")}
 
+# Promo codes applied to the subtotal (demo config).
+_COUPONS = {
+    "CLICKHOME10": {"type": "percent", "value": 10, "label": "10% de descuento"},
+    "BLACK20": {"type": "percent", "value": 20, "label": "20% de descuento"},
+    "BIENVENIDO5": {"type": "fixed", "value": 5, "label": "$5 de descuento"},
+}
+
+
+def _coupon_discount(code: str | None, subtotal: Decimal) -> tuple[str | None, Decimal]:
+    coupon = _COUPONS.get((code or "").strip().upper())
+    if not coupon:
+        return None, Decimal("0")
+    if coupon["type"] == "percent":
+        discount = (subtotal * Decimal(coupon["value"]) / Decimal(100)).quantize(Decimal("0.0001"))
+    else:
+        discount = Decimal(coupon["value"])
+    return (code or "").strip().upper(), min(discount, subtotal)
+
+
 _INSERT_ORDER = text(
     """
     INSERT INTO storefront_orders
       (id, tenant_id, order_number, tracking_number, store_key, status, customer_name,
        customer_email, customer_phone, shipping_address, shipping_method, shipping_amount,
-       currency, subtotal, item_count, placed_at)
+       coupon_code, discount_amount, currency, subtotal, item_count, placed_at)
     VALUES
       (:id, :tenant, :number, :tracking, :store_key, 'placed', :name, :email, :phone, :address,
-       :shipping_method, :shipping_amount, :currency, :subtotal, :item_count, now())
+       :shipping_method, :shipping_amount, :coupon_code, :discount_amount, :currency, :subtotal,
+       :item_count, now())
     """
 )
 _INSERT_ITEM = text(
@@ -248,13 +277,29 @@ _INSERT_EVENT = text(
 _GET_ORDER = text(
     """
     SELECT id, order_number, tracking_number, status, currency, subtotal, shipping_method,
-           shipping_amount, item_count, customer_name, placed_at
+           shipping_amount, coupon_code, discount_amount, item_count, customer_name, placed_at
     FROM storefront_orders WHERE order_number = :number LIMIT 1
     """
 )
 _GET_ITEMS = text(
     "SELECT sku, name, unit_amount, quantity, line_total FROM storefront_order_items WHERE order_id = :order_id ORDER BY name"
 )
+_REVIEWS = text(
+    "SELECT author, rating, comment, created_at FROM storefront_reviews WHERE product_slug = :slug ORDER BY created_at DESC LIMIT 50"
+)
+_REVIEW_STATS = text("SELECT COALESCE(AVG(rating), 0) AS avg, COUNT(*) AS n FROM storefront_reviews WHERE product_slug = :slug")
+_REVIEW_INSERT = text(
+    "INSERT INTO storefront_reviews (id, tenant_id, product_slug, author, rating, comment) "
+    "VALUES (:id, :tenant, :slug, :author, :rating, :comment)"
+)
+
+
+def _review_summary(stats, rows) -> ReviewSummary:
+    return ReviewSummary(
+        average=round(float(stats.avg), 1),
+        count=int(stats.n),
+        items=[Review(author=r.author, rating=r.rating, comment=r.comment, created_at=r.created_at) for r in rows],
+    )
 
 # Delivery pipeline. Only "placed" is recorded at checkout; the rest are derived
 # from the elapsed time since placed_at so tracking visibly advances (estimated).
@@ -309,6 +354,7 @@ def _to_product(row) -> StorefrontProduct:
         short_description=row.short_description,
         brand=row.brand,
         image=_image_for(row.sku),
+        image2=_image2_for(row.sku),
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,
@@ -421,6 +467,38 @@ async def product_stock(key: str, slug: str, session: Annotated[AsyncSession, De
     return StockStatus(slug=slug, available=available, in_stock=available > 0)
 
 
+@router.get("/{key}/coupons/{code}", response_model=CouponInfo)
+async def validate_coupon(key: str, code: str, session: Annotated[AsyncSession, Depends(get_session)]) -> CouponInfo:
+    await _bind(session, key)
+    coupon = _COUPONS.get(code.strip().upper())
+    if not coupon:
+        return CouponInfo(code=code.strip().upper(), valid=False)
+    return CouponInfo(code=code.strip().upper(), valid=True, label=coupon["label"], discount_type=coupon["type"], value=coupon["value"])
+
+
+@router.get("/{key}/products/{slug}/reviews", response_model=ReviewSummary)
+async def product_reviews(key: str, slug: str, session: Annotated[AsyncSession, Depends(get_session)]) -> ReviewSummary:
+    await _bind(session, key)
+    stats = (await session.execute(_REVIEW_STATS, {"slug": slug})).first()
+    rows = (await session.execute(_REVIEWS, {"slug": slug})).all()
+    return _review_summary(stats, rows)
+
+
+@router.post("/{key}/products/{slug}/reviews", response_model=ReviewSummary, status_code=201)
+async def create_review(
+    key: str, slug: str, payload: ReviewInput, session: Annotated[AsyncSession, Depends(get_session)]
+) -> ReviewSummary:
+    store = await _bind(session, key)
+    await session.execute(
+        _REVIEW_INSERT,
+        {"id": uuid4(), "tenant": store.tenant_id, "slug": slug, "author": payload.author, "rating": payload.rating, "comment": payload.comment},
+    )
+    stats = (await session.execute(_REVIEW_STATS, {"slug": slug})).first()
+    rows = (await session.execute(_REVIEWS, {"slug": slug})).all()
+    await session.commit()
+    return _review_summary(stats, rows)
+
+
 @router.post("/{key}/orders", response_model=OrderResponse, status_code=201)
 async def create_order(
     key: str, payload: OrderCreate, session: Annotated[AsyncSession, Depends(get_session)]
@@ -457,12 +535,14 @@ async def create_order(
     item_count = sum(line["quantity"] for line in lines)
     method = payload.shipping_method if payload.shipping_method in _SHIPPING else "standard"
     shipping_amount = _SHIPPING[method]
+    coupon_code, discount = _coupon_discount(payload.coupon_code, subtotal)
     await session.execute(
         _INSERT_ORDER,
         {
             "id": order_id, "tenant": store.tenant_id, "number": number, "tracking": tracking, "store_key": store.key,
             "name": payload.customer_name, "email": payload.customer_email, "phone": payload.customer_phone,
             "address": payload.shipping_address, "shipping_method": method, "shipping_amount": shipping_amount,
+            "coupon_code": coupon_code, "discount_amount": discount,
             "currency": store.currency, "subtotal": subtotal, "item_count": item_count,
         },
     )
@@ -476,7 +556,8 @@ async def create_order(
 
     return OrderResponse(
         order_number=number, tracking_number=tracking, status="placed", currency=store.currency,
-        subtotal=subtotal, shipping_method=method, shipping_amount=shipping_amount, total=subtotal + shipping_amount,
+        subtotal=subtotal, shipping_method=method, shipping_amount=shipping_amount,
+        coupon_code=coupon_code, discount_amount=discount, total=subtotal + shipping_amount - discount,
         item_count=item_count, customer_name=payload.customer_name, placed_at=datetime.now(timezone.utc),
         items=[OrderLine(sku=line["sku"], name=line["name"], unit_amount=line["unit_amount"], quantity=line["quantity"], line_total=line["line_total"]) for line in lines],
     )
@@ -499,8 +580,9 @@ async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depe
     return OrderResponse(
         order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
         subtotal=order.subtotal, shipping_method=order.shipping_method, shipping_amount=order.shipping_amount,
-        total=order.subtotal + order.shipping_amount, item_count=order.item_count, customer_name=order.customer_name,
-        placed_at=order.placed_at,
+        coupon_code=order.coupon_code, discount_amount=order.discount_amount,
+        total=order.subtotal + order.shipping_amount - order.discount_amount, item_count=order.item_count,
+        customer_name=order.customer_name, placed_at=order.placed_at,
         items=[OrderLine(sku=i.sku, name=i.name, unit_amount=i.unit_amount, quantity=i.quantity, line_total=i.line_total) for i in items],
     )
 

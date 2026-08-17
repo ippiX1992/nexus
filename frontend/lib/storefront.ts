@@ -11,6 +11,7 @@ export type StoreProduct = {
   short_description?: string | null;
   brand?: string | null;
   image?: string | null;
+  image2?: string | null;
   sku: string;
   price: string | null;
   compare_at: string | null;
@@ -77,6 +78,8 @@ export type StoreOrder = {
   subtotal: string;
   shipping_method?: string;
   shipping_amount?: string;
+  coupon_code?: string | null;
+  discount_amount?: string;
   total?: string;
   item_count: number;
   customer_name: string;
@@ -91,8 +94,22 @@ export type OrderInput = {
   customer_phone?: string;
   shipping_address?: string;
   shipping_method?: string;
+  coupon_code?: string;
   items: { slug: string; quantity: number }[];
 };
+export type CouponInfo = { code: string; valid: boolean; label?: string | null; discount_type?: string | null; value?: number | null };
+export type Review = { author: string; rating: number; comment?: string | null; created_at: string };
+export type ReviewSummary = { average: number; count: number; items: Review[] };
+
+export function validateCoupon(code: string) {
+  return storeFetch<CouponInfo>(`/${STORE_KEY}/coupons/${encodeURIComponent(code)}`);
+}
+export function getReviews(slug: string) {
+  return storeFetch<ReviewSummary>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}/reviews`);
+}
+export function createReview(slug: string, payload: { author: string; rating: number; comment?: string }) {
+  return storeFetch<ReviewSummary>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}/reviews`, { method: "POST", body: JSON.stringify(payload) });
+}
 
 export function productStock(slug: string) {
   return storeFetch<{ slug: string; available: number; in_stock: boolean }>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}/stock`);

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { createOrder, formatPrice, type StoreOrder } from "@/lib/storefront";
+import { createOrder, formatPrice, validateCoupon, type CouponInfo, type StoreOrder } from "@/lib/storefront";
 import { useCart } from "./cart";
 
 type Stage = "cart" | "form" | "done";
@@ -13,9 +13,34 @@ export function CartDrawer() {
   const [error, setError] = useState("");
   const [order, setOrder] = useState<StoreOrder | null>(null);
   const [shipping, setShipping] = useState<"standard" | "express">("standard");
+  const [coupon, setCoupon] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponInfo | null>(null);
+  const [couponMsg, setCouponMsg] = useState("");
   const currency = items[0]?.currency ?? "USD";
   const shippingCost = shipping === "express" ? 5 : 0;
-  const total = subtotal + shippingCost;
+  const discount = appliedCoupon
+    ? appliedCoupon.discount_type === "percent"
+      ? (subtotal * (appliedCoupon.value ?? 0)) / 100
+      : Math.min(appliedCoupon.value ?? 0, subtotal)
+    : 0;
+  const total = subtotal + shippingCost - discount;
+
+  async function applyCoupon() {
+    const code = coupon.trim();
+    if (!code) {
+      setAppliedCoupon(null);
+      setCouponMsg("");
+      return;
+    }
+    try {
+      const info = await validateCoupon(code);
+      setAppliedCoupon(info.valid ? info : null);
+      setCouponMsg(info.valid ? info.label ?? "Cupón aplicado" : "Cupón no válido");
+    } catch {
+      setAppliedCoupon(null);
+      setCouponMsg("No se pudo validar el cupón");
+    }
+  }
 
   function close() {
     setOpen(false);
@@ -33,6 +58,7 @@ export function CartDrawer() {
         customer_phone: String(form.get("phone") || "") || undefined,
         shipping_address: String(form.get("address") || "") || undefined,
         shipping_method: shipping,
+        coupon_code: appliedCoupon?.code,
         items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
       });
       setOrder(placed);
@@ -120,6 +146,19 @@ export function CartDrawer() {
                 <span>Envío</span>
                 <span className={shippingCost === 0 ? "sf-free" : ""}>{shippingCost === 0 ? "Gratis" : formatPrice(shippingCost, currency)}</span>
               </div>
+              {discount > 0 && (
+                <div className="sf-sum-row">
+                  <span>Descuento ({appliedCoupon?.code})</span>
+                  <span className="sf-free">−{formatPrice(discount, currency)}</span>
+                </div>
+              )}
+              <div className="sf-coupon">
+                <input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="Código de cupón" aria-label="Cupón" />
+                <button type="button" onClick={applyCoupon}>
+                  Aplicar
+                </button>
+              </div>
+              {couponMsg && <p className={`sf-coupon-msg${appliedCoupon ? " ok" : ""}`}>{couponMsg}</p>}
               <div className="sf-sum-row sf-sum-total">
                 <span>Total</span>
                 <strong>{formatPrice(total, currency)}</strong>

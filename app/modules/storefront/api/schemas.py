@@ -19,6 +19,7 @@ class StorefrontProduct(BaseModel):
     short_description: str | None = None
     brand: str | None = None
     image: str | None = None
+    image2: str | None = None
     sku: str
     price: Decimal | None = None
     compare_at: Decimal | None = None
@@ -64,7 +65,35 @@ class OrderCreate(BaseModel):
     customer_phone: str | None = Field(default=None, max_length=40)
     shipping_address: str | None = Field(default=None, max_length=500)
     shipping_method: str = Field(default="standard")
+    coupon_code: str | None = Field(default=None, max_length=40)
     items: list[OrderItemInput] = Field(min_length=1)
+
+
+class CouponInfo(BaseModel):
+    code: str
+    valid: bool
+    label: str | None = None
+    discount_type: str | None = None
+    value: float | None = None
+
+
+class ReviewInput(BaseModel):
+    author: str = Field(min_length=2, max_length=120)
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class Review(BaseModel):
+    author: str
+    rating: int
+    comment: str | None = None
+    created_at: datetime
+
+
+class ReviewSummary(BaseModel):
+    average: float
+    count: int
+    items: list[Review] = []
 
 
 class OrderLine(BaseModel):
@@ -83,6 +112,8 @@ class OrderResponse(BaseModel):
     subtotal: Decimal
     shipping_method: str = "standard"
     shipping_amount: Decimal = Decimal("0")
+    coupon_code: str | None = None
+    discount_amount: Decimal = Decimal("0")
     total: Decimal = Decimal("0")
     item_count: int
     customer_name: str

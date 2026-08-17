@@ -23,8 +23,14 @@ export function ProductCard({ product }: { product: StoreProduct }) {
       </button>
       <Link href={`/tienda/${product.slug}`} className="az-card-img" aria-label={product.name}>
         {product.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image} alt={product.name} loading="lazy" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={product.image} alt={product.name} loading="lazy" />
+            {product.image2 && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="az-card-img2" src={product.image2} alt="" loading="lazy" />
+            )}
+          </>
         ) : (
           <Thumb name={product.name} />
         )}

@@ -1126,6 +1126,124 @@
   font-size: 0.88rem;
 }
 
+/* Coupon in checkout */
+.sf-coupon {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 2px;
+}
+.sf-coupon input {
+  flex: 1;
+  border: 1px solid var(--az-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+.sf-coupon button {
+  border: 1px solid var(--az-border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.sf-coupon-msg {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+  color: #b12704;
+}
+.sf-coupon-msg.ok {
+  color: var(--az-green);
+}
+
+/* Second image swap on card hover */
+.az-card-img2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.az-card:hover .az-card-img2 {
+  opacity: 1;
+}
+
+/* Zoom on detail image hover */
+.sf-detail-media {
+  cursor: zoom-in;
+}
+.sf-detail-media .sf-img {
+  transition: transform 0.3s ease;
+}
+.sf-detail-media:hover .sf-img {
+  transform: scale(1.7);
+}
+
+/* Reviews */
+.sf-reviews {
+  max-width: 1200px;
+  margin: 8px auto 0;
+  background: var(--az-surface);
+  border: 1px solid var(--az-border);
+  border-radius: 10px;
+  padding: 24px;
+}
+.sf-reviews h2 {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+}
+.sf-review {
+  border-top: 1px solid var(--az-border);
+  padding: 12px 0;
+}
+.sf-review-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sf-review-stars {
+  color: #ffa41c;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+.sf-review p {
+  margin: 6px 0 0;
+  color: #333;
+  font-size: 0.92rem;
+}
+.sf-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  border-top: 1px solid var(--az-border);
+  padding-top: 16px;
+  max-width: 460px;
+}
+.sf-review-form input,
+.sf-review-form select,
+.sf-review-form textarea {
+  border: 1px solid var(--az-border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.sf-review-form button {
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  background: var(--az-yellow);
+  color: var(--az-text);
+  font-weight: 600;
+  padding: 9px 20px;
+  cursor: pointer;
+}
+
 /* Wishlist heart on cards */
 .az-fav {
   position: absolute;

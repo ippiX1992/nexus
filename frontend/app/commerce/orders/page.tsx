@@ -75,6 +75,28 @@ export default function Page() {
     }
   }
 
+  function exportCsv() {
+    const header = ["Pedido", "Estado", "Cliente", "Correo", "Articulos", "Total", "Rastreo", "Fecha"];
+    const body = orders.map((order) => [
+      order.order_number,
+      LABEL[order.status] ?? order.status,
+      order.customer_name,
+      order.customer_email ?? "",
+      order.item_count,
+      `${order.currency} ${order.subtotal}`,
+      order.tracking_number,
+      new Date(order.placed_at).toLocaleString(),
+    ]);
+    const csv = [header, ...body].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function advance(orderNumber: string) {
     setBusy(orderNumber);
     setError("");
@@ -108,6 +130,9 @@ export default function Page() {
         </select>
         <input placeholder="Buscar por cliente o número" value={query} onChange={(event) => setQuery(event.target.value)} />
         <button className="compact">Buscar</button>
+        <button type="button" className="compact" onClick={exportCsv} disabled={orders.length === 0}>
+          Exportar CSV
+        </button>
       </form>
       {loading ? (
         <p>Cargando…</p>
