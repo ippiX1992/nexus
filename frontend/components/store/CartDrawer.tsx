@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { ECUADOR, GALAPAGOS_PROVINCE, PROVINCES } from "@/lib/ecuador";
 import { createOrder, formatPrice, validateCoupon, type CouponInfo, type StoreOrder } from "@/lib/storefront";
 import { useCart } from "./cart";
@@ -51,24 +51,33 @@ export function CartDrawer() {
     setOpen(false);
   }
 
+  // Stable per-checkout key: generated on the first submit and reused for any
+  // retry, so a double click or a retried submit reserves stock only once.
+  const idempotencyKey = useRef<string | null>(null);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setPlacing(true);
     setError("");
+    if (!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
     try {
-      const placed = await createOrder({
-        customer_name: String(form.get("name") || ""),
-        customer_email: String(form.get("email") || "") || undefined,
-        customer_phone: String(form.get("phone") || "") || undefined,
-        shipping_address: String(form.get("address") || "") || undefined,
-        shipping_province: province || undefined,
-        shipping_city: city || undefined,
-        coupon_code: appliedCoupon?.code,
-        items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
-      });
+      const placed = await createOrder(
+        {
+          customer_name: String(form.get("name") || ""),
+          customer_email: String(form.get("email") || "") || undefined,
+          customer_phone: String(form.get("phone") || "") || undefined,
+          shipping_address: String(form.get("address") || "") || undefined,
+          shipping_province: province || undefined,
+          shipping_city: city || undefined,
+          coupon_code: appliedCoupon?.code,
+          items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
+        },
+        idempotencyKey.current,
+      );
       setOrder(placed);
       clear();
+      idempotencyKey.current = null; // next checkout gets a fresh key
       setStage("done");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No se pudo crear el pedido");

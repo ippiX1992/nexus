@@ -256,7 +256,7 @@ class ReservationModel(InventoryResourceMixin, Base):
         ),
         UniqueConstraint("tenant_id", "id", name="uq_inventory_reservations_tenant_id"),
         CheckConstraint("quantity > 0", name="ck_inventory_reservation_quantity_positive"),
-        CheckConstraint("status IN ('held','released','committed')", name="ck_inventory_reservation_status"),
+        CheckConstraint("status IN ('held','released','committed','expired')", name="ck_inventory_reservation_status"),
         CheckConstraint(
             "scope_type IS NULL OR scope_type IN ('store','channel','market')",
             name="ck_inventory_reservation_scope_type",

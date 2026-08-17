@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +22,9 @@ from app.api.dependencies import get_current_context
 from app.application.authorization import TenantContext
 from app.infrastructure.database import get_session
 from app.infrastructure.tenant_context import set_tenant_context
+from app.modules.inventory.application.services import InventoryActor, InventoryService
+from app.modules.inventory.domain.policies import InsufficientStock
+from app.modules.inventory.infrastructure.repositories import SqlAlchemyInventoryRepository
 from app.modules.storefront.api.schemas import (
     CouponInfo,
     OrderCreate,
@@ -243,17 +246,20 @@ _ORDER_LINE = text(
     LIMIT 1
     """
 )
-# Reserve stock on the location that can cover the quantity (available drops).
-_RESERVE = text(
-    """
-    UPDATE inventory_stock_levels SET reserved = reserved + :qty, version = version + 1, updated_at = now()
-    WHERE id = (
-      SELECT id FROM inventory_stock_levels
-      WHERE variant_id = :variant_id AND (on_hand - reserved) >= :qty
-      ORDER BY (on_hand - reserved) DESC LIMIT 1
-    )
-    """
-)
+# Stock is never touched with raw SQL from here: reservations, commits, releases
+# and restocks all go through InventoryService so the ledger, events and the
+# reserved/on_hand columns stay consistent. `_ORDER_REF` tags each reservation
+# to its order so we can commit/release the exact holds later.
+_ORDER_REF = "storefront_order"
+
+
+def _inventory(session: AsyncSession, tenant_id) -> InventoryService:
+    # System actor: a public checkout (or the admin advancing an order) has no
+    # inventory-authenticated user; created_by / audit / events accept a null user.
+    actor = InventoryActor(user_id=None, session_id=None, tenant_id=tenant_id, correlation_id=uuid4())
+    return InventoryService(SqlAlchemyInventoryRepository(session), actor, session)
+
+
 # Flete: $5 (IVA 15% incluido) para todo el Ecuador continental; Galápagos tiene
 # una tarifa distinta. El monto lo decide el servidor según la provincia elegida.
 _IVA_RATE = Decimal("0.15")
@@ -291,11 +297,11 @@ _INSERT_ORDER = text(
       (id, tenant_id, order_number, tracking_number, store_key, status, customer_name,
        customer_email, customer_phone, shipping_address, shipping_province, shipping_city,
        shipping_method, shipping_amount, coupon_code, discount_amount, currency, subtotal,
-       item_count, placed_at)
+       item_count, idempotency_key, placed_at)
     VALUES
       (:id, :tenant, :number, :tracking, :store_key, 'placed', :name, :email, :phone, :address,
        :province, :city, :shipping_method, :shipping_amount, :coupon_code, :discount_amount,
-       :currency, :subtotal, :item_count, now())
+       :currency, :subtotal, :item_count, :idempotency_key, now())
     """
 )
 _INSERT_ITEM = text(
@@ -320,6 +326,14 @@ _GET_ORDER = text(
 )
 _GET_ITEMS = text(
     "SELECT sku, name, unit_amount, quantity, line_total FROM storefront_order_items WHERE order_id = :order_id ORDER BY name"
+)
+_GET_ORDER_BY_IDEM = text(
+    """
+    SELECT id, order_number, tracking_number, status, currency, subtotal, shipping_method,
+           shipping_amount, shipping_province, shipping_city, coupon_code, discount_amount,
+           item_count, customer_name, placed_at
+    FROM storefront_orders WHERE idempotency_key = :key LIMIT 1
+    """
 )
 _REVIEWS = text(
     "SELECT author, rating, comment, created_at FROM storefront_reviews WHERE product_slug = :slug ORDER BY created_at DESC LIMIT 50"
@@ -561,12 +575,40 @@ async def create_review(
     return _review_summary(stats, rows)
 
 
+def _order_response(order, items, events: dict | None = None) -> OrderResponse:
+    current, _ = _timeline(order.placed_at, order.status, events)
+    return OrderResponse(
+        order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
+        subtotal=order.subtotal, shipping_method=order.shipping_method, shipping_amount=order.shipping_amount,
+        shipping_province=order.shipping_province, shipping_city=order.shipping_city,
+        coupon_code=order.coupon_code, discount_amount=order.discount_amount,
+        total=order.subtotal + order.shipping_amount - order.discount_amount, item_count=order.item_count,
+        customer_name=order.customer_name, placed_at=order.placed_at,
+        items=[OrderLine(sku=i.sku, name=i.name, unit_amount=i.unit_amount, quantity=i.quantity, line_total=i.line_total) for i in items],
+    )
+
+
 @router.post("/{key}/orders", response_model=OrderResponse, status_code=201)
 async def create_order(
-    key: str, payload: OrderCreate, session: Annotated[AsyncSession, Depends(get_session)]
+    key: str,
+    payload: OrderCreate,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> OrderResponse:
     store = await _bind(session, key)
+
+    # Idempotent replay: a retried / double-clicked checkout with the same key
+    # returns the first order and reserves stock exactly once.
+    idem = (idempotency_key or "").strip() or None
+    if idem:
+        existing = (await session.execute(_GET_ORDER_BY_IDEM, {"key": idem})).first()
+        if existing is not None:
+            items = (await session.execute(_GET_ITEMS, {"order_id": existing.id})).all()
+            return _order_response(existing, items)
+
     price_list_id = await _price_list_id(session)
+    order_id = uuid4()
+    inventory = _inventory(session, store.tenant_id)
 
     lines: list[dict] = []
     subtotal = Decimal("0")
@@ -580,18 +622,28 @@ async def create_order(
         quantity = min(item.quantity, available)
         if quantity <= 0:
             continue  # out of stock — skip silently, validated below
+        try:
+            # The single source of stock writes: reserves via InventoryService,
+            # which locks the level (no overselling), writes the reservation +
+            # ledger + event, and tags the hold to this order for later
+            # commit/release.
+            await inventory.reserve_available(
+                row.variant_id, quantity, reference_type=_ORDER_REF, reference_id=order_id
+            )
+        except InsufficientStock:
+            # Lost the race for the last units between the read and the lock —
+            # treat this line as out of stock rather than oversell.
+            continue
         unit = row.price if row.price is not None else Decimal("0")
         line_total = Decimal(unit) * quantity
         subtotal += line_total
         lines.append(
             {"variant_id": row.variant_id, "sku": row.sku, "name": row.name, "unit_amount": row.price, "quantity": quantity, "line_total": line_total}
         )
-        await session.execute(_RESERVE, {"variant_id": row.variant_id, "qty": quantity})
 
     if not lines:
         raise HTTPException(status_code=400, detail="Ningún producto del pedido tiene stock disponible")
 
-    order_id = uuid4()
     number = f"CH-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}"
     tracking = f"TRK{secrets.token_hex(5).upper()}"
     item_count = sum(line["quantity"] for line in lines)
@@ -606,6 +658,7 @@ async def create_order(
             "shipping_method": method, "shipping_amount": shipping_amount,
             "coupon_code": coupon_code, "discount_amount": discount,
             "currency": store.currency, "subtotal": subtotal, "item_count": item_count,
+            "idempotency_key": idem,
         },
     )
     for line in lines:
@@ -635,20 +688,11 @@ async def _load_order(session: AsyncSession, number: str):
 
 @router.get("/{key}/orders/{number}", response_model=OrderResponse)
 async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depends(get_session)]) -> OrderResponse:
-    store = await _bind(session, key)
+    await _bind(session, key)
     order = await _load_order(session, number)
     items = (await session.execute(_GET_ITEMS, {"order_id": order.id})).all()
     events = {row.status: row.occurred_at for row in (await session.execute(_GET_EVENTS, {"order_id": order.id})).all()}
-    current, _ = _timeline(order.placed_at, order.status, events)
-    return OrderResponse(
-        order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
-        subtotal=order.subtotal, shipping_method=order.shipping_method, shipping_amount=order.shipping_amount,
-        shipping_province=order.shipping_province, shipping_city=order.shipping_city,
-        coupon_code=order.coupon_code, discount_amount=order.discount_amount,
-        total=order.subtotal + order.shipping_amount - order.discount_amount, item_count=order.item_count,
-        customer_name=order.customer_name, placed_at=order.placed_at,
-        items=[OrderLine(sku=i.sku, name=i.name, unit_amount=i.unit_amount, quantity=i.quantity, line_total=i.line_total) for i in items],
-    )
+    return _order_response(order, items, events)
 
 
 @router.get("/{key}/orders/{number}/tracking", response_model=TrackingResponse)
@@ -721,17 +765,49 @@ async def admin_advance_order(
     order = (await session.execute(_ADMIN_GET, {"number": number})).first()
     if order is None:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    if order.status == "cancelled":
+        raise HTTPException(status_code=400, detail="El pedido está cancelado")
     index = _STATUS_ORDER.index(order.status) if order.status in _STATUS_ORDER else 0
     if index >= len(_STATUS_ORDER) - 1:
         raise HTTPException(status_code=400, detail="El pedido ya está entregado")
     nxt = _STATUS_ORDER[index + 1]
     await session.execute(_ADMIN_ADVANCE, {"status": nxt, "id": order.id})
+    if nxt == "shipped":
+        # Dispatch consumes the held stock through the engine: reserved -= qty,
+        # on_hand -= qty, reservation → committed, ledger + event. Idempotent —
+        # only still-held reservations are consumed.
+        await _inventory(session, context.tenant_id).commit_reservations_for(_ORDER_REF, order.id)
     await session.execute(
         _INSERT_EVENT,
         {"id": uuid4(), "tenant": context.tenant_id, "order_id": order.id, "status": nxt, "note": f"Estado actualizado a {nxt}"},
     )
     await session.commit()
     return {"order_number": number, "status": nxt}
+
+
+@admin_router.post("/orders/{number}/cancel")
+async def admin_cancel_order(
+    number: str,
+    context: Annotated[TenantContext, Depends(get_current_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict:
+    order = (await session.execute(_ADMIN_GET, {"number": number})).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    if order.status == "cancelled":
+        return {"order_number": number, "status": "cancelled", "released": 0, "restocked": 0}
+    inventory = _inventory(session, context.tenant_id)
+    # Not yet dispatched → give the held units back. Already dispatched → the
+    # stock left on_hand, so restock it as an explicit adjustment movement.
+    released = await inventory.release_reservations_for(_ORDER_REF, order.id, reason="order cancelled")
+    restocked = await inventory.restock_committed_for(_ORDER_REF, order.id, reason="order cancelled after dispatch")
+    await session.execute(_ADMIN_ADVANCE, {"status": "cancelled", "id": order.id})
+    await session.execute(
+        _INSERT_EVENT,
+        {"id": uuid4(), "tenant": context.tenant_id, "order_id": order.id, "status": "cancelled", "note": "Pedido cancelado"},
+    )
+    await session.commit()
+    return {"order_number": number, "status": "cancelled", "released": released, "restocked": restocked}
 
 
 @admin_router.get("/orders/{number}")

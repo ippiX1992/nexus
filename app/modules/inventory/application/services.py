@@ -23,7 +23,6 @@ from app.modules.inventory.domain.policies import (
     ensure_transfer_completable,
 )
 from app.modules.inventory.domain.values import (
-    Allocation,
     AllocationPlan,
     LocationCandidate,
     allocate,
@@ -34,7 +33,10 @@ from app.modules.platform.contracts.events import EventActor, EventEnvelope
 
 @dataclass(frozen=True, slots=True)
 class InventoryActor:
-    user_id: UUID
+    # user_id is None for system-driven writes with no authenticated user
+    # (e.g. a public storefront checkout or the expiry sweeper); created_by /
+    # audit actor_id / event actor all accept a null user.
+    user_id: UUID | None
     session_id: UUID | None
     tenant_id: UUID
     correlation_id: UUID
@@ -459,27 +461,47 @@ class InventoryService:
         expires_at = data.get("expires_at")
         reservations: list[Any] = []
         for allocation in plan.allocations:
-            reservation = await self._hold_one(variant_id, allocation, scope_type, scope_id, data, expires_at)
+            reservation = await self._hold(
+                variant_id=variant_id,
+                location_id=allocation.location_id,
+                quantity=allocation.quantity,
+                scope_type=scope_type,
+                store_id=scope_id if scope_type == "store" else None,
+                channel_id=scope_id if scope_type == "channel" else None,
+                market_id=scope_id if scope_type == "market" else None,
+                reference_type=data.get("reference_type"),
+                reference_id=data.get("reference_id"),
+                expires_at=expires_at,
+            )
             reservations.append(reservation)
         await self.repository.flush()
         return reservations
 
-    async def _hold_one(
+    async def _hold(
         self,
+        *,
         variant_id: UUID,
-        allocation: Allocation,
-        scope_type: str,
-        scope_id: UUID,
-        data: dict[str, Any],
-        expires_at: datetime | None,
+        location_id: UUID,
+        quantity: int,
+        scope_type: str | None = None,
+        store_id: UUID | None = None,
+        channel_id: UUID | None = None,
+        market_id: UUID | None = None,
+        reference_type: str | None = None,
+        reference_id: UUID | None = None,
+        expires_at: datetime | None = None,
     ) -> Any:
+        """The single place a hold is placed: locks the level, checks available
+        under the lock (no overselling), increments reserved, writes the
+        reservation row + ledger entry + event. Shared by scope-based reserves
+        and the scopeless storefront checkout."""
         level = await self.repository.get_stock_level_by_location_variant(
-            self.actor.tenant_id, allocation.location_id, variant_id, lock=True
+            self.actor.tenant_id, location_id, variant_id, lock=True
         )
         if level is None:
             raise InsufficientStock("Stock disappeared before it could be reserved")
-        ensure_can_reserve(level.available, allocation.quantity)
-        level.reserved += allocation.quantity
+        ensure_can_reserve(level.available, quantity)
+        level.reserved += quantity
         level.updated_by = self.actor.user_id
         level.version += 1
         reservation = await self.repository.create_reservation(
@@ -487,55 +509,90 @@ class InventoryService:
             self.actor.user_id,
             {
                 "variant_id": variant_id,
-                "location_id": allocation.location_id,
-                "quantity": allocation.quantity,
+                "location_id": location_id,
+                "quantity": quantity,
                 "scope_type": scope_type,
-                "store_id": scope_id if scope_type == "store" else None,
-                "channel_id": scope_id if scope_type == "channel" else None,
-                "market_id": scope_id if scope_type == "market" else None,
-                "reference_type": data.get("reference_type"),
-                "reference_id": data.get("reference_id"),
+                "store_id": store_id,
+                "channel_id": channel_id,
+                "market_id": market_id,
+                "reference_type": reference_type,
+                "reference_id": reference_id,
                 "expires_at": expires_at,
                 "status": "held",
             },
         )
         await self.repository.flush()
-        await self._ledger(allocation.location_id, variant_id, "reservation_hold", 0, level.on_hand,
+        await self._ledger(location_id, variant_id, "reservation_hold", 0, level.on_hand,
                            reference_type="reservation", reference_id=reservation.id)
         await self.repository.add_event(
             self._event("inventory.reservation.held.v1", "inventory.reservation", reservation.id, reservation.version,
-                        {"variant_id": str(variant_id), "location_id": str(allocation.location_id),
-                         "quantity": allocation.quantity})
+                        {"variant_id": str(variant_id), "location_id": str(location_id), "quantity": quantity})
         )
         await self._audit("inventory.reservation_held", "success", reservation.id)
         return reservation
+
+    async def reserve_available(
+        self,
+        variant_id: UUID,
+        quantity: int,
+        *,
+        reference_type: str,
+        reference_id: UUID,
+        expires_at: datetime | None = None,
+    ) -> list[Any]:
+        """Reserve `quantity` of a variant across the tenant's active locations
+        (no fulfillment scope required) — the entry point for a single-store
+        storefront checkout. Fails atomically with InsufficientStock if the
+        full quantity can't be covered, so a checkout can never oversell."""
+        ensure_positive_quantity(quantity)
+        if not await self.repository.variant_exists(self.actor.tenant_id, variant_id):
+            await self._missing("variant", variant_id)
+        candidates = await self._available_candidates(variant_id)
+        plan = allocate(quantity, candidates)
+        if not plan.fully_allocated:
+            await self._audit("inventory.reservation_shortfall", "denied", variant_id,
+                              {"requested": quantity, "allocated": plan.allocated})
+            raise InsufficientStock(
+                f"Cannot reserve {quantity}; only {plan.allocated} available for this variant"
+            )
+        reservations: list[Any] = []
+        for allocation in plan.allocations:
+            reservations.append(
+                await self._hold(
+                    variant_id=variant_id,
+                    location_id=allocation.location_id,
+                    quantity=allocation.quantity,
+                    reference_type=reference_type,
+                    reference_id=reference_id,
+                    expires_at=expires_at,
+                )
+            )
+        await self.repository.flush()
+        return reservations
+
+    async def _available_candidates(self, variant_id: UUID) -> list[LocationCandidate]:
+        location_ids = await self.repository.active_location_ids(self.actor.tenant_id)
+        levels = await self.repository.list_available_candidates(self.actor.tenant_id, variant_id, location_ids)
+        candidates: list[LocationCandidate] = []
+        for level in levels:
+            location = await self.repository.get_location(self.actor.tenant_id, level.location_id)
+            warehouse_id = location.warehouse_id if location is not None else level.location_id
+            candidates.append(
+                LocationCandidate(
+                    location_id=level.location_id,
+                    warehouse_id=warehouse_id,
+                    priority=0,
+                    available=level.available,
+                )
+            )
+        return candidates
 
     async def release_reservation(self, resource_id: UUID, expected: int) -> Any:
         reservation = await self.repository.get_reservation(self.actor.tenant_id, resource_id, lock=True)
         if reservation is None:
             await self._missing("reservation", resource_id)
         await self._version("reservation", reservation, expected)
-        ensure_reservation_releasable(reservation.status)
-        level = await self.repository.get_stock_level_by_location_variant(
-            self.actor.tenant_id, reservation.location_id, reservation.variant_id, lock=True
-        )
-        if level is not None:
-            level.reserved -= reservation.quantity
-            level.updated_by = self.actor.user_id
-            level.version += 1
-        reservation.status = "released"
-        reservation.updated_by = self.actor.user_id
-        reservation.version += 1
-        await self.repository.flush()
-        await self._ledger(reservation.location_id, reservation.variant_id, "reservation_release", 0,
-                           level.on_hand if level is not None else 0,
-                           reference_type="reservation", reference_id=reservation.id)
-        await self.repository.add_event(
-            self._event("inventory.reservation.released.v1", "inventory.reservation", reservation.id,
-                        reservation.version, {"variant_id": str(reservation.variant_id)})
-        )
-        await self._audit("inventory.reservation_released", "success", reservation.id)
-        return reservation
+        return await self._release_one(reservation)
 
     async def commit_reservation(self, resource_id: UUID, expected: int) -> Any:
         """Fulfillment: consumes the hold. Decrements both on_hand and reserved
@@ -544,6 +601,39 @@ class InventoryService:
         if reservation is None:
             await self._missing("reservation", resource_id)
         await self._version("reservation", reservation, expected)
+        return await self._commit_one(reservation)
+
+    async def _release_one(self, reservation: Any, *, reason: str | None = None, expired: bool = False) -> Any:
+        """Return a held reservation's units to available. `expired` marks it as
+        auto-expired (sweeper) rather than manually released; both undo the same
+        `reserved` increment."""
+        ensure_reservation_releasable(reservation.status)
+        level = await self.repository.get_stock_level_by_location_variant(
+            self.actor.tenant_id, reservation.location_id, reservation.variant_id, lock=True
+        )
+        if level is not None:
+            level.reserved -= reservation.quantity
+            level.updated_by = self.actor.user_id
+            level.version += 1
+        reservation.status = "expired" if expired else "released"
+        reservation.updated_by = self.actor.user_id
+        reservation.version += 1
+        await self.repository.flush()
+        await self._ledger(reservation.location_id, reservation.variant_id, "reservation_release", 0,
+                           level.on_hand if level is not None else 0,
+                           reference_type="reservation", reference_id=reservation.id, reason=reason)
+        event_type = "inventory.reservation.expired.v1" if expired else "inventory.reservation.released.v1"
+        await self.repository.add_event(
+            self._event(event_type, "inventory.reservation", reservation.id,
+                        reservation.version, {"variant_id": str(reservation.variant_id)})
+        )
+        await self._audit(
+            "inventory.reservation_expired" if expired else "inventory.reservation_released",
+            "success", reservation.id,
+        )
+        return reservation
+
+    async def _commit_one(self, reservation: Any) -> Any:
         ensure_reservation_releasable(reservation.status)
         ensure_reservation_not_expired(reservation.expires_at, datetime.now(UTC))
         level = await self.repository.get_stock_level_by_location_variant(
@@ -569,6 +659,71 @@ class InventoryService:
         )
         await self._audit("inventory.reservation_committed", "success", reservation.id)
         return reservation
+
+    # --- Order-driven reservation lifecycle (by reference) ---
+
+    async def commit_reservations_for(self, reference_type: str, reference_id: UUID) -> int:
+        """Consume every held reservation a document placed (e.g. dispatch of a
+        storefront order). Idempotent: only 'held' rows are acted on, so
+        re-running commits nothing a second time."""
+        held = await self.repository.list_reservations_by_reference(
+            self.actor.tenant_id, reference_type, reference_id, status="held", lock=True
+        )
+        for reservation in held:
+            await self._commit_one(reservation)
+        return len(held)
+
+    async def release_reservations_for(
+        self, reference_type: str, reference_id: UUID, *, reason: str | None = None
+    ) -> int:
+        """Release every still-held reservation a document placed (cancel /
+        payment failure before dispatch)."""
+        held = await self.repository.list_reservations_by_reference(
+            self.actor.tenant_id, reference_type, reference_id, status="held", lock=True
+        )
+        for reservation in held:
+            await self._release_one(reservation, reason=reason)
+        return len(held)
+
+    async def restock_committed_for(
+        self, reference_type: str, reference_id: UUID, *, reason: str | None = None
+    ) -> int:
+        """Cancel after dispatch: the stock already left on_hand, so a release
+        would be wrong. Put the units back as an explicit `adjustment` (restock)
+        movement in the ledger, at the same location they shipped from."""
+        committed = await self.repository.list_reservations_by_reference(
+            self.actor.tenant_id, reference_type, reference_id, status="committed", lock=True
+        )
+        for reservation in committed:
+            level = await self.repository.get_or_create_stock_level(
+                self.actor.tenant_id, self.actor.user_id, reservation.location_id, reservation.variant_id
+            )
+            level.on_hand += reservation.quantity
+            level.updated_by = self.actor.user_id
+            level.version += 1
+            await self.repository.flush()
+            await self._ledger(reservation.location_id, reservation.variant_id, "adjustment",
+                               reservation.quantity, level.on_hand,
+                               reference_type="reservation", reference_id=reservation.id,
+                               reason=reason or "restock (order cancelled after dispatch)")
+            await self.repository.add_event(
+                self._event("inventory.stock.adjusted.v1", "inventory.stock_level", level.id, level.version,
+                            {"location_id": str(reservation.location_id), "variant_id": str(reservation.variant_id),
+                             "delta": reservation.quantity, "on_hand": level.on_hand, "reason": "restock"})
+            )
+            await self._audit("inventory.stock_adjusted", "success", level.id,
+                              {"variant_id": str(reservation.variant_id), "delta": reservation.quantity, "restock": True})
+        return len(committed)
+
+    async def expire_due_reservations(self, *, now: datetime | None = None, limit: int = 100) -> int:
+        """Release every held reservation whose expiry has passed. Rows are
+        locked with SKIP LOCKED, so several sweeper workers are safe and each
+        run is idempotent."""
+        moment = now or datetime.now(UTC)
+        due = await self.repository.list_due_reservations(self.actor.tenant_id, moment, limit=limit)
+        for reservation in due:
+            await self._release_one(reservation, reason="reservation expired", expired=True)
+        return len(due)
 
     # --- Fulfillment scopes ---
 

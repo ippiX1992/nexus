@@ -235,6 +235,49 @@ class SqlAlchemyInventoryRepository:
         self.session.add(row)
         return row
 
+    async def list_reservations_by_reference(
+        self,
+        tenant_id: UUID,
+        reference_type: str,
+        reference_id: UUID,
+        *,
+        status: str | None = None,
+        lock: bool = False,
+    ) -> list[ReservationModel]:
+        """Every reservation a downstream document (e.g. a storefront order)
+        placed. Locking is needed when we are about to commit/release them so a
+        concurrent worker can't act on the same holds."""
+        statement = select(ReservationModel).where(
+            ReservationModel.tenant_id == tenant_id,
+            ReservationModel.reference_type == reference_type,
+            ReservationModel.reference_id == reference_id,
+        )
+        if status:
+            statement = statement.where(ReservationModel.status == status)
+        if lock:
+            statement = statement.with_for_update()
+        return list((await self.session.scalars(statement)).all())
+
+    async def list_due_reservations(
+        self, tenant_id: UUID, now: datetime, *, limit: int = 100
+    ) -> list[ReservationModel]:
+        """Held reservations past their expiry, locked with SKIP LOCKED so
+        several sweeper workers can run at once without ever touching the same
+        row twice."""
+        statement = (
+            select(ReservationModel)
+            .where(
+                ReservationModel.tenant_id == tenant_id,
+                ReservationModel.status == "held",
+                ReservationModel.expires_at.is_not(None),
+                ReservationModel.expires_at <= now,
+            )
+            .order_by(ReservationModel.expires_at.asc())
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        return list((await self.session.scalars(statement)).all())
+
     # --- Fulfillment scopes ---
 
     async def get_fulfillment_scope(
@@ -280,6 +323,17 @@ class SqlAlchemyInventoryRepository:
             )
         )
         return row is not None
+
+    async def active_location_ids(self, tenant_id: UUID) -> list[UUID]:
+        """Every active location of the tenant, for reservations that aren't
+        tied to a fulfillment scope (e.g. a single-store storefront checkout)."""
+        rows = await self.session.scalars(
+            select(LocationModel.id).where(
+                LocationModel.tenant_id == tenant_id,
+                LocationModel.status == "active",
+            )
+        )
+        return list(rows.all())
 
     async def active_location_ids_for_warehouses(self, tenant_id: UUID, warehouse_ids: list[UUID]) -> list[UUID]:
         if not warehouse_ids:

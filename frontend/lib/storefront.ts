@@ -123,8 +123,12 @@ export function createReview(slug: string, payload: { author: string; rating: nu
 export function productStock(slug: string) {
   return storeFetch<{ slug: string; available: number; in_stock: boolean }>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}/stock`);
 }
-export function createOrder(payload: OrderInput) {
-  return storeFetch<StoreOrder>(`/${STORE_KEY}/orders`, { method: "POST", body: JSON.stringify(payload) });
+export function createOrder(payload: OrderInput, idempotencyKey?: string) {
+  // Sending a stable key per checkout makes a double-clicked / retried submit
+  // create one order and reserve stock once (the backend replays the first).
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  return storeFetch<StoreOrder>(`/${STORE_KEY}/orders`, { method: "POST", headers, body: JSON.stringify(payload) });
 }
 export function getOrder(orderNumber: string) {
   return storeFetch<StoreOrder>(`/${STORE_KEY}/orders/${encodeURIComponent(orderNumber)}`);
