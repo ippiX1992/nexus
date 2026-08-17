@@ -23,6 +23,18 @@ type OrderDetail = Order & {
   stages: { status: string; label: string; at: string; done: boolean }[];
 };
 
+type Metrics = {
+  orders: number;
+  revenue: string;
+  products: number;
+  inventory_value: string;
+  inventory_units: number;
+  by_status: Record<string, number>;
+  top_products: { name: string; qty: number; revenue: string }[];
+};
+
+const money = (value: string | number) => `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 const LABEL: Record<string, string> = {
   placed: "Recibido",
   confirmed: "Confirmado",
@@ -35,6 +47,7 @@ export default function Page() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [openNumber, setOpenNumber] = useState("");
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
@@ -60,6 +73,12 @@ export default function Page() {
   useEffect(() => {
     load();
   }, [status]);
+
+  useEffect(() => {
+    api("/admin/storefront/metrics")
+      .then(setMetrics)
+      .catch(() => setMetrics(null));
+  }, []);
 
   async function toggle(orderNumber: string) {
     if (openNumber === orderNumber) {
@@ -113,6 +132,41 @@ export default function Page() {
 
   return (
     <AdminShell title="Pedidos" description="Pedidos del storefront. Al avanzar el estado, el seguimiento del cliente se actualiza en vivo.">
+      {metrics && (
+        <>
+          <div className="metrics">
+            <div className="metric">
+              <span>Ventas</span>
+              <strong>{money(metrics.revenue)}</strong>
+            </div>
+            <div className="metric">
+              <span>Pedidos</span>
+              <strong>{metrics.orders}</strong>
+            </div>
+            <div className="metric">
+              <span>Productos activos</span>
+              <strong>{metrics.products}</strong>
+            </div>
+            <div className="metric">
+              <span>Valor de inventario</span>
+              <strong>{money(metrics.inventory_value)}</strong>
+            </div>
+          </div>
+          {metrics.top_products.length > 0 && (
+            <div className="tile">
+              <strong>Top productos</strong>
+              {metrics.top_products.map((product) => (
+                <div className="row" key={product.name}>
+                  <span>{product.name}</span>
+                  <span>
+                    {product.qty} uds · {money(product.revenue)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
       <form
         className="row"
         onSubmit={(event) => {

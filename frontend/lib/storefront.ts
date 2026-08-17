@@ -66,6 +66,10 @@ export function storeProducts(
 export function storeCategories() {
   return storeFetch<StoreCategory[]>(`/${STORE_KEY}/categories`);
 }
+export type Suggestion = { slug: string; name: string; image?: string | null };
+export function suggest(query: string) {
+  return storeFetch<Suggestion[]>(`/${STORE_KEY}/suggest?q=${encodeURIComponent(query)}`);
+}
 export function storeProduct(slug: string) {
   return storeFetch<StoreProductDetail>(`/${STORE_KEY}/products/${encodeURIComponent(slug)}`);
 }

@@ -20,6 +20,7 @@ export default function ProductPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [reviews, setReviews] = useState<ReviewSummary | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -141,66 +142,81 @@ export default function ProductPage() {
           <button className={`sf-fav-btn${has(product.slug) ? " active" : ""}`} onClick={() => toggle(product)}>
             {has(product.slug) ? "♥ En favoritos" : "♡ Guardar en favoritos"}
           </button>
+          <p className="sf-sku">SKU: {product.sku}</p>
           <div className="sf-guarantees">
             <span>🛡️ 12 meses de garantía</span>
             <span>↩️ Devolución en 7 días</span>
             <span>🚚 Envío a todo el Ecuador</span>
           </div>
-          {product.specs && product.specs.length > 0 && (
-            <div className="sf-specs">
-              <h3>Especificaciones</h3>
-              <table>
-                <tbody>
-                  {product.specs.map((spec) => (
-                    <tr key={spec.label}>
-                      <th>{spec.label}</th>
-                      <td>{spec.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {product.long_description && (
-            <div className="sf-desc">
-              <h3>Descripción</h3>
-              <p>{product.long_description}</p>
-            </div>
-          )}
         </div>
       </div>
 
-      <section className="sf-reviews">
-        <h2>Opiniones{reviews && reviews.count > 0 ? ` · ${reviews.average.toFixed(1)} ★ (${reviews.count})` : ""}</h2>
-        {reviews && reviews.count > 0 ? (
-          reviews.items.map((review, index) => (
-            <div className="sf-review" key={index}>
-              <div className="sf-review-head">
-                <strong>{review.author}</strong>
-                <span className="sf-review-stars">
-                  {"★".repeat(review.rating)}
-                  {"☆".repeat(5 - review.rating)}
-                </span>
-              </div>
-              {review.comment && <p>{review.comment}</p>}
-            </div>
-          ))
-        ) : (
-          <p className="sf-muted">Sé el primero en opinar sobre este producto.</p>
+      <section className="sf-tabs">
+        <div className="sf-tabs-head" role="tablist">
+          <button role="tab" className={activeTab === "desc" ? "active" : ""} onClick={() => setActiveTab("desc")}>
+            Descripción
+          </button>
+          <button role="tab" className={activeTab === "specs" ? "active" : ""} onClick={() => setActiveTab("specs")}>
+            Especificaciones
+          </button>
+          <button role="tab" className={activeTab === "reviews" ? "active" : ""} onClick={() => setActiveTab("reviews")}>
+            Opiniones{reviews && reviews.count > 0 ? ` (${reviews.count})` : ""}
+          </button>
+        </div>
+
+        {activeTab === "desc" && (
+          <div className="sf-tab-panel sf-desc">
+            {product.long_description ? <p>{product.long_description}</p> : <p className="sf-muted">Sin descripción disponible.</p>}
+          </div>
         )}
-        <form className="sf-review-form" onSubmit={submitReview}>
-          <strong>Deja tu opinión</strong>
-          <input name="author" placeholder="Tu nombre" required minLength={2} />
-          <select name="rating" defaultValue="5">
-            <option value="5">★★★★★ (5)</option>
-            <option value="4">★★★★ (4)</option>
-            <option value="3">★★★ (3)</option>
-            <option value="2">★★ (2)</option>
-            <option value="1">★ (1)</option>
-          </select>
-          <textarea name="comment" rows={2} placeholder="Cuéntanos tu experiencia (opcional)" />
-          <button disabled={reviewBusy}>{reviewBusy ? "Enviando…" : "Publicar opinión"}</button>
-        </form>
+
+        {activeTab === "specs" && (
+          <div className="sf-tab-panel sf-specs">
+            <table>
+              <tbody>
+                {(product.specs ?? []).map((spec) => (
+                  <tr key={spec.label}>
+                    <th>{spec.label}</th>
+                    <td>{spec.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "reviews" && (
+          <div className="sf-tab-panel">
+            <p className="sf-reviews-avg">
+              {reviews && reviews.count > 0 ? `${reviews.average.toFixed(1)} ★ · ${reviews.count} opiniones` : "Aún sin opiniones"}
+            </p>
+            {reviews?.items.map((review, index) => (
+              <div className="sf-review" key={index}>
+                <div className="sf-review-head">
+                  <strong>{review.author}</strong>
+                  <span className="sf-review-stars">
+                    {"★".repeat(review.rating)}
+                    {"☆".repeat(5 - review.rating)}
+                  </span>
+                </div>
+                {review.comment && <p>{review.comment}</p>}
+              </div>
+            ))}
+            <form className="sf-review-form" onSubmit={submitReview}>
+              <strong>Deja tu opinión</strong>
+              <input name="author" placeholder="Tu nombre" required minLength={2} />
+              <select name="rating" defaultValue="5">
+                <option value="5">★★★★★ (5)</option>
+                <option value="4">★★★★ (4)</option>
+                <option value="3">★★★ (3)</option>
+                <option value="2">★★ (2)</option>
+                <option value="1">★ (1)</option>
+              </select>
+              <textarea name="comment" rows={2} placeholder="Cuéntanos tu experiencia (opcional)" />
+              <button disabled={reviewBusy}>{reviewBusy ? "Enviando…" : "Publicar opinión"}</button>
+            </form>
+          </div>
+        )}
       </section>
     </article>
   );

@@ -501,6 +501,30 @@ async def validate_coupon(key: str, code: str, session: Annotated[AsyncSession, 
     return CouponInfo(code=code.strip().upper(), valid=True, label=coupon["label"], discount_type=coupon["type"], value=coupon["value"])
 
 
+_SUGGEST = text(
+    """
+    SELECT COALESCE(t.slug, v.sku) AS slug, COALESCE(t.name, v.sku) AS name, v.sku AS sku
+    FROM catalog_products p
+    JOIN catalog_product_variants v ON v.product_id = p.id AND v.is_default AND v.archived_at IS NULL
+    LEFT JOIN catalog_product_translations t ON t.product_id = p.id AND t.locale = :locale
+    WHERE p.status = 'active' AND p.archived_at IS NULL AND t.name ILIKE '%' || :q || '%'
+    ORDER BY t.name LIMIT 8
+    """
+)
+
+
+@router.get("/{key}/suggest")
+async def suggest(
+    key: str, session: Annotated[AsyncSession, Depends(get_session)], q: str = Query("", max_length=120)
+) -> list[dict]:
+    store = await _bind(session, key)
+    term = q.strip()
+    if len(term) < 2:
+        return []
+    rows = (await session.execute(_SUGGEST, {"locale": store.locale, "q": term})).all()
+    return [{"slug": row.slug, "name": row.name, "image": _image_for(row.sku)} for row in rows]
+
+
 @router.get("/{key}/products/{slug}/reviews", response_model=ReviewSummary)
 async def product_reviews(key: str, slug: str, session: Annotated[AsyncSession, Depends(get_session)]) -> ReviewSummary:
     await _bind(session, key)
@@ -719,4 +743,50 @@ async def admin_order_detail(
             for i in items
         ],
         "stages": [{"status": s.status, "label": s.label, "at": s.at.isoformat(), "done": s.done} for s in stages],
+    }
+
+
+@admin_router.get("/metrics")
+async def admin_metrics(
+    context: Annotated[TenantContext, Depends(get_current_context)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict:
+    summary = (
+        await session.execute(
+            text("SELECT count(*) AS orders, COALESCE(SUM(subtotal + shipping_amount - discount_amount), 0) AS revenue FROM storefront_orders")
+        )
+    ).first()
+    by_status = {
+        row.status: row.n
+        for row in (await session.execute(text("SELECT status, count(*) AS n FROM storefront_orders GROUP BY status"))).all()
+    }
+    top = (
+        await session.execute(
+            text(
+                "SELECT name, SUM(quantity) AS qty, SUM(line_total) AS revenue "
+                "FROM storefront_order_items GROUP BY name ORDER BY qty DESC LIMIT 5"
+            )
+        )
+    ).all()
+    inventory = (
+        await session.execute(
+            text(
+                """
+                SELECT COALESCE(SUM(s.on_hand * e.unit_amount), 0) AS value, COALESCE(SUM(s.on_hand), 0) AS units
+                FROM inventory_stock_levels s
+                JOIN pricing_price_list_entries e ON e.variant_id = s.variant_id
+                  AND e.price_list_id = (SELECT id FROM pricing_price_lists WHERE is_default AND status = 'active' LIMIT 1)
+                """
+            )
+        )
+    ).first()
+    products = (await session.execute(text("SELECT count(*) FROM catalog_products WHERE status = 'active'"))).scalar() or 0
+    return {
+        "orders": int(summary.orders or 0),
+        "revenue": str(summary.revenue or 0),
+        "by_status": {k: int(v) for k, v in by_status.items()},
+        "top_products": [{"name": r.name, "qty": int(r.qty), "revenue": str(r.revenue)} for r in top],
+        "inventory_value": str(inventory.value or 0),
+        "inventory_units": int(inventory.units or 0),
+        "products": int(products),
     }

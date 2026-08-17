@@ -1703,3 +1703,32 @@
   .az-dept-menu{display:none}
   .sf-qv-grid{grid-template-columns:1fr}
 }
+
+/* ===== Autocomplete, cart preview, product tabs ===== */
+.az-search-wrap{flex:1;min-width:0;position:relative}
+.az-search-wrap .az-search{width:100%}
+.az-suggest{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--az-surface);border:1px solid var(--az-border);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,.18);z-index:40;overflow:hidden;max-height:60vh;overflow-y:auto}
+.az-suggest-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;background:none;padding:8px 12px;cursor:pointer;font-size:.86rem;color:var(--az-text);border-bottom:1px solid #f2f2f2}
+.az-suggest-item:hover{background:#f2f7fb}
+.az-suggest-item img{width:36px;height:36px;object-fit:contain;flex:none;mix-blend-mode:multiply}
+.az-suggest-noimg{width:36px;height:36px;display:grid;place-items:center;flex:none}
+.az-suggest-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.az-cart-wrap{position:relative}
+.az-cart-preview{position:absolute;right:0;top:100%;width:320px;background:var(--az-surface);color:var(--az-text);border:1px solid var(--az-border);border-radius:10px;box-shadow:0 14px 32px rgba(0,0,0,.22);padding:14px;opacity:0;visibility:hidden;transform:translateY(6px);transition:opacity .15s ease,transform .15s ease;z-index:35}
+.az-cart-wrap:hover .az-cart-preview{opacity:1;visibility:visible;transform:none}
+.az-cart-line{display:flex;justify-content:space-between;gap:10px;font-size:.82rem;padding:5px 0;border-bottom:1px solid #f2f2f2}
+.az-cart-sub{display:flex;justify-content:space-between;margin:10px 0;font-weight:700}
+.az-cart-preview .sf-checkout{width:100%;padding:10px}
+@media (hover:none){.az-cart-preview{display:none}}
+
+.sf-tabs{max-width:1200px;margin:20px auto 0;background:var(--az-surface);border:1px solid var(--az-border);border-radius:10px;overflow:hidden}
+.sf-tabs-head{display:flex;border-bottom:1px solid var(--az-border);background:#fbfbfc}
+.sf-tabs-head button{border:none;background:none;padding:14px 20px;font-size:.95rem;font-weight:600;color:var(--az-muted);cursor:pointer;border-bottom:3px solid transparent}
+.sf-tabs-head button:hover{color:var(--az-text)}
+.sf-tabs-head button.active{color:var(--az-text);border-bottom-color:var(--az-link)}
+.sf-tab-panel{padding:22px}
+.sf-tab-panel.sf-desc{border:none;padding:22px}
+.sf-tab-panel.sf-specs{border:none;padding:22px}
+.sf-tab-panel .sf-review-form{margin-top:20px}
+.sf-reviews-avg{margin:0 0 14px;font-weight:700;font-size:1.05rem}
