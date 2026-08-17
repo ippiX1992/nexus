@@ -219,14 +219,18 @@ _RESERVE = text(
     )
     """
 )
+# Shipping options offered at checkout (amount added to the subtotal).
+_SHIPPING = {"standard": Decimal("0"), "express": Decimal("5")}
+
 _INSERT_ORDER = text(
     """
     INSERT INTO storefront_orders
       (id, tenant_id, order_number, tracking_number, store_key, status, customer_name,
-       customer_email, customer_phone, shipping_address, currency, subtotal, item_count, placed_at)
+       customer_email, customer_phone, shipping_address, shipping_method, shipping_amount,
+       currency, subtotal, item_count, placed_at)
     VALUES
       (:id, :tenant, :number, :tracking, :store_key, 'placed', :name, :email, :phone, :address,
-       :currency, :subtotal, :item_count, now())
+       :shipping_method, :shipping_amount, :currency, :subtotal, :item_count, now())
     """
 )
 _INSERT_ITEM = text(
@@ -243,7 +247,8 @@ _INSERT_EVENT = text(
 )
 _GET_ORDER = text(
     """
-    SELECT id, order_number, tracking_number, status, currency, subtotal, item_count, customer_name, placed_at
+    SELECT id, order_number, tracking_number, status, currency, subtotal, shipping_method,
+           shipping_amount, item_count, customer_name, placed_at
     FROM storefront_orders WHERE order_number = :number LIMIT 1
     """
 )
@@ -450,12 +455,15 @@ async def create_order(
     number = f"CH-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}"
     tracking = f"TRK{secrets.token_hex(5).upper()}"
     item_count = sum(line["quantity"] for line in lines)
+    method = payload.shipping_method if payload.shipping_method in _SHIPPING else "standard"
+    shipping_amount = _SHIPPING[method]
     await session.execute(
         _INSERT_ORDER,
         {
             "id": order_id, "tenant": store.tenant_id, "number": number, "tracking": tracking, "store_key": store.key,
             "name": payload.customer_name, "email": payload.customer_email, "phone": payload.customer_phone,
-            "address": payload.shipping_address, "currency": store.currency, "subtotal": subtotal, "item_count": item_count,
+            "address": payload.shipping_address, "shipping_method": method, "shipping_amount": shipping_amount,
+            "currency": store.currency, "subtotal": subtotal, "item_count": item_count,
         },
     )
     for line in lines:
@@ -468,7 +476,8 @@ async def create_order(
 
     return OrderResponse(
         order_number=number, tracking_number=tracking, status="placed", currency=store.currency,
-        subtotal=subtotal, item_count=item_count, customer_name=payload.customer_name, placed_at=datetime.now(timezone.utc),
+        subtotal=subtotal, shipping_method=method, shipping_amount=shipping_amount, total=subtotal + shipping_amount,
+        item_count=item_count, customer_name=payload.customer_name, placed_at=datetime.now(timezone.utc),
         items=[OrderLine(sku=line["sku"], name=line["name"], unit_amount=line["unit_amount"], quantity=line["quantity"], line_total=line["line_total"]) for line in lines],
     )
 
@@ -489,7 +498,9 @@ async def get_order(key: str, number: str, session: Annotated[AsyncSession, Depe
     current, _ = _timeline(order.placed_at, order.status, events)
     return OrderResponse(
         order_number=order.order_number, tracking_number=order.tracking_number, status=current, currency=order.currency,
-        subtotal=order.subtotal, item_count=order.item_count, customer_name=order.customer_name, placed_at=order.placed_at,
+        subtotal=order.subtotal, shipping_method=order.shipping_method, shipping_amount=order.shipping_amount,
+        total=order.subtotal + order.shipping_amount, item_count=order.item_count, customer_name=order.customer_name,
+        placed_at=order.placed_at,
         items=[OrderLine(sku=i.sku, name=i.name, unit_amount=i.unit_amount, quantity=i.quantity, line_total=i.line_total) for i in items],
     )
 
@@ -514,7 +525,10 @@ _ADMIN_LIST = text(
     """
     SELECT order_number, tracking_number, status, currency, subtotal, item_count,
            customer_name, customer_email, placed_at
-    FROM storefront_orders ORDER BY placed_at DESC LIMIT :limit OFFSET :offset
+    FROM storefront_orders
+    WHERE (:status = '' OR status = :status)
+      AND (:q = '' OR customer_name ILIKE '%' || :q || '%' OR order_number ILIKE '%' || :q || '%')
+    ORDER BY placed_at DESC LIMIT :limit OFFSET :offset
     """
 )
 _ADMIN_GET = text("SELECT id, status FROM storefront_orders WHERE order_number = :number LIMIT 1")
@@ -534,10 +548,14 @@ _ADMIN_ADVANCE = text(
 async def admin_orders(
     context: Annotated[TenantContext, Depends(get_current_context)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    status: str = Query("", max_length=24),
+    q: str = Query("", max_length=120),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> list[dict]:
-    rows = (await session.execute(_ADMIN_LIST, {"limit": limit, "offset": offset})).all()
+    rows = (
+        await session.execute(_ADMIN_LIST, {"status": status.strip(), "q": q.strip(), "limit": limit, "offset": offset})
+    ).all()
     return [
         {
             "order_number": r.order_number, "tracking_number": r.tracking_number, "status": r.status,

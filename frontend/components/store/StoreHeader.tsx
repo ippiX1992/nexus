@@ -4,12 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { storeCategories, type StoreCategory } from "@/lib/storefront";
 import { useCart } from "./cart";
+import { useWishlist } from "./wishlist";
 
 export function StoreHeader({ storeName }: { storeName: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const activeCategory = params.get("category") ?? "";
   const { count, setOpen } = useCart();
+  const { count: favCount } = useWishlist();
   const [query, setQuery] = useState("");
   const [dept, setDept] = useState("");
   const [categories, setCategories] = useState<StoreCategory[]>([]);
@@ -54,6 +56,10 @@ export function StoreHeader({ storeName }: { storeName: string }) {
             🔍
           </button>
         </form>
+        <Link href="/tienda/favoritos" className="az-orders">
+          <span aria-hidden="true">♥</span>
+          <span className="az-orders-label">Favoritos{favCount > 0 ? ` (${favCount})` : ""}</span>
+        </Link>
         <Link href="/tienda/rastrear" className="az-orders">
           <span aria-hidden="true">📦</span>
           <span className="az-orders-label">Pedidos</span>

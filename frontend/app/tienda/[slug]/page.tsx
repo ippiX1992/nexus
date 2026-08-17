@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/components/store/cart";
 import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
+import { useWishlist } from "@/components/store/wishlist";
 import { formatPrice, storeProduct, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
   const slug = String(params.slug);
   const { add } = useCart();
+  const { has, toggle } = useWishlist();
   const [product, setProduct] = useState<StoreProductDetail | null>(null);
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
@@ -104,6 +106,9 @@ export default function ProductPage() {
               </button>
             </div>
           )}
+          <button className={`sf-fav-btn${has(product.slug) ? " active" : ""}`} onClick={() => toggle(product)}>
+            {has(product.slug) ? "♥ En favoritos" : "♡ Guardar en favoritos"}
+          </button>
           <p className="sf-sku">SKU: {product.sku}</p>
           {product.long_description && (
             <div className="sf-desc">

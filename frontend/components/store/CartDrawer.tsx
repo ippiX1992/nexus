@@ -12,7 +12,10 @@ export function CartDrawer() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
   const [order, setOrder] = useState<StoreOrder | null>(null);
+  const [shipping, setShipping] = useState<"standard" | "express">("standard");
   const currency = items[0]?.currency ?? "USD";
+  const shippingCost = shipping === "express" ? 5 : 0;
+  const total = subtotal + shippingCost;
 
   function close() {
     setOpen(false);
@@ -29,6 +32,7 @@ export function CartDrawer() {
         customer_email: String(form.get("email") || "") || undefined,
         customer_phone: String(form.get("phone") || "") || undefined,
         shipping_address: String(form.get("address") || "") || undefined,
+        shipping_method: shipping,
         items: items.map((line) => ({ slug: line.slug, quantity: line.qty })),
       });
       setOrder(placed);
@@ -68,8 +72,9 @@ export function CartDrawer() {
             <p>
               Pedido <strong>{order.order_number}</strong>
               <br />
-              Total {formatPrice(order.subtotal, order.currency)} · {order.item_count} artículos
+              Total {formatPrice(order.total ?? order.subtotal, order.currency)} · {order.item_count} artículos
             </p>
+            <p className="sf-muted">📧 Te enviamos la confirmación por correo.</p>
             <p className="sf-muted">Rastreo: {order.tracking_number}</p>
             <Link className="sf-checkout" href={`/tienda/pedido/${order.order_number}`} onClick={reset}>
               Ver seguimiento
@@ -80,6 +85,24 @@ export function CartDrawer() {
           </div>
         ) : stage === "form" ? (
           <form className="sf-checkout-form" onSubmit={submit}>
+            <div className="sf-ship-methods">
+              <label className={shipping === "standard" ? "active" : ""}>
+                <input type="radio" name="ship" checked={shipping === "standard"} onChange={() => setShipping("standard")} />
+                <span>
+                  <strong>Estándar · Gratis</strong>
+                  <br />
+                  Entrega en 2–4 días
+                </span>
+              </label>
+              <label className={shipping === "express" ? "active" : ""}>
+                <input type="radio" name="ship" checked={shipping === "express"} onChange={() => setShipping("express")} />
+                <span>
+                  <strong>Express · {formatPrice(5, currency)}</strong>
+                  <br />
+                  Entrega en 1–2 días
+                </span>
+              </label>
+            </div>
             <div className="sf-order-summary">
               {items.map((line) => (
                 <div className="sf-sum-line" key={line.slug}>
@@ -95,13 +118,13 @@ export function CartDrawer() {
               </div>
               <div className="sf-sum-row">
                 <span>Envío</span>
-                <span className="sf-free">Gratis</span>
+                <span className={shippingCost === 0 ? "sf-free" : ""}>{shippingCost === 0 ? "Gratis" : formatPrice(shippingCost, currency)}</span>
               </div>
               <div className="sf-sum-row sf-sum-total">
                 <span>Total</span>
-                <strong>{formatPrice(subtotal, currency)}</strong>
+                <strong>{formatPrice(total, currency)}</strong>
               </div>
-              <p className="sf-sum-eta">🚚 Entrega estimada: 2–4 días · Envío a todo el Ecuador</p>
+              <p className="sf-sum-eta">🚚 {shipping === "express" ? "Entrega estimada: 1–2 días" : "Entrega estimada: 2–4 días"} · Envío a todo el Ecuador</p>
             </div>
             <label>
               Nombre completo

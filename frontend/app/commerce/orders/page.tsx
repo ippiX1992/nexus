@@ -35,6 +35,8 @@ export default function Page() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [openNumber, setOpenNumber] = useState("");
+  const [status, setStatus] = useState("");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -42,7 +44,11 @@ export default function Page() {
   async function load() {
     setLoading(true);
     try {
-      setOrders(await api("/admin/storefront/orders"));
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (query.trim()) params.set("q", query.trim());
+      const qs = params.toString();
+      setOrders(await api(`/admin/storefront/orders${qs ? `?${qs}` : ""}`));
       setError("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Error");
@@ -50,9 +56,10 @@ export default function Page() {
       setLoading(false);
     }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     load();
-  }, []);
+  }, [status]);
 
   async function toggle(orderNumber: string) {
     if (openNumber === orderNumber) {
@@ -84,6 +91,24 @@ export default function Page() {
 
   return (
     <AdminShell title="Pedidos" description="Pedidos del storefront. Al avanzar el estado, el seguimiento del cliente se actualiza en vivo.">
+      <form
+        className="row"
+        onSubmit={(event) => {
+          event.preventDefault();
+          load();
+        }}
+      >
+        <select value={status} onChange={(event) => setStatus(event.target.value)} style={{ width: "auto" }} aria-label="Estado">
+          <option value="">Todos los estados</option>
+          <option value="placed">Recibido</option>
+          <option value="confirmed">Confirmado</option>
+          <option value="preparing">En preparación</option>
+          <option value="shipped">Enviado</option>
+          <option value="delivered">Entregado</option>
+        </select>
+        <input placeholder="Buscar por cliente o número" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <button className="compact">Buscar</button>
+      </form>
       {loading ? (
         <p>Cargando…</p>
       ) : orders.length === 0 ? (

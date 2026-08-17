@@ -4,14 +4,23 @@ import { formatPrice, type StoreProduct } from "@/lib/storefront";
 import { useCart } from "./cart";
 import { Stars } from "./Stars";
 import { Thumb } from "./Thumb";
+import { useWishlist } from "./wishlist";
 
 // Amazon-style product card: white tile, product image on top, blue title link,
 // bold price, stock note and a yellow "Agregar al carro" button.
 export function ProductCard({ product }: { product: StoreProduct }) {
   const { add } = useCart();
+  const { has, toggle } = useWishlist();
   const price = product.price != null ? Number(product.price) : null;
   return (
     <div className="az-card">
+      <button
+        className={`az-fav${has(product.slug) ? " active" : ""}`}
+        onClick={() => toggle(product)}
+        aria-label={has(product.slug) ? "Quitar de favoritos" : "Agregar a favoritos"}
+      >
+        ♥
+      </button>
       <Link href={`/tienda/${product.slug}`} className="az-card-img" aria-label={product.name}>
         {product.image ? (
           // eslint-disable-next-line @next/next/no-img-element

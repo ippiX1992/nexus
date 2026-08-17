@@ -1099,12 +1099,71 @@
   flex-direction: column;
   gap: 12px;
 }
+.sf-ship-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sf-ship-methods label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--az-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.sf-ship-methods label.active {
+  border-color: var(--az-link);
+  box-shadow: 0 0 0 1px var(--az-link);
+}
 .sf-order-summary {
   background: #f7f8f8;
   border: 1px solid var(--az-border);
   border-radius: 10px;
   padding: 14px;
   font-size: 0.88rem;
+}
+
+/* Wishlist heart on cards */
+.az-fav {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--az-border);
+  background: rgba(255, 255, 255, 0.92);
+  color: #b0b3b8;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.az-fav:hover {
+  color: #cc0c39;
+}
+.az-fav.active {
+  color: #cc0c39;
+  border-color: #cc0c39;
+}
+.sf-fav-btn {
+  border: 1px solid var(--az-border);
+  background: var(--az-surface);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--az-text);
+  margin-bottom: 14px;
+}
+.sf-fav-btn.active {
+  color: #cc0c39;
+  border-color: #cc0c39;
 }
 .sf-sum-line {
   display: flex;

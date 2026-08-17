@@ -75,6 +75,9 @@ export type StoreOrder = {
   status: string;
   currency: string;
   subtotal: string;
+  shipping_method?: string;
+  shipping_amount?: string;
+  total?: string;
   item_count: number;
   customer_name: string;
   placed_at: string;
@@ -87,6 +90,7 @@ export type OrderInput = {
   customer_email?: string;
   customer_phone?: string;
   shipping_address?: string;
+  shipping_method?: string;
   items: { slug: string; quantity: number }[];
 };
 

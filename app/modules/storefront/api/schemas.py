@@ -63,6 +63,7 @@ class OrderCreate(BaseModel):
     customer_email: str | None = Field(default=None, max_length=255)
     customer_phone: str | None = Field(default=None, max_length=40)
     shipping_address: str | None = Field(default=None, max_length=500)
+    shipping_method: str = Field(default="standard")
     items: list[OrderItemInput] = Field(min_length=1)
 
 
@@ -80,6 +81,9 @@ class OrderResponse(BaseModel):
     status: str
     currency: str
     subtotal: Decimal
+    shipping_method: str = "standard"
+    shipping_amount: Decimal = Decimal("0")
+    total: Decimal = Decimal("0")
     item_count: int
     customer_name: str
     placed_at: datetime
