@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { Carousel } from "@/components/store/Carousel";
 import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
 import { SkeletonGrid } from "@/components/store/Skeletons";
@@ -44,6 +45,8 @@ export default function StorePage() {
   const [categories, setCategories] = useState<StoreCategory[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [deals, setDeals] = useState<StoreProduct[]>([]);
+  const [newest, setNewest] = useState<StoreProduct[]>([]);
+  const [featured, setFeatured] = useState<StoreProduct[]>([]);
   const [catName, setCatName] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -56,7 +59,12 @@ export default function StorePage() {
     (async () => {
       try {
         if (isHome) {
-          const [cats, dealItems] = await Promise.all([storeCategories(), storeProducts("", "", 12)]);
+          const [cats, dealItems, newestItems, randomItems] = await Promise.all([
+            storeCategories(),
+            storeProducts("", "", 12),
+            storeProducts("", "", 16, 0, "newest"),
+            storeProducts("", "", 16, 0, "random"),
+          ]);
           // Same curation as the header: real departments, not the flat category noise.
           const departments = cats.filter((entry) => entry.product_count >= 15 || (entry.children?.length ?? 0) > 0);
           const top = departments.slice(0, 8);
@@ -64,6 +72,8 @@ export default function StorePage() {
           if (!alive) return;
           setCategories(departments);
           setDeals(dealItems.items);
+          setNewest(newestItems.items);
+          setFeatured(randomItems.items);
           setSections(top.map((entry, index) => ({ category: entry, items: perCategory[index].items })));
         } else {
           const [page, cats] = await Promise.all([
@@ -123,6 +133,36 @@ export default function StorePage() {
                   <span className="az-tile-count">{entry.product_count} productos →</span>
                 </Link>
               ))}
+            </section>
+          )}
+
+          {newest.length > 0 && (
+            <section className="sf-section">
+              <div className="sf-section-head">
+                <h2>✨ Novedades</h2>
+              </div>
+              <Carousel>
+                {newest.map((product) => (
+                  <div className="sf-carousel-item" key={product.slug}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </Carousel>
+            </section>
+          )}
+
+          {featured.length > 0 && (
+            <section className="sf-section">
+              <div className="sf-section-head">
+                <h2>Recomendados para ti</h2>
+              </div>
+              <Carousel>
+                {featured.map((product) => (
+                  <div className="sf-carousel-item" key={product.slug}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </Carousel>
             </section>
           )}
 

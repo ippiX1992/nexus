@@ -182,6 +182,8 @@ _ORDER = {
     "price_asc": "ORDER BY e.unit_amount ASC NULLS LAST, t.name",
     "price_desc": "ORDER BY e.unit_amount DESC NULLS LAST, t.name",
     "name": "ORDER BY t.name NULLS LAST",
+    "newest": "ORDER BY p.created_at DESC NULLS LAST, t.name",
+    "random": "ORDER BY random()",
 }
 _DETAIL = text(
     """

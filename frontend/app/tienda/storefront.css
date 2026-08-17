@@ -1758,3 +1758,13 @@
 .sf-tab-panel.sf-specs{border:none;padding:22px}
 .sf-tab-panel .sf-review-form{margin-top:20px}
 .sf-reviews-avg{margin:0 0 14px;font-weight:700;font-size:1.05rem}
+
+/* ===== Product carousels ===== */
+.sf-carousel{position:relative}
+.sf-carousel-track{display:grid;grid-auto-flow:column;grid-auto-columns:210px;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:8px;scrollbar-width:thin}
+.sf-carousel-item{scroll-snap-align:start}
+.sf-carousel-arrow{position:absolute;top:40%;transform:translateY(-50%);width:40px;height:40px;border-radius:999px;border:1px solid var(--az-border);background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:1.5rem;line-height:1;cursor:pointer;z-index:5;color:var(--az-text);display:grid;place-items:center}
+.sf-carousel-arrow.left{left:-8px}
+.sf-carousel-arrow.right{right:-8px}
+.sf-carousel-arrow:hover{background:#f2f7fb}
+@media (hover:none){.sf-carousel-arrow{display:none}}
