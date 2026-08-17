@@ -30,6 +30,7 @@ from app.modules.storefront.api.schemas import (
     Review,
     ReviewInput,
     ReviewSummary,
+    SpecItem,
     StockStatus,
     StorefrontCategory,
     StorefrontMeta,
@@ -65,6 +66,29 @@ def _image_for(sku: str) -> str | None:
 def _image2_for(sku: str) -> str | None:
     gallery = _MEDIA.get(sku) or []
     return gallery[1] if len(gallery) > 1 else None
+
+
+# Real product specs (dimensions/weight/EAN) harvested from ClickHome. Warranty
+# is a store-wide policy (not per-product data), shown as such.
+_SPECS_PATH = Path(__file__).resolve().parents[1] / "clickhome_specs.json"
+try:
+    _SPECS: dict[str, dict] = json.loads(_SPECS_PATH.read_text(encoding="utf-8"))
+except FileNotFoundError:
+    _SPECS = {}
+
+
+def _specs_for(sku: str, available: int) -> list[SpecItem]:
+    spec = _SPECS.get(sku, {})
+    items = [SpecItem(label="SKU", value=sku)]
+    if spec.get("ean"):
+        items.append(SpecItem(label="Código EAN", value=spec["ean"]))
+    if spec.get("dimensions"):
+        items.append(SpecItem(label="Dimensiones", value=spec["dimensions"]))
+    if spec.get("weight"):
+        items.append(SpecItem(label="Peso", value=spec["weight"]))
+    items.append(SpecItem(label="Disponibilidad", value=f"{available} en stock" if available > 0 else "Agotado"))
+    items.append(SpecItem(label="Garantía", value="12 meses del fabricante"))
+    return items
 
 _DEFAULT_PRICE_LIST = text(
     "SELECT id FROM pricing_price_lists WHERE is_default AND status = 'active' "
@@ -450,6 +474,7 @@ async def product_detail(
         brand=row.brand,
         image=_image_for(row.sku),
         images=_images_for(row.sku),
+        specs=_specs_for(row.sku, available),
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,

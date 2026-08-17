@@ -28,9 +28,15 @@ class StorefrontProduct(BaseModel):
     in_stock: bool
 
 
+class SpecItem(BaseModel):
+    label: str
+    value: str
+
+
 class StorefrontProductDetail(StorefrontProduct):
     long_description: str | None = None
     images: list[str] = []
+    specs: list[SpecItem] = []
 
 
 class StorefrontProductList(BaseModel):

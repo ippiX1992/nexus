@@ -19,7 +19,8 @@ export type StoreProduct = {
   available: number;
   in_stock: boolean;
 };
-export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[] };
+export type SpecItem = { label: string; value: string };
+export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[]; specs?: SpecItem[] };
 export type StoreMeta = { key: string; name: string; currency: string; locale: string; brand?: string | null; product_count: number };
 export type StoreProductList = { items: StoreProduct[]; total: number };
 export type StoreCategory = { slug: string; name: string; product_count: number; children?: StoreCategory[] };

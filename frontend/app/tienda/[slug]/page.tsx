@@ -130,7 +130,26 @@ export default function ProductPage() {
           <button className={`sf-fav-btn${has(product.slug) ? " active" : ""}`} onClick={() => toggle(product)}>
             {has(product.slug) ? "♥ En favoritos" : "♡ Guardar en favoritos"}
           </button>
-          <p className="sf-sku">SKU: {product.sku}</p>
+          <div className="sf-guarantees">
+            <span>🛡️ 12 meses de garantía</span>
+            <span>↩️ Devolución en 7 días</span>
+            <span>🚚 Envío a todo el Ecuador</span>
+          </div>
+          {product.specs && product.specs.length > 0 && (
+            <div className="sf-specs">
+              <h3>Especificaciones</h3>
+              <table>
+                <tbody>
+                  {product.specs.map((spec) => (
+                    <tr key={spec.label}>
+                      <th>{spec.label}</th>
+                      <td>{spec.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {product.long_description && (
             <div className="sf-desc">
               <h3>Descripción</h3>

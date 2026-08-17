@@ -310,6 +310,31 @@
 .az-hero-cta:hover {
   background: var(--az-yellow-h);
 }
+.az-hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.az-hero-arrow:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+.az-hero-arrow.left {
+  left: 14px;
+}
+.az-hero-arrow.right {
+  right: 14px;
+}
 .az-hero-dots {
   position: absolute;
   bottom: 14px;
@@ -921,6 +946,41 @@
   color: var(--az-muted);
   font-size: 0.82rem;
   margin: 0 0 20px;
+}
+.sf-guarantees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0 0 18px;
+  font-size: 0.85rem;
+  color: var(--az-muted);
+}
+.sf-specs {
+  border-top: 1px solid var(--az-border);
+  padding-top: 18px;
+  margin-bottom: 18px;
+}
+.sf-specs h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+.sf-specs table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.sf-specs th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--az-muted);
+  padding: 8px 12px 8px 0;
+  width: 40%;
+  vertical-align: top;
+  border-bottom: 1px solid #eee;
+}
+.sf-specs td {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
 }
 .sf-desc {
   border-top: 1px solid var(--az-border);

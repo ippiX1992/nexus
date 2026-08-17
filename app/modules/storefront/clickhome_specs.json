@@ -1,0 +1,1626 @@
+{
+ "REM-HC1080A": {
+  "dimensions": "7 x 24 x 14 cm",
+  "weight": "0.38 kg"
+ },
+ "REM-HC5850A": {
+  "dimensions": "7.8 x 27 x 16.8 cm",
+  "weight": "897 kg"
+ },
+ "ADA-32GB": {
+  "dimensions": "1.5 x 1 x 1.1 cm",
+  "weight": "0.005 kg"
+ },
+ "SUD-A1PRO-WH": {
+  "dimensions": "2.87 x 2.87 x 3.8 cm",
+  "weight": "0.18 kg"
+ },
+ "CHE-RJ406WIFI-BK": {
+  "dimensions": "14.98 x 838 x 254 cm",
+  "weight": "5.6 kg"
+ },
+ "CHE-CQ601SET-BK": {
+  "dimensions": "85 x 29 x 30 cm",
+  "weight": "1 kg"
+ },
+ "REM-D5000": {
+  "dimensions": "5.51 x 23.72 x 20.72 cm",
+  "weight": "0.9 kg"
+ },
+ "CHE-RJ38ZF6T": {
+  "dimensions": "44.7 x 17.39 x 19.71 cm",
+  "weight": "0.9 kg"
+ },
+ "KWI-HAL99590003": {
+  "dimensions": "762 x 32 x 32 cm",
+  "weight": "26 kg"
+ },
+ "KWI-HAL99390004": {
+  "dimensions": "6 x 15.18 x 26.89 cm",
+  "weight": "1 kg"
+ },
+ "REM-AS21AO-110F": {
+  "dimensions": "538 x 1041 x 1727 cm",
+  "weight": "9 kg"
+ },
+ "SON-WFC700-BK": {
+  "dimensions": "10 x 20 x 26 cm",
+  "weight": "6.3 kg"
+ },
+ "SON-WHCH520-BK": {
+  "dimensions": "96 x 3098 x 1651 cm",
+  "weight": "72 kg"
+ },
+ "SON-WHCH520-WH": {
+  "dimensions": "15 x 10.79 x 32 cm",
+  "weight": "3.62 kg"
+ },
+ "SON-WHCH520-CR": {
+  "dimensions": "24.7 x 43.18 x 82.5 cm",
+  "weight": "0.45 kg"
+ },
+ "SON-WHCH520-BL": {
+  "dimensions": "28.95 x 7.11 x 1.27 cm",
+  "weight": "2 kg"
+ },
+ "GEK-GO1328G": {
+  "weight": "0.37 kg"
+ },
+ "CUI-ANS-TOA2528": {
+  "weight": "1 kg"
+ },
+ "BRA-NRCC0810": {
+  "dimensions": "7 x 27.5 x 29 cm",
+  "weight": "1.5 kg"
+ },
+ "CHE-RJ13V2-BK": {
+  "dimensions": "15 x 33.3 x 26 cm",
+  "weight": "4.7 kg"
+ },
+ "CHE-RJ1117GOPP-BK": {
+  "dimensions": "28.9 x 18.4 x 22.09 cm",
+  "weight": "2.2 kg"
+ },
+ "CHE-RJ3810RDOV2-BK": {
+  "dimensions": "40.64 x 35.56 x 43.18 cm",
+  "weight": "11.79 kg"
+ },
+ "CUI-EM-100NP1": {
+  "dimensions": "0.28 x 2.99 x 10 cm",
+  "weight": "0.28 kg"
+ },
+ "KAL-PZM43618R": {
+  "dimensions": "0.28633 x 17 x 13 cm",
+  "weight": "0.28633 kg"
+ },
+ "REM-S27A": {
+  "dimensions": "0.13 x 6.09 x 15.01 cm",
+  "weight": "0.13 kg"
+ },
+ "CUI-CHW-16": {
+  "dimensions": "99 x 2.54 x 5.08 cm",
+  "weight": "99 kg"
+ },
+ "CUI-N51-12BK": {
+  "dimensions": "0.04 x 16.76 x 1.27 cm",
+  "weight": "0.04 kg"
+ },
+ "BD-CJ625W": {
+  "dimensions": "0.02 x 16.76 x 1.27 cm",
+  "weight": "0.02 kg"
+ },
+ "BD-CM0755S-MX": {
+  "dimensions": "6.8 x 30 x 10.5 cm",
+  "weight": "0.7 kg"
+ },
+ "CUI-CTOA130-PC2": {
+  "dimensions": "40 x 20 x 20 cm",
+  "weight": "1.75 kg"
+ },
+ "REM-D12A": {
+  "dimensions": "0.03 x 7.11 x 3.81 cm",
+  "weight": "0.03 kg"
+ },
+ "CUI-CTG-00-4BB": {
+  "dimensions": "0.5 x 9.8 x 26 cm",
+  "weight": "0.5 kg"
+ },
+ "SON-HTS400": {
+  "dimensions": "136 x 83 x 16 cm",
+  "weight": "19 kg"
+ },
+ "VV-28704606": {
+  "dimensions": "79 x 453 x 728 cm",
+  "weight": "4.5 kg"
+ },
+ "VV-68854606": {
+  "dimensions": "98 x 57 x 11.6 cm",
+  "weight": "9 kg"
+ },
+ "VV-68514606": {
+  "dimensions": "91 x 53 x 11.6 cm",
+  "weight": "8 kg"
+ },
+ "VV-38864606": {
+  "dimensions": "4 x 2 x 4 cm",
+  "weight": "0.34 kg"
+ },
+ "SON-HTS100F": {
+  "dimensions": "67.7 x 3 x 17 cm",
+  "weight": "1.31 kg"
+ },
+ "BD-GC3100B": {
+  "dimensions": "27 x 45 x 42.5 cm",
+  "weight": "5.8 kg"
+ },
+ "BD-WM120B": {
+  "dimensions": "28.5 x 22.4 x 41.7 cm",
+  "weight": "0.154167 kg"
+ },
+ "NUT-NBJ48200": {
+  "dimensions": "21.5 x 21 x 22 cm",
+  "weight": "0.046 kg"
+ },
+ "NUT-MBR0748": {
+  "dimensions": "20 x 25 x 32 cm",
+  "weight": "0.862 kg"
+ },
+ "BD-PAN24535": {
+  "dimensions": "22 x 25 x 22 cm",
+  "weight": "0.462 kg"
+ },
+ "BD-WM1404S": {
+  "dimensions": "27.5 x 21 x 35.8 cm",
+  "weight": "0.4 kg"
+ },
+ "BD-SC2007S": {
+  "dimensions": "43 x 41 x 75 cm",
+  "weight": "20 kg"
+ },
+ "BD-SC1004D": {
+  "dimensions": "35.6 x 14 x 44.4 cm",
+  "weight": "0.4 kg"
+ },
+ "BD-SB1001B": {
+  "dimensions": "35.6 x 14 x 44.4 cm",
+  "weight": "0.4 kg"
+ },
+ "BD-CM2046S-LA": {
+  "dimensions": "16.9 x 30.6 x 34.9 cm",
+  "weight": "3.2 kg"
+ },
+ "BD-TO4315SS-LA": {
+  "dimensions": "7 x 24.5 x 11.6 cm",
+  "weight": "0.6 kg"
+ },
+ "BD-CM0916B": {
+  "dimensions": "75 x 25 x 23.1 cm",
+  "weight": "1.2 kg"
+ },
+ "BD-BL1670S": {
+  "dimensions": "8.15 x 14.7 x 8.8 cm",
+  "weight": "0.2 kg"
+ },
+ "BD-RC620B": {
+  "dimensions": "8.15 x 13.2 x 8.8 cm",
+  "weight": "0.2 kg"
+ },
+ "BD-RC5200M": {
+  "dimensions": "8.5 x 14.7 x 12.5 cm",
+  "weight": "0.3 kg"
+ },
+ "REM-AS15A": {
+  "dimensions": "2.8 x 19.6 x 12 cm",
+  "weight": "0.32 kg"
+ },
+ "BD-IR1865": {
+  "dimensions": "4.7 x 21 x 8.2 cm",
+  "weight": "0.2 kg"
+ },
+ "NEX-NHCF610": {
+  "dimensions": "27.1 x 28.9 x 28.9 cm",
+  "weight": "3.57 kg"
+ },
+ "HOM-47997": {
+  "dimensions": "4.6 x 20 x 13.3 cm",
+  "weight": "0.2 kg"
+ },
+ "CON-72610Z": {
+  "dimensions": "2 x 18.3 x 10 cm",
+  "weight": "75 kg"
+ },
+ "CON-88743": {
+  "dimensions": "4.6 x 20 x 13.3 cm",
+  "weight": "0.2 kg"
+ },
+ "CON-80053Z": {
+  "dimensions": "3 x 16.3 x 5 cm",
+  "weight": "0.1 kg"
+ },
+ "CON-80093Z": {
+  "dimensions": "4.6 x 20 x 13.3 cm",
+  "weight": "0.2 kg"
+ },
+ "CON-82902Z": {
+  "dimensions": "11.4 x 26 x 16 cm",
+  "weight": "0.9 kg"
+ },
+ "CON-95100Z": {
+  "dimensions": "11.5 x 24 x 12.8 cm",
+  "weight": "0.7 kg"
+ },
+ "CON-77203Z": {
+  "dimensions": "5.5 x 12 x 7.5 cm",
+  "weight": "0.1 kg"
+ },
+ "CON-95106Z": {
+  "dimensions": "0.05 x 22.3 x 7.2 cm",
+  "weight": "0.06 kg"
+ },
+ "CON-77204Z": {
+  "dimensions": "46.5 x 86.8 x 49.7 cm",
+  "weight": "22.5 kg"
+ },
+ "CON-82215Z": {
+  "dimensions": "3.5 x 29 x 20.3 cm",
+  "weight": "0.5 kg"
+ },
+ "CON-72607Z": {
+  "dimensions": "24 x 3.3 x 8 cm",
+  "weight": "0.16 kg"
+ },
+ "REM-PG6855A": {
+  "dimensions": "2.5 x 20.7 x 9 cm",
+  "weight": "0.1 kg"
+ },
+ "REM-S9100": {
+  "dimensions": "2.8 x 24 x 10 cm",
+  "weight": "0.1 kg"
+ },
+ "REM-D13A": {
+  "dimensions": "0.3 x 22.6 x 7.7 cm",
+  "weight": "75 kg"
+ },
+ "BD-SK1212B": {
+  "dimensions": "8.5 x 10 x 98.6 cm",
+  "weight": "1.9 kg"
+ },
+ "BD-BL2010WP-07LA": {
+  "weight": "2.1 kg"
+ },
+ "BD-BL2010WG-03LA": {
+  "weight": "2 kg"
+ },
+ "BD-KE2000SD": {
+  "dimensions": "20 x 41 x 72.5 cm",
+  "weight": "9.6 kg"
+ },
+ "CUI-CPT-540": {
+  "dimensions": "5.5 x 12 x 7.5 cm",
+  "weight": "0.1 kg"
+ },
+ "REM-AC8820": {
+  "dimensions": "5 x 5 x 5 cm",
+  "weight": "0.03 kg"
+ },
+ "REM-S8599": {
+  "dimensions": "13.7 x 26.2 x 27.3 cm",
+  "weight": "1.8 kg"
+ },
+ "BD-MC901": {
+  "dimensions": "35.6 x 86.5 x 55 cm",
+  "weight": "35.6 kg"
+ },
+ "BD-MCH14": {
+  "dimensions": "37 x 41 x 48 cm",
+  "weight": "6.8 kg"
+ },
+ "BD-HGS250-LA": {
+  "dimensions": "2 x 17.5 x 5 cm",
+  "weight": "0.02 kg"
+ },
+ "BL-BPP89RM": {
+  "dimensions": "28.2 x 37.4 x 35.7 cm",
+  "weight": "5.4 kg"
+ },
+ "BL-BPPC75": {
+  "dimensions": "30 x 34 x 43.5 cm",
+  "weight": "10 kg"
+ },
+ "BL-BPPAPRON": {
+  "dimensions": "24 x 25 x 40 cm",
+  "weight": "3.5 kg"
+ },
+ "BL-BPPCH": {
+  "dimensions": "7 x 23.5 x 48 cm",
+  "weight": "3 kg"
+ },
+ "BL-BPPC9375": {
+  "dimensions": "7 x 23.6 x 68.5 cm",
+  "weight": "5.5 kg"
+ },
+ "BL-BPPC10RM": {
+  "dimensions": "13.4 x 51 x 82.6 cm",
+  "weight": "5.7 kg"
+ },
+ "BD-CM1331S": {
+  "dimensions": "6 x 22.3 x 27.2 cm",
+  "weight": "0.6 kg"
+ },
+ "GOL-S1-GR": {
+  "dimensions": "16.5 x 28.5 x 39.6 cm",
+  "weight": "4 kg"
+ },
+ "BBL-AET-R1B1": {
+  "dimensions": "6.2 x 23.6 x 27.6 cm",
+  "weight": "0.4 kg"
+ },
+ "ELE-EWW083XSLB": {
+  "dimensions": "4.3 x 22.3 x 8.5 cm",
+  "weight": "0.22 kg"
+ },
+ "CUI-RWO-100": {
+  "dimensions": "3 x 17.5 x 14 cm",
+  "weight": "0.31 kg"
+ },
+ "CUI-CB-30P1": {
+  "dimensions": "3 x 17.5 x 11.5 cm",
+  "weight": "0.22 kg"
+ },
+ "CUI-CCO-55": {
+  "dimensions": "1.4 x 16 x 10.5 cm",
+  "weight": "0.08 kg"
+ },
+ "CUI-CEC-10": {
+  "dimensions": "4.1 x 16 x 9.5 cm",
+  "weight": "0.05 kg"
+ },
+ "BD-PR100SD": {
+  "dimensions": "4.2 x 29 x 22 cm",
+  "weight": "0.33 kg"
+ },
+ "BD-FP5501": {
+  "dimensions": "8.8 x 14.9 x 8.8 cm",
+  "weight": "0.17 kg"
+ },
+ "CUI-CPT-180P1": {
+  "dimensions": "8.6 x 26 x 13.1 cm",
+  "weight": "0.12 kg"
+ },
+ "CUI-CPT-142BKP1": {
+  "ean": "086279049476",
+  "dimensions": "9.4 x 20.1 x 10.1 cm",
+  "weight": "0.18 kg"
+ },
+ "WAH-03701": {
+  "dimensions": "4.5 x 16.5 x 30.3 cm",
+  "weight": "0.55 kg"
+ },
+ "WAH-09243-6408": {
+  "dimensions": "10.7 x 24.5 x 24.8 cm",
+  "weight": "1.33 kg"
+ },
+ "VV-6824606": {
+  "dimensions": "10.5 x 18 x 22 cm",
+  "weight": "1.4 kg"
+ },
+ "VV-9876606": {
+  "dimensions": "19.5 x 39.4 x 26.4 cm",
+  "weight": "2.3 kg"
+ },
+ "VV-18881606": {
+  "dimensions": "8 x 25.7 x 14.3 cm",
+  "weight": "0.4 kg"
+ },
+ "VV-18570606": {
+  "dimensions": "7 x 19 x 13.5 cm",
+  "weight": "0.22 kg"
+ },
+ "VV-8850606": {
+  "dimensions": "16.3 x 24.1 x 9.3 cm",
+  "weight": "0.42 kg"
+ },
+ "VV-77010606": {
+  "dimensions": "8.9 x 13.4 x 16 cm",
+  "weight": "0.5 kg"
+ },
+ "VV-886360": {
+  "dimensions": "9.5 x 20 x 3.9 cm",
+  "weight": "0.06 kg"
+ },
+ "VV-1854660": {
+  "dimensions": "6 x 36 x 12.7 cm",
+  "weight": "0.5 kg"
+ },
+ "VV-18553606": {
+  "dimensions": "8.8 x 2.3 x 12.7 cm",
+  "weight": "572 kg"
+ },
+ "VV-9875606": {
+  "dimensions": "11.2 x 28 x 20.5 cm",
+  "weight": "0.51 kg"
+ },
+ "VV-6492606": {
+  "dimensions": "10.8 x 23.8 x 29.5 cm",
+  "weight": "1.2 kg"
+ },
+ "VV-9812606": {
+  "dimensions": "12.7 x 35.48 x 7.1 cm",
+  "weight": "0.35 kg"
+ },
+ "VV-8542606": {
+  "dimensions": "6 x 36 x 12.7 cm",
+  "weight": "0.5 kg"
+ },
+ "VV-3630360": {
+  "dimensions": "3 x 9 x 3 cm",
+  "weight": "75 kg"
+ },
+ "VV-3645460": {
+  "dimensions": "3 x 26.5 x 17.5 cm",
+  "weight": "0.19 kg"
+ },
+ "VV-38804606": {
+  "dimensions": "6 x 26 x 12 cm",
+  "weight": "0.3 kg"
+ },
+ "VV-3983360": {
+  "dimensions": "3.6 x 14.7 x 8.2 cm",
+  "weight": "0.11 kg"
+ },
+ "VV-3983360-1": {
+  "dimensions": "5 x 24 x 12 cm",
+  "weight": "0.2 kg"
+ },
+ "VV-36255606": {
+  "dimensions": "2.5 x 28 x 12 cm",
+  "weight": "0.1 kg"
+ },
+ "VV-68405606": {
+  "dimensions": "15 x 27 x 27.5 cm",
+  "weight": "1.8 kg"
+ },
+ "CUI-HM200TBL": {
+  "dimensions": "18.7 x 91.5 x 15.5 cm",
+  "weight": "2.9 kg"
+ },
+ "CUI-HM200T": {
+  "dimensions": "16.5 x 48.6 x 19.7 cm",
+  "weight": "2 kg"
+ },
+ "REM-PG6125-F": {
+  "dimensions": "10.5 x 23 x 40 cm",
+  "weight": "1.3 kg"
+ },
+ "REM-TLG100A": {
+  "dimensions": "21 x 20.7 x 28 cm",
+  "weight": "1.7 kg"
+ },
+ "REM-R95": {
+  "dimensions": "13.6 x 35.8 x 19.7 cm",
+  "weight": "1415 kg"
+ },
+ "REM-R27A": {
+  "dimensions": "32 x 43 x 52.7 cm",
+  "weight": "8.7 kg"
+ },
+ "REM-NE3250": {
+  "dimensions": "12.5 x 16.2 x 28.6 cm",
+  "weight": "1075 kg"
+ },
+ "REM-S12A": {
+  "dimensions": "12.44 x 13.97 x 27.68 cm",
+  "weight": "1 kg"
+ },
+ "REM-D2400": {
+  "dimensions": "12.5 x 16.2 x 28.6 cm",
+  "weight": "1063 kg"
+ },
+ "REM-D3015": {
+  "dimensions": "13.9 x 17.1 x 32.4 cm",
+  "weight": "1.54 kg"
+ },
+ "REM-AC9140": {
+  "dimensions": "13.4 x 17 x 32 cm",
+  "weight": "1.8 kg"
+ },
+ "PHI-SVC1119R": {
+  "dimensions": "20.4 x 38 x 26.3 cm",
+  "weight": "2.8 kg"
+ },
+ "REM-CI63N1": {
+  "dimensions": "19.68 x 14.6 x 13.65 cm",
+  "weight": "0.94 kg"
+ },
+ "REM-S4A500": {
+  "dimensions": "12.6 x 4.9 x 12 cm",
+  "weight": "156 kg"
+ },
+ "REM-S6300M": {
+  "dimensions": "19 x 15 x 21 cm",
+  "weight": "1.2 kg"
+ },
+ "PHI-SVC1119L": {
+  "dimensions": "21 x 34 x 25 cm",
+  "weight": "3.2 kg"
+ },
+ "PHI-SVC1119M": {
+  "dimensions": "26 x 32.5 x 20.5 cm",
+  "weight": "2.88 kg"
+ },
+ "CUI-CTG00SCHP": {
+  "dimensions": "17 x 42 x 18 cm",
+  "weight": "3.98 kg"
+ },
+ "CUI-CTG003MPT": {
+  "dimensions": "26.5 x 39 x 28 cm",
+  "weight": "4 kg"
+ },
+ "PHI-SVC1119C": {
+  "dimensions": "10.5 x 38 x 10.5 cm",
+  "weight": "1.47 kg"
+ },
+ "CUI-C77-2PSHR8B7R": {
+  "dimensions": "16.3 x 23.5 x 24.2 cm",
+  "weight": "1.72 kg"
+ },
+ "CUI-CTG00S3MS": {
+  "dimensions": "37.3 x 37.3 x 63.8 cm",
+  "weight": "8.52 kg"
+ },
+ "CUI-CTG0013PS": {
+  "dimensions": "22.7 x 16.3 x 22.5 cm",
+  "weight": "1.34 kg"
+ },
+ "CUI-CTG-00-YS": {
+  "dimensions": "35 x 37.5 x 49.7 cm",
+  "weight": "3.07 kg"
+ },
+ "CUI-CTG00CP": {
+  "dimensions": "43.94 x 23.87 x 30.48 cm",
+  "weight": "4.58 kg"
+ },
+ "CUI-PRS-50": {
+  "dimensions": "44.37 x 32.25 x 39.29 cm",
+  "weight": "3.07 kg"
+ },
+ "CUI-MG-50": {
+  "dimensions": "34.29 x 9.14 x 34.03 cm",
+  "weight": "2.4 kg"
+ },
+ "BD-BDH2000PLA": {
+  "dimensions": "2 x 16 x 7.04 cm",
+  "weight": "0.02 kg"
+ },
+ "BD-PW1450TD-B3": {
+  "weight": "0.02 kg"
+ },
+ "BD-PI100LA-B3": {
+  "dimensions": "36.83 x 36.83 x 38.1 cm",
+  "weight": "1.9 kg"
+ },
+ "BD-VCBD603": {
+  "dimensions": "8.76 x 43 x 9.29 cm",
+  "weight": "0.92 kg"
+ },
+ "BD-VCBD8090": {
+  "dimensions": "10.92 x 18.28 x 36.49 cm",
+  "weight": "1.63 kg"
+ },
+ "BD-VCBD8530": {
+  "dimensions": "4.01 x 42.31 x 4.01 cm",
+  "weight": "0.72 kg"
+ },
+ "BD-IRBD100": {
+  "dimensions": "8 x 43.18 x 4 cm",
+  "weight": "0.5 kg"
+ },
+ "BD-IR3001": {
+  "dimensions": "23 x 42 x 3.81 cm",
+  "weight": "0.59 kg"
+ },
+ "BD-BL1650-05LA": {
+  "dimensions": "30 x 30 x 6.35 cm",
+  "weight": "0.9 kg"
+ },
+ "BD-BL1650-04LA": {
+  "dimensions": "31 x 41.14 x 1.27 cm",
+  "weight": "0.97 kg"
+ },
+ "BD-JE2400BD": {
+  "dimensions": "12 x 12.5 x 3.17 cm",
+  "weight": "1.1 kg"
+ },
+ "BD-SM1000W-WH": {
+  "dimensions": "8 x 16 x 21 cm",
+  "weight": "0.62 kg"
+ },
+ "BD-HB2400B": {
+  "dimensions": "26 x 43.48 x 12.7 cm",
+  "weight": "3.39 kg"
+ },
+ "BD-HB2800B": {
+  "dimensions": "3 x 43.48 x 26.67 cm",
+  "weight": "0.54 kg"
+ },
+ "BD-MX1500W": {
+  "dimensions": "1.9 x 27.3 x 4.44 cm",
+  "weight": "0.5 kg"
+ },
+ "BD-MX900": {
+  "dimensions": "67 x 35 x 26 cm",
+  "weight": "3.54 kg"
+ },
+ "BD-TO3260XSBD": {
+  "dimensions": "21 x 34 x 26 cm",
+  "weight": "4 kg"
+ },
+ "BD-RC503": {
+  "dimensions": "52 x 15 x 4 cm",
+  "weight": "0.6 kg"
+ },
+ "BD-RC514B": {
+  "dimensions": "10 x 15 x 4 cm",
+  "weight": "0.5 kg"
+ },
+ "BD-RC620W": {
+  "dimensions": "10 x 15 x 4 cm",
+  "weight": "0.5 kg"
+ },
+ "BD-RC628W": {
+  "dimensions": "6 x 12 x 6 cm",
+  "weight": "0.1 kg"
+ },
+ "BD-RC620SS": {
+  "dimensions": "14 x 11 x 5 cm",
+  "weight": "0.2 kg"
+ },
+ "BD-GD2011B": {
+  "dimensions": "8 x 8 x 5 cm",
+  "weight": "0.4 kg"
+ },
+ "BD-G49TD": {
+  "dimensions": "10 x 13 x 7 cm",
+  "weight": "0.2 kg"
+ },
+ "BD-TO1342W": {
+  "dimensions": "9 x 40 x 9 cm",
+  "weight": "0.8 kg"
+ },
+ "BD-JKCBD7876W": {
+  "dimensions": "18 x 14 x 18 cm",
+  "weight": "0.6 kg"
+ },
+ "BD-JKC681": {
+  "dimensions": "19 x 17 x 6 cm",
+  "weight": "0.5 kg"
+ },
+ "BD-DB1002B": {
+  "weight": "0.94 kg"
+ },
+ "BD-CM618": {
+  "dimensions": "8.6 x 5 x 10 cm",
+  "weight": "0.54 kg"
+ },
+ "KWI-HAL99590004": {
+  "dimensions": "19.68 x 35.56 x 22.86 cm",
+  "weight": "4.08 kg"
+ },
+ "CON-88730": {
+  "dimensions": "17.78 x 39.37 x 27.94 cm",
+  "weight": "3.9 kg"
+ },
+ "IRO-M611330": {
+  "dimensions": "6.6 x 35.86 x 18.09 cm",
+  "weight": "0.87 kg"
+ },
+ "SON-WIC100-BK": {
+  "dimensions": "6.35 x 35.06 x 18.08 cm",
+  "weight": "0.83 kg"
+ },
+ "SON-WIC100-BL": {
+  "dimensions": "7.92 x 26.67 x 20.95 cm",
+  "weight": "1.4 kg"
+ },
+ "SON-WIC100-WH": {
+  "dimensions": "20.62 x 26.03 x 7.62 cm",
+  "weight": "1.38 kg"
+ },
+ "NUT-NB48350MA-MG": {
+  "dimensions": "30.48 x 27.94 x 38.1 cm",
+  "weight": "3.86 kg"
+ },
+ "CUI-CCG-190RB": {
+  "dimensions": "15.24 x 31.11 x 19.05 cm",
+  "weight": "3.08 kg"
+ },
+ "CUI-CCG-216A": {
+  "dimensions": "1.09 x 10.49 x 40.97 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CGC-10244": {
+  "dimensions": "7.62 x 31.75 x 3.18 cm",
+  "weight": "0.19 kg"
+ },
+ "CUI-CGC-10118": {
+  "dimensions": "7.62 x 35.5 x 4.45 cm",
+  "weight": "0.15 kg"
+ },
+ "CUI-CGMT-140": {
+  "dimensions": "8.89 x 33.65 x 1.13 cm",
+  "weight": "0.13 kg"
+ },
+ "CUI-CPT-2140": {
+  "dimensions": "23.49 x 2.54 x 10.16 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CSBK-400": {
+  "dimensions": "31.75 x 3.18 x 7.62 cm",
+  "weight": "0.14 kg"
+ },
+ "CUI-CGS-1200": {
+  "dimensions": "33.65 x 3.17 x 7.62 cm",
+  "weight": "0.14 kg"
+ },
+ "CUI-CCB-5014": {
+  "dimensions": "6.68 x 3.17 x 34.29 cm",
+  "weight": "0.23 kg"
+ },
+ "CUI-CCB-4125": {
+  "dimensions": "3.3 x 6.85 x 18.89 cm",
+  "weight": "0.26 kg"
+ },
+ "CUI-CGR-600": {
+  "dimensions": "20.32 x 2.28 x 2.54 cm",
+  "weight": "0.17 kg"
+ },
+ "CUI-CPS-006": {
+  "dimensions": "0.9 x 5.01 x 5.01 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CPS-050": {
+  "dimensions": "60 x 85.1 x 48.5 cm",
+  "weight": "24.2 kg"
+ },
+ "CUI-CPS-445P": {
+  "dimensions": "25.5 x 108.6 x 17.1 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CPS-3216": {
+  "dimensions": "29.5 x 20.08 x 29.5 cm",
+  "weight": "2.44 kg"
+ },
+ "CUI-CMT-100": {
+  "dimensions": "24 x 19.5 x 19.5 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CPK-200": {
+  "dimensions": "13.5 x 28 x 49 cm",
+  "weight": "4.31 kg"
+ },
+ "CHE-RJ25M45BLACK": {
+  "dimensions": "15 x 26 x 35 cm",
+  "weight": "1.86 kg"
+ },
+ "BD-BL08761RDLA-RD": {
+  "dimensions": "5.5 x 28 x 48 cm",
+  "weight": "0.92 kg"
+ },
+ "BD-BL08764BDLA-BK": {
+  "dimensions": "7.7 x 28 x 48 cm",
+  "weight": "1.03 kg"
+ },
+ "BD-BL08763WDLA-WH": {
+  "dimensions": "6 x 20 x 37 cm",
+  "weight": "0.54 kg"
+ },
+ "BD-BL08762SDLA-GR": {
+  "dimensions": "6.5 x 24 x 43 cm",
+  "weight": "0.74 kg"
+ },
+ "BD-HC150B": {
+  "dimensions": "10.99 x 30.48 x 23.49 cm",
+  "weight": "1 kg"
+ },
+ "CON-CS2112": {
+  "dimensions": "5.08 x 5.08 x 31.24 cm",
+  "weight": "0.56 kg"
+ },
+ "CUI-RHM-100": {
+  "dimensions": "7.6 x 27.5 x 19.3 cm",
+  "weight": "0.45 kg"
+ },
+ "CUI-CPM-150": {
+  "dimensions": "16 x 34.18 x 15.84 cm",
+  "weight": "0.99 kg"
+ },
+ "CUI-CPT-7BK": {
+  "dimensions": "30.48 x 20.32 x 15.87 cm",
+  "weight": "1.89 kg"
+ },
+ "BD-EM0312-0SDLA": {
+  "dimensions": "30.48 x 27.94 x 38.1 cm",
+  "weight": "3.86 kg"
+ },
+ "CUI-CTG-04-LTH": {
+  "dimensions": "7.62 x 35.5 x 4.45 cm",
+  "weight": "0.15 kg"
+ },
+ "CUI-CTG-04-LSH": {
+  "dimensions": "8.89 x 33.65 x 6.35 cm",
+  "weight": "0.13 kg"
+ },
+ "CUI-CTG-04-P1": {
+  "dimensions": "24.13 x 2.54 x 7.62 cm",
+  "weight": "0.45 kg"
+ },
+ "CUI-CTG-04-SP": {
+  "dimensions": "31.75 x 3.18 x 7.62 cm",
+  "weight": "0.14 kg"
+ },
+ "CUI-CTG-22-LTT": {
+  "dimensions": "8.29 x 4.29 x 34.03 cm",
+  "weight": "0.23 kg"
+ },
+ "CUI-CTG-22-STT": {
+  "dimensions": "8.25 x 3.81 x 34.62 cm",
+  "weight": "0.23 kg"
+ },
+ "CUI-CTG-22-SST": {
+  "dimensions": "6.68 x 3.17 x 34.29 cm",
+  "weight": "0.23 kg"
+ },
+ "CUI-CTG-22-GPT": {
+  "dimensions": "3.3 x 6.85 x 18.89 cm",
+  "weight": "0.26 kg"
+ },
+ "CUI-CTG-22-P1T": {
+  "dimensions": "20.32 x 2.28 x 2.54 cm",
+  "weight": "0.17 kg"
+ },
+ "NUT-HBM1123": {
+  "dimensions": "10.49 x 16.51 x 10.31 cm",
+  "weight": "0.38 kg"
+ },
+ "NUT-HMB1121": {
+  "dimensions": "13 x 13 x 12 cm",
+  "weight": "0.17 kg"
+ },
+ "NUT-NBMVE015": {
+  "dimensions": "10.49 x 16.51 x 10.31 cm",
+  "weight": "0.48 kg"
+ },
+ "NUT-NBMVE016": {
+  "dimensions": "10.36 x 15.39 x 7.01 cm",
+  "weight": "0.25 kg"
+ },
+ "NUT-NBMBA028AMZ": {
+  "dimensions": "11.2 x 11.73 x 7.89 cm",
+  "weight": "0.5 kg"
+ },
+ "NUT-NBMVE001": {
+  "weight": "0.38 kg"
+ },
+ "NUT-ANBJP27": {
+  "weight": "1 kg"
+ },
+ "NUT-ANBFP64": {
+  "dimensions": "21.08 x 22.88 x 25.04 cm",
+  "weight": "1 kg"
+ },
+ "NUT-ANBEZBA002": {
+  "dimensions": "11.7 x 11.68 x 7.62 cm",
+  "weight": "0.38 kg"
+ },
+ "FIR-T07573": {
+  "dimensions": "69.85 x 66.29 x 75.69 cm",
+  "weight": "96 kg"
+ },
+ "REM-S31A-110F": {
+  "dimensions": "33 x 33 x 3 cm",
+  "weight": "0.4 kg"
+ },
+ "BL-SPRAY": {
+  "dimensions": "6.73 x 6.73 x 24.13 cm",
+  "weight": "1 kg"
+ },
+ "BD-RC514W": {
+  "dimensions": "29.5 x 20.08 x 29.5 cm",
+  "weight": "2.44 kg"
+ },
+ "BD-BL08762RDLA-RD": {
+  "dimensions": "18 x 40 x 26 cm",
+  "weight": "4 kg"
+ },
+ "CHE-RJ28-R-BK": {
+  "dimensions": "31.8 x 23.1 x 37.9 cm",
+  "weight": "0.5 kg"
+ },
+ "RES-93010": {
+  "dimensions": "6.4 x 20 x 40 cm",
+  "weight": "0.57 kg"
+ },
+ "RES-93012": {
+  "dimensions": "6.8 x 24 x 44 cm",
+  "weight": "0.75 kg"
+ },
+ "RES-93023": {
+  "dimensions": "5.3 x 26 x 46 cm",
+  "weight": "0.75 kg"
+ },
+ "RES-93052": {
+  "dimensions": "6.5 x 24 x 43 cm",
+  "weight": "0.74 kg"
+ },
+ "RES-95501": {
+  "dimensions": "3 x 18 x 35 cm",
+  "weight": "0.58 kg"
+ },
+ "RES-95504": {
+  "dimensions": "3 x 18 x 350 cm",
+  "weight": "0.58 kg"
+ },
+ "BD-SM602F-1WDLA": {
+  "dimensions": "13.99 x 26.49 x 26.11 cm",
+  "weight": "1.98 kg"
+ },
+ "BD-AFBD62-1BDLA": {
+  "dimensions": "35.5 x 33.6 x 38.8 cm",
+  "weight": "6.09 kg"
+ },
+ "BD-AFBD82-1BDLA": {
+  "dimensions": "36.5 x 35.45 x 45.8 cm",
+  "weight": "7.42 kg"
+ },
+ "BD-IG201": {
+  "dimensions": "11.8 x 34 x 53.5 cm",
+  "weight": "1 kg"
+ },
+ "BD-JMBD3181": {
+  "dimensions": "24.4 x 45.8 x 33.2 cm",
+  "weight": "1 kg"
+ },
+ "BD-BL1686-0SDLA": {
+  "dimensions": "25.3 x 38.3 x 27.6 cm",
+  "weight": "1 kg"
+ },
+ "BD-GS0311-0PDLA": {
+  "dimensions": "13 x 20 x 17.6 cm",
+  "weight": "1 kg"
+ },
+ "REM-D27A": {
+  "dimensions": "10.99 x 30.48 x 23.49 cm",
+  "weight": "1 kg"
+ },
+ "REM-F7001": {
+  "dimensions": "5 x 15 x 6 cm",
+  "weight": "0.25 kg"
+ },
+ "BD-HGS012P-LA": {
+  "ean": "50875003156",
+  "dimensions": "10 x 24 x 14.5 cm",
+  "weight": "0.8 kg"
+ },
+ "BD-IRBD350": {
+  "ean": "050875003897",
+  "dimensions": "15.2 x 12.7 x 30.5 cm",
+  "weight": "1.12 kg"
+ },
+ "REM-S33A": {
+  "dimensions": "12 x 6 x 6 cm",
+  "weight": "0.94 kg"
+ },
+ "REM-SFG2040": {
+  "dimensions": "4 x 4 x 15 cm",
+  "weight": "0.3 kg"
+ },
+ "CHE-RJ484MLWHITE-DSMX": {
+  "dimensions": "26 x 18 x 23 cm",
+  "weight": "1.9 kg"
+ },
+ "BD-ICR004B-LA": {
+  "ean": "50875004528",
+  "dimensions": "32 x 16 x 14 cm",
+  "weight": "1.5 kg"
+ },
+ "SUD-K1-PUR": {
+  "dimensions": "15 x 21 x 7.5 cm",
+  "weight": "0.5 kg"
+ },
+ "SUD-K1-BL": {
+  "dimensions": "15 x 21 x 7 cm",
+  "weight": "0.5 kg"
+ },
+ "SUD-R3-PK": {
+  "dimensions": "19 x 7 x 8 cm",
+  "weight": "0.8 kg"
+ },
+ "SUD-A3-PUR": {
+  "dimensions": "5.7 x 24 x 4.8 cm",
+  "weight": "0.03 kg"
+ },
+ "SUD-A3-WH": {
+  "dimensions": "5.7 x 24 x 4.8 cm",
+  "weight": "0.3 kg"
+ },
+ "SUD-A3-BK": {
+  "dimensions": "5.7 x 24 x 4.8 cm",
+  "weight": "0.03 kg"
+ },
+ "REM-PG6160A": {
+  "dimensions": "14 x 8.5 x 23.5 cm",
+  "weight": "0.27 kg"
+ },
+ "REM-R5011": {
+  "dimensions": "25.8 x 12.8 x 8 cm",
+  "weight": "0.31 kg"
+ },
+ "REM-XR7001": {
+  "ean": "74590558326",
+  "dimensions": "10 x 23 x 14 cm",
+  "weight": "0.5 kg"
+ },
+ "REM-D31A": {
+  "dimensions": "11 x 24 x 29.15 cm",
+  "weight": "1.217 kg"
+ },
+ "REM-D5805": {
+  "ean": "74590557671",
+  "dimensions": "9.7 x 22 x 28.5 cm",
+  "weight": "1 kg"
+ },
+ "REM-D26A": {
+  "ean": "074590557145",
+  "dimensions": "24 x 29.77 x 29.7 cm",
+  "weight": "0.85 kg"
+ },
+ "REM-AS8821-110F": {
+  "ean": "074590558333",
+  "dimensions": "35 x 17.5 x 9 cm",
+  "weight": "0.8 kg"
+ },
+ "BD-PC900": {
+  "dimensions": "29.2 x 27.7 x 42.2 cm",
+  "weight": "3.5 kg"
+ },
+ "BD-PC700": {
+  "ean": "050875528437",
+  "dimensions": "29.7 x 23.2 x 42.4 cm",
+  "weight": "3.2 kg"
+ },
+ "BD-PC500": {
+  "ean": "050875528444",
+  "dimensions": "27.2 x 22 x 39.7 cm",
+  "weight": "2.8 kg"
+ },
+ "BD-FS1200LA": {
+  "ean": "050875004436",
+  "dimensions": "7 x 20.5 x 8.7 cm",
+  "weight": "0.33 kg"
+ },
+ "BD-HFEJ415JWMF22-B3": {
+  "ean": "50875823389",
+  "dimensions": "20.5 x 70 x 25 cm",
+  "weight": "3.6 kg"
+ },
+ "BD-HLWVA325J21-B3": {
+  "ean": "50875004320",
+  "dimensions": "15.9 x 19 x 36 cm",
+  "weight": "1.3 kg"
+ },
+ "BD-IR1841": {
+  "ean": "50875827318",
+  "dimensions": "12 x 16 x 29 cm",
+  "weight": "1 kg"
+ },
+ "BD-IRBD352": {
+  "ean": "50875003903",
+  "dimensions": "12.5 x 15.5 x 30 cm",
+  "weight": "1.1 kg"
+ },
+ "BD-BL1686-0RDLA": {
+  "ean": "50875003323",
+  "dimensions": "25.7 x 39 x 27 cm",
+  "weight": "4.2 kg"
+ },
+ "BD-MX9125-0RDLA": {
+  "ean": "050875003262",
+  "dimensions": "26.39 x 27.3 x 43.99 cm",
+  "weight": "2.25 kg"
+ },
+ "BD-MX9125-0WDLA": {
+  "ean": "050875003248",
+  "dimensions": "26.39 x 27.3 x 43.99 cm",
+  "weight": "5.2 kg"
+ },
+ "BD-TR7827-1WDLA": {
+  "ean": "50875003309",
+  "dimensions": "16.7 x 18 x 28 cm",
+  "weight": "1.1 kg"
+ },
+ "BD-TO4120-1SDLA": {
+  "ean": "50875004450",
+  "dimensions": "30.5 x 24.2 x 43.7 cm",
+  "weight": "3.84 kg"
+ },
+ "BD-AFBD92-1BDLA": {
+  "ean": "050875004511",
+  "dimensions": "47.7 x 36 x 48.7 cm",
+  "weight": "1 kg"
+ },
+ "BD-KE7000B-LA-1274": {
+  "ean": "50875001374",
+  "dimensions": "22.5 x 31 x 22.5 cm",
+  "weight": "1.4 kg"
+ },
+ "BD-HGS600-LA": {
+  "ean": "050875005211",
+  "dimensions": "37 x 20.8 x 44 cm",
+  "weight": "4.5 kg"
+ },
+ "SUD-C1CBLK": {
+  "dimensions": "9 x 3 x 13 cm",
+  "weight": "0.1 kg"
+ },
+ "SUD-R3-WH": {
+  "dimensions": "19.7 x 17.3 x 7.8 cm",
+  "weight": "0.8 kg"
+ },
+ "REM-EC8930": {
+  "ean": "074590558692",
+  "dimensions": "24 x 31.7 x 10.4 cm",
+  "weight": "1.38 kg"
+ },
+ "REM-AS8930": {
+  "ean": "074590558715",
+  "dimensions": "6.7 x 37.1 x 15.2 cm",
+  "weight": "0.96 kg"
+ },
+ "REM-S8930": {
+  "ean": "074590558685",
+  "dimensions": "36.2 x 15.6 x 6.7 cm",
+  "weight": "0.88 kg"
+ },
+ "BD-CM0322-0SDLA": {
+  "ean": "050875005266",
+  "dimensions": "34.7 x 22.3 x 32.7 cm",
+  "weight": "2.3 kg"
+ },
+ "BD-CM0322-0BDLA": {
+  "ean": "050875005273",
+  "dimensions": "34.7 x 22.3 x 32.7 cm",
+  "weight": "2.23 kg"
+ },
+ "BD-HHVJ315JDP27-B3": {
+  "ean": "50875823358",
+  "dimensions": "16 x 19.7 x 43.5 cm",
+  "weight": "1.9 kg"
+ },
+ "BD-TR1227-0SDLA": {
+  "ean": "050875005204",
+  "dimensions": "20 x 18 x 28 cm",
+  "weight": "1.45 kg"
+ },
+ "REM-R3011": {
+  "ean": "074590557831",
+  "dimensions": "25 x 12 x 8 cm",
+  "weight": "0.33 kg"
+ },
+ "CUI-635C-16OP": {
+  "ean": "074590557831",
+  "dimensions": "8 x 34.3 x 17.27 cm",
+  "weight": "1 kg"
+ },
+ "CUI-719-16": {
+  "ean": "086279002228",
+  "dimensions": "16 x 12 x 33 cm",
+  "weight": "1.33 kg"
+ },
+ "CUI-722-20": {
+  "ean": "086279002228",
+  "dimensions": "20 x 8 x 38 cm",
+  "weight": "0.83 kg"
+ },
+ "CUI-722-24": {
+  "ean": "086279002280",
+  "dimensions": "20 x 8 x 38 cm",
+  "weight": "0.83 kg"
+ },
+ "CUI-C77SS-2PUTPK": {
+  "ean": "086279239914",
+  "dimensions": "10 x 34 x 2.5 cm",
+  "weight": "0.23 kg"
+ },
+ "CUI-CTG-00-BCR7": {
+  "ean": "086279039941",
+  "dimensions": "16.83 x 39.37 x 13.97 cm",
+  "weight": "1.54 kg"
+ },
+ "CUI-CTG-00-GS": {
+  "ean": "086279190130",
+  "dimensions": "5.59 x 4.32 x 26.67 cm",
+  "weight": "0.18 kg"
+ },
+ "CUI-CTG-00-NC": {
+  "ean": "086279125804",
+  "dimensions": "22.86 x 10.8 x 1.27 cm",
+  "weight": "0.25 kg"
+ },
+ "CUI-CTG-00-TIS": {
+  "ean": "086279126535",
+  "dimensions": "8.89 x 24.13 x 3.81 cm",
+  "weight": "0.06 kg"
+ },
+ "CUI-CTG-01-HG": {
+  "ean": "086279037091",
+  "dimensions": "10.8 x 30.48 x 2.54 cm",
+  "weight": "0.13 kg"
+ },
+ "CUI-CTG-20-P1": {
+  "ean": "086279167668",
+  "dimensions": "7.62 x 26.04 x 2.54 cm",
+  "weight": "0.09 kg"
+ },
+ "CUI-FPC2-24BK": {
+  "ean": "086279250148",
+  "dimensions": "48.26 x 10.92 x 25.4 cm",
+  "weight": "1.93 kg"
+ },
+ "CUI-CCJ-500P1": {
+  "ean": "086279183941",
+  "dimensions": "20 x 31 x 17.15 cm",
+  "weight": "1.63 kg"
+ },
+ "CUI-CPM-700NAS": {
+  "ean": "086279246172",
+  "dimensions": "28.26 x 37.47 x 27.62 cm",
+  "weight": "3.27 kg"
+ },
+ "CUI-CSK-150NAS": {
+  "ean": "086279245267",
+  "dimensions": "53.43 x 36.51 x 17.46 cm",
+  "weight": "4.36 kg"
+ },
+ "CUI-DCC-5570NAS": {
+  "ean": "086279244413",
+  "dimensions": "18.79 x 30.2 x 30.4 cm",
+  "weight": "1.95 kg"
+ },
+ "CUI-WM-SW2N1NAS": {
+  "ean": "086279245892",
+  "dimensions": "25.4 x 26.67 x 11.75 cm",
+  "weight": "1.77 kg"
+ },
+ "BD-TO6235-0SDLA": {
+  "ean": "050875005198",
+  "dimensions": "40 x 33 x 50.5 cm",
+  "weight": "7.18 kg"
+ },
+ "BD-CM0021-0BDLA": {
+  "ean": "050875005259",
+  "dimensions": "29.5 x 34 x 38 cm",
+  "weight": "0.5 kg"
+ },
+ "SUD-D1-BLK": {
+  "dimensions": "11.2 x 11 x 3.3 cm",
+  "weight": "0.4 kg"
+ },
+ "SUD-D1-WH": {
+  "ean": "817427025307",
+  "dimensions": "11.2 x 11 x 3.3 cm",
+  "weight": "0.4 kg"
+ },
+ "BD-AFBD42-3BDLA": {
+  "ean": "050875005716",
+  "dimensions": "26.3 x 28.1 x 34.5 cm",
+  "weight": "5.4 kg"
+ },
+ "BD-AFBD42-3WDLA": {
+  "ean": "050875005723",
+  "dimensions": "26.3 x 28.1 x 34.5 cm",
+  "weight": "5.4 kg"
+ },
+ "BD-BL0877-0BDLA": {
+  "ean": "050875003101",
+  "dimensions": "36.9 x 21.9 x 27 cm",
+  "weight": "2.45 kg"
+ },
+ "CUI-BL-9BKC": {
+  "ean": "068459310422",
+  "dimensions": "35.8 x 18.5 x 17.3 cm",
+  "weight": "1 kg"
+ },
+ "CUI-CPB-7BKC": {
+  "ean": "068459308870",
+  "dimensions": "15.24 x 37.44 x 13.97 cm",
+  "weight": "2.8 kg"
+ },
+ "CUI-HM-3BKC": {
+  "ean": "068459308450",
+  "dimensions": "76 x 30.5 x 20.3 cm",
+  "weight": "1.2 kg"
+ },
+ "CUI-CSB-87C": {
+  "ean": "068459256973",
+  "dimensions": "5 x 33 x 5 cm",
+  "weight": "1.72 kg"
+ },
+ "CUI-CHB-60BKC": {
+  "ean": "068459308474",
+  "dimensions": "6 x 39.37 x 6 cm",
+  "weight": "1.77 kg"
+ },
+ "CUI-DCC-5BKC": {
+  "ean": "068459308757",
+  "dimensions": "24.1 x 33.4 x 15 cm",
+  "weight": "3.15 kg"
+ },
+ "CUI-CPK-17C": {
+  "ean": "068459261984",
+  "dimensions": "15.54 x 24.77 x 22.23 cm",
+  "weight": "1.7 kg"
+ },
+ "CUI-CPK-20C": {
+  "ean": "068459217561",
+  "dimensions": "22.23 x 24.77 x 14.61 cm",
+  "weight": "1.75 kg"
+ },
+ "CUI-CPK1723BRFP": {
+  "ean": "086279232458",
+  "dimensions": "16 x 25 x 23 cm",
+  "weight": "1.75 kg"
+ },
+ "CUI-GK-17NC": {
+  "ean": "068459289209",
+  "dimensions": "12.7 x 22.9 x 17.8 cm",
+  "weight": "1.7 kg"
+ },
+ "CUI-GR-102C": {
+  "ean": "068459308412",
+  "dimensions": "26.87 x 17.78 x 26.87 cm",
+  "weight": "3.63 kg"
+ },
+ "CUI-ICE-FD10C": {
+  "ean": "068459321756",
+  "dimensions": "11.2 x 41.25 x 22.4 cm",
+  "weight": "2 kg"
+ },
+ "CUI-MG-220C": {
+  "ean": "068459308627",
+  "dimensions": "30.48 x 41.28 x 21.92 cm",
+  "weight": "5.81 kg"
+ },
+ "CUI-TOA-28BBC": {
+  "ean": "068459285508",
+  "dimensions": "39.37 x 40.64 x 35.56 cm",
+  "weight": "9.53 kg"
+ },
+ "CUI-AIR370BRFP": {
+  "ean": "086279232946",
+  "dimensions": "31.5 x 39.5 x 30.5 cm",
+  "weight": "4.3 kg"
+ },
+ "CUI-AIR700BRFP": {
+  "ean": "086279232960",
+  "dimensions": "33 x 37 x 38 cm",
+  "weight": "6 kg"
+ },
+ "CUI-PSC-350C": {
+  "ean": "068459255570",
+  "dimensions": "32.18 x 24.13 x 23.19 cm",
+  "weight": "3.6 kg"
+ },
+ "CUI-BJC-550C": {
+  "ean": "068459295187",
+  "dimensions": "22.45 x 31.6 x 16.36 cm",
+  "weight": "3.95 kg"
+ },
+ "CUI-DLC-2AC": {
+  "ean": "068459224644",
+  "dimensions": "17.78 x 23.5 x 12.7 cm",
+  "weight": "1.36 kg"
+ },
+ "CUI-CCH-3BKC": {
+  "ean": "068459308603",
+  "dimensions": "17.78 x 23.5 x 12.7 cm",
+  "weight": "1.36 kg"
+ },
+ "CUI-FP-5C": {
+  "ean": "068459323774",
+  "dimensions": "15.01 x 33.81 x 20.07 cm",
+  "weight": "4.2 kg"
+ },
+ "CUI-CPT-122BKC": {
+  "ean": "068459249760",
+  "dimensions": "27.94 x 18.29 x 16.51 cm",
+  "weight": "1.72 kg"
+ },
+ "CUI-CPT-160C": {
+  "ean": "068459229007"
+ },
+ "CUI-WAF-V400C": {
+  "ean": "068459284853",
+  "dimensions": "14.5 x 27.23 x 32.69 cm",
+  "weight": "2.3 kg"
+ },
+ "CUI-WAF-ST6C": {
+  "ean": "068459308580",
+  "dimensions": "11.43 x 19.56 x 21.41 cm",
+  "weight": "1.95 kg"
+ },
+ "CUI-WMR-CAC": {
+  "ean": "68459225054",
+  "dimensions": "20.02 x 24.61 x 8.41 cm",
+  "weight": "2.29 kg"
+ },
+ "BD-CBBD1746": {
+  "ean": "050875004177",
+  "dimensions": "40.8 x 29 x 44.2 cm",
+  "weight": "2.21 kg"
+ },
+ "CUI-TRC-H6SKC": {
+  "ean": "068459209887",
+  "dimensions": "3.4 x 30 x 24.8 cm",
+  "weight": "0.5 kg"
+ },
+ "CUI-54C-11BKC": {
+  "ean": "068459329851",
+  "dimensions": "61.91 x 35.56 x 28.26 cm",
+  "weight": "9.75 kg"
+ },
+ "SON-IEREX15C-BK": {
+  "ean": "027242933057",
+  "dimensions": "2.5 x 1.3 x 1.2 cm",
+  "weight": "0.01 kg"
+ },
+ "SON-IEREX15C-WH": {
+  "ean": "027242933064",
+  "dimensions": "2.5 x 1.3 x 1.2 cm",
+  "weight": "0.01 kg"
+ },
+ "SON-IEREX15C-BL": {
+  "ean": "027242933071",
+  "dimensions": "2.5 x 1.3 x 1.2 cm",
+  "weight": "0.01 kg"
+ },
+ "SON-IEREX15C-PK": {
+  "ean": "027242933330",
+  "dimensions": "2.5 x 1.3 x 1.2 cm",
+  "weight": "0.01 kg"
+ },
+ "SON-SRSULT50-BK": {
+  "dimensions": "32 x 13 x 14.4 cm",
+  "weight": "3.3 kg"
+ },
+ "SON-SRSULT30-BK": {
+  "dimensions": "25.6 x 11.3 x 7.9 cm",
+  "weight": "1.2 kg"
+ },
+ "SON-SRSULT10/BK": {
+  "dimensions": "20.6 x 7.7 x 7.59 cm",
+  "weight": "0.65 kg"
+ },
+ "RES-90515": {
+  "ean": "4260709012902",
+  "dimensions": "15.5 x 13 x 15 cm",
+  "weight": "0.35 kg"
+ },
+ "RES-90516": {
+  "ean": "4260709012919",
+  "dimensions": "15.5 x 13 x 15.5 cm",
+  "weight": "0.35 kg"
+ },
+ "RES-90534": {
+  "ean": "4260709013817",
+  "dimensions": "9.5 x 19.5 x 14.2 cm",
+  "weight": "0.43 kg"
+ },
+ "RES-90535": {
+  "ean": "4260709013824",
+  "dimensions": "9.5 x 19.5 x 14.2 cm",
+  "weight": "0.43 kg"
+ },
+ "RES-90601": {
+  "ean": "4260403577288",
+  "dimensions": "22 x 24 x 22 cm",
+  "weight": "0.83 kg"
+ },
+ "RES-90610": {
+  "ean": "4260709012872",
+  "dimensions": "21 x 23.5 x 21 cm",
+  "weight": "0.91 kg"
+ },
+ "RES-90611": {
+  "ean": "4260709012896",
+  "dimensions": "21 x 20 x 21 cm",
+  "weight": "0.84 kg"
+ },
+ "RES-92201": {
+  "ean": "4260709013701",
+  "dimensions": "16 x 9 x 16 cm",
+  "weight": "0.77 kg"
+ },
+ "RES-92205": {
+  "ean": "4260709013749",
+  "dimensions": "24 x 14 x 24 cm",
+  "weight": "1.53 kg"
+ },
+ "RES-93021": {
+  "ean": "4260403577554",
+  "dimensions": "22 x 46 x 42 cm",
+  "weight": "0.6 kg"
+ },
+ "RES-93053": {
+  "ean": "4260403578834",
+  "dimensions": "7 x 26 x 45 cm",
+  "weight": "0.85 kg"
+ },
+ "RES-93712": {
+  "ean": "4260709013763",
+  "dimensions": "7 x 28 x 20 cm",
+  "weight": "1.03 kg"
+ },
+ "RES-93065": {
+  "ean": "4260709014197",
+  "dimensions": "24 x 6.5 x 18 cm",
+  "weight": "1 kg"
+ },
+ "RES-95325": {
+  "ean": "4260403577608",
+  "dimensions": "13 x 7 x 23 cm",
+  "weight": "0.14 kg"
+ },
+ "RES-95347": {
+  "ean": "4260709014210",
+  "dimensions": "26 x 53 x 49 cm",
+  "weight": "1.06 kg"
+ },
+ "RES-95348": {
+  "ean": "4260709014227",
+  "dimensions": "28 x 55 x 51 cm",
+  "weight": "1.18 kg"
+ },
+ "RES-95349": {
+  "ean": "4260709013527",
+  "dimensions": "28 x 7.5 x 51 cm",
+  "weight": "1.42 kg"
+ },
+ "CUI-8919-14": {
+  "ean": "086279081599",
+  "dimensions": "32.05 x 16.81 x 11.73 cm",
+  "weight": "1.36 kg"
+ },
+ "BD-BL6010": {
+  "ean": "050875813144",
+  "dimensions": "42.69 x 31.99 x 29.04 cm",
+  "weight": "2 kg"
+ },
+ "BD-IR2023-1ODLA": {
+  "ean": "050875005990",
+  "dimensions": "15 x 12.6 x 32.8 cm",
+  "weight": "1.25 kg"
+ },
+ "BD-GS0541-0ODLA": {
+  "ean": "050875005297",
+  "dimensions": "30.5 x 15.4 x 24 cm",
+  "weight": "1.9 kg"
+ },
+ "SON-WHCH520-PK": {
+  "ean": "027242932425",
+  "dimensions": "9.6 x 30.98 x 16.51 cm",
+  "weight": "0.72 kg"
+ },
+ "SON-WIC100-CR": {
+  "ean": "027242923669",
+  "dimensions": "7.01 x 15.49 x 3.99 cm",
+  "weight": "0.5 kg"
+ },
+ "CUI-CPP-612P": {
+  "weight": "1 kg"
+ },
+ "CUI-C55CNS-8CFP": {
+  "ean": "086279096203",
+  "dimensions": "11.43 x 40.64 x 2.54 cm",
+  "weight": "0.24 kg"
+ }
+}
