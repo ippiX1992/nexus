@@ -1,1 +1,1 @@
-"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Sales Channels"><PlatformCollection kind="channels"/></Shell>}
+"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Canales de venta"><PlatformCollection kind="channels"/></Shell>}

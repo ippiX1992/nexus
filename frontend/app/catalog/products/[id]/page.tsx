@@ -86,7 +86,7 @@ async function saveSpecifications(event:FormEvent<HTMLFormElement>){
  }catch(e){setError(technicalError(e))}
 }
 
-return <Shell title="Product detail">{loading&&!detail?<p>Cargando…</p>:detail&&<>
+return <Shell title="Detalle de producto">{loading&&!detail?<p>Cargando…</p>:detail&&<>
  <div className="tile">
   <strong>{detail.translations[0]?.name??detail.product.code??detail.product.id}</strong>
   <p>{detail.product.status} · v{detail.product.version} · activo no significa publicado</p>

@@ -32,7 +32,7 @@ export default function Page(){
   catch(e){setError(technicalError(e))}
  }
 
- return <AdminShell title="Warehouses" description="Centros físicos o lógicos que guardan stock. Cada uno agrupa Locations y se asigna a Store/Channel/Market para asignación (allocation).">
+ return <AdminShell title="Bodegas" description="Centros físicos o lógicos que guardan stock. Cada uno agrupa Locations y se asigna a Store/Channel/Market para asignación (allocation).">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Warehouse</strong>
    <label>Código<input name="code" required/></label>

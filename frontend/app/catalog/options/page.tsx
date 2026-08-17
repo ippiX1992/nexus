@@ -59,7 +59,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <AdminShell title="Options" description="Dimensiones que generan combinaciones de Variant (Color, Talla). Para atributos descriptivos, ver Attributes.">
+ return <AdminShell title="Opciones" description="Dimensiones que generan combinaciones de Variant (Color, Talla). Para atributos descriptivos, ver Attributes.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Option</strong>
    <label>Código<input name="code" required/></label>

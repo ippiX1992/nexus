@@ -89,8 +89,8 @@ export default function Page(){
   catch(e){setError(technicalError(e))}
  }
 
- if(loading&&!warehouse)return <AdminShell title="Warehouse">Cargando…</AdminShell>;
- if(!warehouse)return <AdminShell title="Warehouse"><p className="error" role="alert">{error||"No encontrado"}</p></AdminShell>;
+ if(loading&&!warehouse)return <AdminShell title="Bodega">Cargando…</AdminShell>;
+ if(!warehouse)return <AdminShell title="Bodega"><p className="error" role="alert">{error||"No encontrado"}</p></AdminShell>;
 
  return <AdminShell title={warehouse.name} description={`${warehouse.code} · ${warehouse.status}`}>
   <h2>Locations</h2>

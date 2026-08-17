@@ -70,7 +70,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <AdminShell title="Product Types" description="Define qué Attributes aplican a cada tipo de producto.">
+ return <AdminShell title="Tipos de producto" description="Define qué Attributes aplican a cada tipo de producto.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Product Type</strong>
    <label>Código<input name="code" required/></label>

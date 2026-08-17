@@ -105,8 +105,8 @@ export default function Page(){
   catch(e){setError(technicalError(e))}
  }
 
- if(loading&&!priceList)return <AdminShell title="Price List">Cargando…</AdminShell>;
- if(!priceList)return <AdminShell title="Price List"><p className="error" role="alert">{error||"No encontrado"}</p></AdminShell>;
+ if(loading&&!priceList)return <AdminShell title="Lista de precios">Cargando…</AdminShell>;
+ if(!priceList)return <AdminShell title="Lista de precios"><p className="error" role="alert">{error||"No encontrado"}</p></AdminShell>;
 
  return <AdminShell
   title={priceList.name}

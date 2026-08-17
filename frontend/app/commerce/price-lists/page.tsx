@@ -37,7 +37,7 @@ export default function Page(){
   catch(e){setError(technicalError(e))}
  }
 
- return <AdminShell title="Price Lists" description="Listas de precios por moneda. Se asignan a Store, Channel o Market con prioridad y vigencia.">
+ return <AdminShell title="Listas de precios" description="Listas de precios por moneda. Se asignan a Store, Channel o Market con prioridad y vigencia.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Price List</strong>
    <label>Código<input name="code" required/></label>

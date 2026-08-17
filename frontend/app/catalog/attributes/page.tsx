@@ -75,7 +75,7 @@ export default function Page(){
   }catch(e){setError(technicalError(e))}
  }
 
- return <AdminShell title="Attributes" description="Características informativas de un producto (Potencia, Material). Para combinaciones de Variant, ver Options.">
+ return <AdminShell title="Atributos" description="Características informativas de un producto (Potencia, Material). Para combinaciones de Variant, ver Options.">
   {canManage&&<form className="tile" onSubmit={submit}>
    <strong>Crear Attribute</strong>
    <label>Código<input name="code" required/></label>

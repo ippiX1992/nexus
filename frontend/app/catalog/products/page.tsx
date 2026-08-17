@@ -44,7 +44,7 @@ export default function Page() {
 
   return (
     <AdminShell
-      title="Products"
+      title="Productos"
       description={search ? `Resultados para "${search}"` : "Catálogo de productos del tenant activo."}
       actions={
         permissions.includes("catalog.product.create") && (
