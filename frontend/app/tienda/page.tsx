@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
+import { SkeletonGrid } from "@/components/store/Skeletons";
 import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
 
 type Section = { category: StoreCategory; items: StoreProduct[] };
@@ -98,7 +99,15 @@ export default function StorePage() {
     }
   }
 
-  if (loading) return <div className="sf-grid-wrap"><p className="sf-muted">Cargando productos…</p></div>;
+  if (loading)
+    return (
+      <div className="sf-grid-wrap">
+        <div className="sf-grid-head">
+          <span className="sf-skel sf-skel-heading" />
+        </div>
+        <SkeletonGrid />
+      </div>
+    );
   if (error) return <div className="sf-grid-wrap"><p className="sf-error">No se pudo cargar la tienda: {error}</p></div>;
 
   if (isHome) {

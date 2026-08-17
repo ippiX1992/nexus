@@ -1480,17 +1480,129 @@
   }
 }
 
+/* Benefits / trust bar */
+.sf-benefits {
+  background: var(--az-surface);
+  border-bottom: 1px solid var(--az-border);
+}
+.sf-benefits-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  justify-content: center;
+  font-size: 0.82rem;
+  color: var(--az-text);
+}
+.sf-benefits-inner b {
+  font-size: 0.95rem;
+}
+
+/* Skeletons */
+@keyframes sf-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.sf-skel {
+  background: #e9ecec;
+  background-image: linear-gradient(90deg, #e9ecec 0px, #f4f6f6 200px, #e9ecec 400px);
+  background-size: 800px 100%;
+  animation: sf-shimmer 1.3s linear infinite;
+  border-radius: 6px;
+}
+.sf-skel-card {
+  background: var(--az-surface);
+  border: 1px solid #e7e7e7;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sf-skel-img {
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+}
+.sf-skel-line {
+  height: 12px;
+}
+.sf-skel-line.short {
+  width: 60%;
+}
+.sf-skel-price {
+  height: 20px;
+  width: 40%;
+  margin-top: 4px;
+}
+.sf-skel-btn {
+  height: 32px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.sf-skel-heading {
+  display: inline-block;
+  height: 20px;
+  width: 180px;
+}
+
 /* Footer */
 .sf-footer {
   margin-top: auto;
   background: var(--az-dark2);
   color: #dcdcdc;
-  padding: 26px 20px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+}
+.sf-footer-cols {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 34px 20px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 26px;
+}
+.sf-footer-cols h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: #fff;
+}
+.sf-footer-cols a,
+.sf-footer-cols span {
+  display: block;
+  color: #cfd6dc;
+  text-decoration: none;
   font-size: 0.85rem;
+  padding: 4px 0;
+}
+.sf-footer-cols a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+.sf-pay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sf-pay span {
+  border: 1px solid #48566a;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e8edf2;
+}
+.sf-footer-note {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #aeb8c2;
+}
+.sf-footer-bottom {
+  border-top: 1px solid #3a4657;
+  background: var(--az-dark);
+  color: #aeb8c2;
+  text-align: center;
+  padding: 16px 20px;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 760px) {
