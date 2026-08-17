@@ -57,28 +57,25 @@ export function Topbar({
           {tenantName ?? "…"}
         </span>
         <select
-          aria-label="Store global activo"
-          title="Store activo"
+          aria-label="Tienda activa"
+          title="Tienda activa"
           value={activeStoreId}
           onChange={(event) => onStoreChange(event.target.value)}
           className="max-w-52 rounded-md border border-line bg-bg px-2 py-1 text-xs text-text"
         >
-          <option value="">Sin Store</option>
+          <option value="">Todas las tiendas</option>
           {stores.filter((store) => store.status !== "archived").map((store) => (
             <option key={store.id} value={store.id}>{store.name}</option>
           ))}
         </select>
-        <span className="hidden truncate rounded-md bg-white/5 px-2 py-1 text-muted/60 xl:inline" title="Environment activo (pendiente)">
-          Environment: —
-        </span>
       </div>
 
       <form onSubmit={search} className="ml-auto min-w-0 flex-1 lg:flex-none">
         <input
           name="q"
           type="search"
-          placeholder="Buscar productos…"
-          aria-label="Buscar"
+          placeholder="Buscar producto o SKU…"
+          aria-label="Buscar producto o SKU"
           className="w-full max-w-[10rem] rounded-lg border border-line bg-bg px-3 py-1.5 text-sm text-text placeholder:text-muted/60 focus:border-brand focus:outline-none sm:max-w-xs"
         />
       </form>

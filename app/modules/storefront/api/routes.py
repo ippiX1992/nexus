@@ -771,6 +771,18 @@ async def admin_metrics(
             text("SELECT count(*) AS orders, COALESCE(SUM(subtotal + shipping_amount - discount_amount), 0) AS revenue FROM storefront_orders")
         )
     ).first()
+    # "Hoy" en hora de Ecuador (America/Guayaquil), no en UTC, para que el corte
+    # de día coincida con lo que ve el administrador.
+    today = (
+        await session.execute(
+            text(
+                "SELECT count(*) AS orders, COALESCE(SUM(subtotal + shipping_amount - discount_amount), 0) AS revenue "
+                "FROM storefront_orders "
+                "WHERE (created_at AT TIME ZONE 'America/Guayaquil')::date "
+                "    = (now() AT TIME ZONE 'America/Guayaquil')::date"
+            )
+        )
+    ).first()
     by_status = {
         row.status: row.n
         for row in (await session.execute(text("SELECT status, count(*) AS n FROM storefront_orders GROUP BY status"))).all()
@@ -783,7 +795,64 @@ async def admin_metrics(
             )
         )
     ).all()
-    inventory = (
+    recent = (
+        await session.execute(
+            text(
+                "SELECT order_number, customer_name, status, "
+                "(subtotal + shipping_amount - discount_amount) AS total, created_at "
+                "FROM storefront_orders ORDER BY created_at DESC LIMIT 6"
+            )
+        )
+    ).all()
+    # Resumen de inventario agregado por variante (una variante puede vivir en
+    # varias ubicaciones): disponible = on_hand - reservado.
+    inv_sum = (
+        await session.execute(
+            text(
+                """
+                WITH v AS (
+                    SELECT variant_id,
+                           SUM(available) AS avail,
+                           SUM(reserved)  AS reserved,
+                           SUM(incoming)  AS incoming
+                    FROM inventory_stock_levels GROUP BY variant_id
+                )
+                SELECT COALESCE(SUM(avail), 0)                        AS available,
+                       COALESCE(SUM(reserved), 0)                     AS reserved,
+                       COALESCE(SUM(incoming), 0)                     AS incoming,
+                       COUNT(*) FILTER (WHERE avail <= 0)             AS out_of_stock,
+                       COUNT(*) FILTER (WHERE avail > 0 AND avail <= 5) AS low_stock
+                FROM v
+                """
+            )
+        )
+    ).first()
+    low_stock_items = (
+        await session.execute(
+            text(
+                """
+                WITH v AS (
+                    SELECT variant_id,
+                           SUM(available) AS avail,
+                           SUM(reserved)  AS reserved,
+                           SUM(incoming)  AS incoming
+                    FROM inventory_stock_levels GROUP BY variant_id
+                )
+                SELECT COALESCE(t.name, p.code, cv.sku) AS name, cv.sku AS sku,
+                       v.avail AS available, v.reserved AS reserved, v.incoming AS incoming
+                FROM v
+                JOIN catalog_product_variants cv ON cv.id = v.variant_id
+                JOIN catalog_products p ON p.id = cv.product_id AND p.tenant_id = cv.tenant_id
+                LEFT JOIN catalog_product_translations t
+                  ON t.product_id = p.id AND t.tenant_id = p.tenant_id AND t.locale = 'es-EC'
+                WHERE v.avail <= 5
+                ORDER BY v.avail ASC, name
+                LIMIT 8
+                """
+            )
+        )
+    ).all()
+    inv_value = (
         await session.execute(
             text(
                 """
@@ -795,13 +864,45 @@ async def admin_metrics(
             )
         )
     ).first()
+    transfers_in_transit = (
+        await session.execute(text("SELECT count(*) FROM inventory_transfers WHERE status = 'in_transit'"))
+    ).scalar() or 0
     products = (await session.execute(text("SELECT count(*) FROM catalog_products WHERE status = 'active'"))).scalar() or 0
     return {
         "orders": int(summary.orders or 0),
         "revenue": str(summary.revenue or 0),
+        "today": {"orders": int(today.orders or 0), "revenue": str(today.revenue or 0)},
         "by_status": {k: int(v) for k, v in by_status.items()},
         "top_products": [{"name": r.name, "qty": int(r.qty), "revenue": str(r.revenue)} for r in top],
-        "inventory_value": str(inventory.value or 0),
-        "inventory_units": int(inventory.units or 0),
+        "recent_orders": [
+            {
+                "order_number": r.order_number,
+                "customer_name": r.customer_name,
+                "status": r.status,
+                "total": str(r.total),
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in recent
+        ],
+        "inventory": {
+            "available": int(inv_sum.available or 0),
+            "reserved": int(inv_sum.reserved or 0),
+            "incoming": int(inv_sum.incoming or 0),
+            "out_of_stock": int(inv_sum.out_of_stock or 0),
+            "low_stock": int(inv_sum.low_stock or 0),
+        },
+        "low_stock_items": [
+            {
+                "name": r.name,
+                "sku": r.sku,
+                "available": int(r.available or 0),
+                "reserved": int(r.reserved or 0),
+                "incoming": int(r.incoming or 0),
+            }
+            for r in low_stock_items
+        ],
+        "transfers_in_transit": int(transfers_in_transit),
+        "inventory_value": str(inv_value.value or 0),
+        "inventory_units": int(inv_value.units or 0),
         "products": int(products),
     }
