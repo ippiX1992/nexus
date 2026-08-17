@@ -82,13 +82,21 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           <span aria-hidden="true">☰</span> Todos
         </button>
         {departments.map((category) => (
-          <Link
-            key={category.slug}
-            href={`/tienda?category=${category.slug}`}
-            className={`az-sub-link${activeCategory === category.slug ? " active" : ""}`}
-          >
-            {category.name}
-          </Link>
+          <div className="az-dept" key={category.slug}>
+            <Link href={`/tienda?category=${category.slug}`} className={`az-sub-link${activeCategory === category.slug ? " active" : ""}`}>
+              {category.name}
+            </Link>
+            {category.children && category.children.length > 0 && (
+              <div className="az-dept-menu">
+                {category.children.map((child) => (
+                  <Link key={child.slug} href={`/tienda?category=${child.slug}`}>
+                    {child.name}
+                    <span>{child.product_count}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

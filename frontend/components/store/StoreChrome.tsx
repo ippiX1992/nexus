@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { CartProvider } from "./cart";
 import { CartDrawer } from "./CartDrawer";
+import { QuickView } from "./QuickView";
 import { StoreHeader } from "./StoreHeader";
+import { Toast, UIProvider } from "./ui";
 import { WishlistProvider } from "./wishlist";
 
 const BENEFITS = [
@@ -15,9 +17,10 @@ const BENEFITS = [
 
 export function StoreChrome({ storeName, children }: { storeName: string; children: ReactNode }) {
   return (
-    <WishlistProvider>
-      <CartProvider>
-        <div className="sf-root">
+    <UIProvider>
+      <WishlistProvider>
+        <CartProvider>
+          <div className="sf-root">
           <StoreHeader storeName={storeName} />
           <div className="sf-benefits">
             <div className="sf-benefits-inner">
@@ -68,9 +71,12 @@ export function StoreChrome({ storeName, children }: { storeName: string; childr
               © {new Date().getFullYear()} {storeName} · Tienda demo sobre Nexus · Precios y stock en vivo
             </div>
           </footer>
-          <CartDrawer />
-        </div>
-      </CartProvider>
-    </WishlistProvider>
+            <CartDrawer />
+            <QuickView />
+            <Toast />
+          </div>
+        </CartProvider>
+      </WishlistProvider>
+    </UIProvider>
   );
 }

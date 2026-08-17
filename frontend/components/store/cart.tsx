@@ -50,7 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) return prev.map((line) => (line.slug === item.slug ? { ...line, qty: Math.min(max, line.qty + qty) } : line));
       return [...prev, { ...item, qty: Math.min(max, Math.max(1, qty)) }];
     });
-    setOpen(true);
+    // Feedback is a toast (see UIProvider), not a forced drawer open.
   }, []);
 
   const setQty = useCallback((slug: string, qty: number) => {

@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useCart } from "@/components/store/cart";
 import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
+import { useUI } from "@/components/store/ui";
 import { useWishlist } from "@/components/store/wishlist";
 import { createReview, formatPrice, getReviews, storeProduct, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
 
@@ -13,6 +14,7 @@ export default function ProductPage() {
   const slug = String(params.slug);
   const { add } = useCart();
   const { has, toggle } = useWishlist();
+  const { showToast } = useUI();
   const [product, setProduct] = useState<StoreProductDetail | null>(null);
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
@@ -65,9 +67,17 @@ export default function ProductPage() {
 
   return (
     <article className="sf-detail">
-      <Link className="sf-back" href="/tienda">
-        ← Volver al catálogo
-      </Link>
+      <nav className="sf-crumbs" aria-label="Ruta">
+        <Link href="/tienda">Inicio</Link>
+        <span>›</span>
+        {product.brand && (
+          <>
+            <span>{product.brand}</span>
+            <span>›</span>
+          </>
+        )}
+        <span className="sf-crumbs-current">{product.name.length > 60 ? `${product.name.slice(0, 60)}…` : product.name}</span>
+      </nav>
       <div className="sf-detail-grid">
         <div className="sf-detail-gallery">
           <div className="sf-detail-media">
@@ -116,12 +126,13 @@ export default function ProductPage() {
               </div>
               <button
                 className="sf-add sf-add-lg"
-                onClick={() =>
+                onClick={() => {
                   add(
                     { slug: product.slug, name: product.name, price, sku: product.sku, currency: product.currency, available: product.available },
                     qty,
-                  )
-                }
+                  );
+                  showToast("Agregado al carrito ✓");
+                }}
               >
                 Agregar al carrito
               </button>
