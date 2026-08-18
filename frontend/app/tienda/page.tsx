@@ -61,7 +61,7 @@ export default function StorePage() {
         if (isHome) {
           const [cats, dealItems, newestItems, randomItems] = await Promise.all([
             storeCategories(),
-            storeProducts("", "", 12),
+            storeProducts("", "", 12, 0, "random"),
             storeProducts("", "", 16, 0, "newest"),
             storeProducts("", "", 16, 0, "random"),
           ]);
