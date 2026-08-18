@@ -19,6 +19,7 @@
   min-height: 100vh;
   background: var(--az-bg);
   color: var(--az-text);
+  color-scheme: light;
   font-family: "Amazon Ember", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   display: flex;
   flex-direction: column;
@@ -27,6 +28,24 @@
 .sf-root *::before,
 .sf-root *::after {
   box-sizing: border-box;
+}
+/* Storefront headings default to the dark ink so they never inherit the admin
+   panel's light heading color. Dark-background headings (hero, footer) override
+   this explicitly below. */
+.sf-root h1,
+.sf-root h2,
+.sf-root h3,
+.sf-root h4 {
+  color: var(--az-text);
+}
+/* Native form controls always render on a light surface, regardless of the OS
+   color-scheme. Controls with their own background (search, sort, disabled)
+   override this via higher specificity below. */
+.sf-root input,
+.sf-root select,
+.sf-root textarea {
+  background-color: var(--az-surface);
+  color: var(--az-text);
 }
 
 /* ===== Header ===== */
@@ -336,6 +355,7 @@
   font-size: clamp(1.6rem, 3.6vw, 2.7rem);
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: #fff;
   max-width: 640px;
 }
 .az-hero-copy p {
@@ -1274,6 +1294,8 @@
   font-size: 0.85rem;
 }
 .sf-coupon button {
+  flex: 0 0 auto;
+  width: auto;
   border: 1px solid var(--az-border);
   background: #fff;
   border-radius: 8px;
@@ -1281,6 +1303,10 @@
   font-size: 0.85rem;
   cursor: pointer;
   font-weight: 600;
+  color: var(--az-text);
+}
+.sf-coupon button:hover {
+  background: #f2f2f2;
 }
 .sf-coupon-msg {
   margin: 0 0 4px;
