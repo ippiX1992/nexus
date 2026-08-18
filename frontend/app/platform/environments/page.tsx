@@ -1,1 +1,1 @@
-"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Ambientes"><PlatformCollection kind="environments"/></Shell>}
+"use client";import{AdminShell}from"@/components/admin/AdminShell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <AdminShell title="Ambientes"><PlatformCollection kind="environments"/></AdminShell>}

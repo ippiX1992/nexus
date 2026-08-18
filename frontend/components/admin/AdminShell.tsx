@@ -9,7 +9,7 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { PageHeader } from "./PageHeader";
 import { breadcrumbsForPath, type NavItem } from "./nav";
 
-type Identity = { tenantName?: string; userName?: string; stores: Store[]; activeStoreId: string };
+import { getIdentityCache, type Identity, setIdentityCache } from "@/lib/identityCache";
 
 export function AdminShell({
   title,
@@ -27,7 +27,7 @@ export function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [identity, setIdentity] = useState<Identity>({ stores: [], activeStoreId: "" });
+  const [identity, setIdentity] = useState<Identity>(getIdentityCache() ?? { stores: [], activeStoreId: "" });
 
   useEffect(() => {
     let active = true;
@@ -44,8 +44,11 @@ export function AdminShell({
         const storedId = activeStore() ?? "";
         const activeStoreId = stores.some((store) => store.id === storedId && store.status !== "archived") ? storedId : "";
         if (storedId && !activeStoreId) selectStore(null);
-        setIdentity({ tenantName, userName: user.full_name, stores, activeStoreId });
+        const next = { tenantName, userName: user.full_name, stores, activeStoreId };
+        setIdentityCache(next);
+        setIdentity(next);
       } catch {
+        setIdentityCache(null);
         router.replace("/");
       }
     })();

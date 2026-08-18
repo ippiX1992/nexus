@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { api } from "@/lib/api";
+import { setIdentityCache } from "@/lib/identityCache";
 import type { Store } from "@/lib/platform";
 
 export function Topbar({
@@ -31,6 +32,7 @@ export function Topbar({
       sessionStorage.removeItem("access_token");
       sessionStorage.removeItem("challenge_token");
       sessionStorage.removeItem("active_store_id");
+      setIdentityCache(null);
       router.replace("/");
     }
   }

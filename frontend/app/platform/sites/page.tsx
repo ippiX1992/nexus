@@ -1,1 +1,1 @@
-"use client";import{Shell}from"@/components/Shell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <Shell title="Sitios"><PlatformCollection kind="sites"/></Shell>}
+"use client";import{AdminShell}from"@/components/admin/AdminShell";import{PlatformCollection}from"@/components/PlatformCollection";export default function Page(){return <AdminShell title="Sitios"><PlatformCollection kind="sites"/></AdminShell>}
