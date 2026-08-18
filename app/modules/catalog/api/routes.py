@@ -474,11 +474,34 @@ async def list_products(
         translations = await repository.list_translations(ctx.tenant_id, row.id)
         variants, _ = await repository.list_variants(ctx.tenant_id, row.id, limit=100, cursor=None)
         default = next((variant for variant in variants if variant.is_default), None)
+        # Primary category name (for the admin list column).
+        category = (
+            await db.execute(
+                text(
+                    "SELECT c.name FROM catalog_product_categories pc "
+                    "JOIN catalog_categories c ON c.id = pc.category_id AND c.tenant_id = pc.tenant_id "
+                    "WHERE pc.product_id = :pid AND pc.tenant_id = :tenant "
+                    "ORDER BY pc.is_primary DESC NULLS LAST LIMIT 1"
+                ),
+                {"pid": row.id, "tenant": ctx.tenant_id},
+            )
+        ).scalar()
+        # Available stock across the default variant's locations.
+        stock = None
+        if default is not None:
+            stock = (
+                await db.execute(
+                    text("SELECT COALESCE(SUM(available), 0) FROM inventory_stock_levels WHERE variant_id = :vid AND tenant_id = :tenant"),
+                    {"vid": default.id, "tenant": ctx.tenant_id},
+                )
+            ).scalar()
         items.append(
             ProductSummary(
                 **ProductResponse.model_validate(row).model_dump(),
                 name=translations[0].name if translations else None,
                 default_sku=default.sku if default else None,
+                category=category,
+                stock=int(stock) if stock is not None else None,
             )
         )
     return ProductPage(items=items, next_cursor=_next_cursor(rows, has_more), has_more=has_more)

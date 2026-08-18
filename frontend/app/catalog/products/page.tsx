@@ -45,8 +45,10 @@ export default function Page() {
 
   const columns: Column<Product>[] = [
     { key: "name", header: "Producto", render: (p) => <span className="font-medium text-text">{p.name ?? p.code ?? "—"}</span> },
-    { key: "default_sku", header: "SKU", render: (p) => <span className="text-muted">{p.default_sku ?? "Sin SKU"}</span> },
+    { key: "default_sku", header: "SKU", render: (p) => <span className="text-muted">{p.default_sku ?? "Sin SKU"}</span>, hideOnMobile: true },
+    { key: "category", header: "Categoría", render: (p) => <span className="text-muted">{p.category ?? "—"}</span>, hideOnMobile: true },
     { key: "status", header: "Estado", render: (p) => <StatusBadge status={p.status} /> },
+    { key: "stock", header: "Stock", align: "right", render: (p) => (p.stock == null ? "—" : <span className={p.stock <= 0 ? "text-red-300" : p.stock <= 5 ? "text-amber-300" : "text-text"}>{p.stock}</span>) },
   ];
 
   return (

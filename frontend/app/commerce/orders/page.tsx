@@ -24,6 +24,13 @@ type Order = {
 type OrderDetail = Order & {
   customer_phone?: string | null;
   shipping_address?: string | null;
+  shipping_province?: string | null;
+  shipping_city?: string | null;
+  shipping_method?: string | null;
+  shipping_amount?: string;
+  discount_amount?: string;
+  coupon_code?: string | null;
+  total?: string;
   items: { sku: string; name: string; image: string | null; quantity: number; unit_amount: string | null; line_total: string }[];
   stages: { status: string; label: string; at: string; done: boolean }[];
 };
@@ -198,6 +205,10 @@ export default function Page() {
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Envío</h4>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-text">{detail.shipping_address ?? "Sin dirección"}</p>
+                  {(detail.shipping_city || detail.shipping_province) && (
+                    <p className="text-muted">{[detail.shipping_city, detail.shipping_province].filter(Boolean).join(", ")}</p>
+                  )}
+                  {detail.shipping_method && <p className="text-muted">{detail.shipping_method === "galapagos" ? "Galápagos" : "Ecuador continental"}</p>}
                   <p className="text-muted">Rastreo: {detail.tracking_number}</p>
                 </div>
               </section>
@@ -227,7 +238,11 @@ export default function Page() {
                 <dl className="space-y-1 text-sm">
                   <div className="flex justify-between"><dt className="text-muted">Artículos</dt><dd className="text-text tabular-nums">{detail.item_count}</dd></div>
                   <div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd className="text-text tabular-nums">{money(detail.subtotal)}</dd></div>
-                  <div className="flex justify-between border-t border-line pt-1.5"><dt className="font-medium text-text">Total</dt><dd className="font-semibold text-text tabular-nums">{money(detail.subtotal)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-muted">Envío</dt><dd className="text-text tabular-nums">{money(detail.shipping_amount ?? 0)}</dd></div>
+                  {Number(detail.discount_amount ?? 0) > 0 && (
+                    <div className="flex justify-between"><dt className="text-muted">Descuento{detail.coupon_code ? ` (${detail.coupon_code})` : ""}</dt><dd className="text-emerald-300 tabular-nums">−{money(detail.discount_amount ?? 0)}</dd></div>
+                  )}
+                  <div className="flex justify-between border-t border-line pt-1.5"><dt className="font-medium text-text">Total</dt><dd className="font-semibold text-text tabular-nums">{money(detail.total ?? detail.subtotal)}</dd></div>
                 </dl>
               </section>
 

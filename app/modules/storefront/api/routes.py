@@ -725,7 +725,9 @@ _ADMIN_GET = text("SELECT id, status FROM storefront_orders WHERE order_number =
 _ADMIN_ORDER = text(
     """
     SELECT id, order_number, tracking_number, status, currency, subtotal, item_count,
-           customer_name, customer_email, customer_phone, shipping_address, placed_at
+           customer_name, customer_email, customer_phone, shipping_address,
+           shipping_province, shipping_city, shipping_method, shipping_amount,
+           discount_amount, coupon_code, placed_at
     FROM storefront_orders WHERE order_number = :number LIMIT 1
     """
 )
@@ -827,6 +829,10 @@ async def admin_order_detail(
         "currency": order.currency, "subtotal": str(order.subtotal), "item_count": order.item_count,
         "customer_name": order.customer_name, "customer_email": order.customer_email,
         "customer_phone": order.customer_phone, "shipping_address": order.shipping_address,
+        "shipping_province": order.shipping_province, "shipping_city": order.shipping_city,
+        "shipping_method": order.shipping_method, "shipping_amount": str(order.shipping_amount),
+        "discount_amount": str(order.discount_amount), "coupon_code": order.coupon_code,
+        "total": str(order.subtotal + order.shipping_amount - order.discount_amount),
         "placed_at": order.placed_at.isoformat(),
         "items": [
             {"sku": i.sku, "name": i.name, "image": _image_for(i.sku), "quantity": i.quantity,

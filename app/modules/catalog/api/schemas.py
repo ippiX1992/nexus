@@ -107,6 +107,8 @@ class ProductResponse(CatalogSchema):
 class ProductSummary(ProductResponse):
     name: str | None = None
     default_sku: str | None = None
+    category: str | None = None
+    stock: int | None = None
 
 
 class ProductPage(BaseModel):
