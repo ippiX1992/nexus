@@ -1,15 +1,18 @@
 export type NavItem = { href: string; label: string };
-export type NavGroup = { label: string; items: NavItem[]; comingSoon?: boolean };
+export type NavGroup = { label: string; icon: string; items: NavItem[]; collapsible?: boolean };
 
 // Menú orientado al trabajo (no al modelo técnico): grupos por lo que el
-// usuario quiere hacer. Lo poco usado vive en "Configuración avanzada".
+// usuario quiere hacer. Lo poco usado vive en "Configuración avanzada",
+// colapsada por defecto. `icon` mapea a un trazo SVG en Sidebar.
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Ventas",
+    icon: "cart",
     items: [{ href: "/commerce/orders", label: "Pedidos" }],
   },
   {
     label: "Catálogo",
+    icon: "tag",
     items: [
       { href: "/catalog/products", label: "Productos" },
       { href: "/catalog/taxonomies", label: "Categorías" },
@@ -18,14 +21,17 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Inventario",
+    icon: "box",
     items: [
       { href: "/commerce/inventory", label: "Stock" },
       { href: "/commerce/warehouses", label: "Bodegas" },
       { href: "/commerce/transfers", label: "Transferencias" },
+      { href: "/commerce/reservations", label: "Reservas" },
     ],
   },
   {
     label: "Precios",
+    icon: "dollar",
     items: [
       { href: "/commerce/price-lists", label: "Listas de precios" },
       { href: "/commerce/pricing-rules", label: "Reglas de precio" },
@@ -34,6 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Canales",
+    icon: "store",
     items: [
       { href: "/platform/stores", label: "Tiendas" },
       { href: "/platform/markets", label: "Mercados" },
@@ -41,8 +48,9 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Administración",
+    icon: "users",
     items: [
-      { href: "/members", label: "Miembros" },
+      { href: "/members", label: "Usuarios" },
       { href: "/roles", label: "Roles" },
       { href: "/security", label: "Seguridad" },
       { href: "/sessions", label: "Sesiones" },
@@ -53,6 +61,8 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Configuración avanzada",
+    icon: "sliders",
+    collapsible: true,
     items: [
       { href: "/catalog/product-types", label: "Tipos de producto" },
       { href: "/catalog/options", label: "Opciones" },

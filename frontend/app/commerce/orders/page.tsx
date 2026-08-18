@@ -1,7 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { Button } from "@/components/admin/Button";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
+import { DataTable, type Column } from "@/components/admin/DataTable";
 import { EmptyState } from "@/components/admin/EmptyState";
+import { FilterBar, Select } from "@/components/admin/FilterBar";
+import { SearchInput } from "@/components/admin/SearchInput";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 import { api } from "@/lib/api";
 
 type Order = {
@@ -15,7 +21,6 @@ type Order = {
   customer_email?: string | null;
   placed_at: string;
 };
-
 type OrderDetail = Order & {
   customer_phone?: string | null;
   shipping_address?: string | null;
@@ -23,36 +28,19 @@ type OrderDetail = Order & {
   stages: { status: string; label: string; at: string; done: boolean }[];
 };
 
-type Metrics = {
-  orders: number;
-  revenue: string;
-  products: number;
-  inventory_value: string;
-  inventory_units: number;
-  by_status: Record<string, number>;
-  top_products: { name: string; qty: number; revenue: string }[];
-};
-
-const money = (value: string | number) => `$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const LABEL: Record<string, string> = {
-  placed: "Recibido",
-  confirmed: "Confirmado",
-  preparing: "En preparación",
-  shipped: "Enviado",
-  delivered: "Entregado",
-};
+const money = (v: string | number) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fecha = (s: string) => new Date(s).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" });
 
 export default function Page() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [openNumber, setOpenNumber] = useState("");
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState("");
 
   async function load() {
     setLoading(true);
@@ -74,17 +62,8 @@ export default function Page() {
     load();
   }, [status]);
 
-  useEffect(() => {
-    api("/admin/storefront/metrics")
-      .then(setMetrics)
-      .catch(() => setMetrics(null));
-  }, []);
-
   async function toggle(orderNumber: string) {
-    if (openNumber === orderNumber) {
-      setOpenNumber("");
-      return;
-    }
+    if (openNumber === orderNumber) return setOpenNumber("");
     setOpenNumber(orderNumber);
     setDetail(null);
     try {
@@ -92,28 +71,6 @@ export default function Page() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Error");
     }
-  }
-
-  function exportCsv() {
-    const header = ["Pedido", "Estado", "Cliente", "Correo", "Articulos", "Total", "Rastreo", "Fecha"];
-    const body = orders.map((order) => [
-      order.order_number,
-      LABEL[order.status] ?? order.status,
-      order.customer_name,
-      order.customer_email ?? "",
-      order.item_count,
-      `${order.currency} ${order.subtotal}`,
-      order.tracking_number,
-      new Date(order.placed_at).toLocaleString(),
-    ]);
-    const csv = [header, ...body].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   }
 
   async function advance(orderNumber: string) {
@@ -130,138 +87,148 @@ export default function Page() {
     }
   }
 
+  async function cancel(orderNumber: string) {
+    setBusy(orderNumber);
+    setError("");
+    try {
+      await api(`/admin/storefront/orders/${orderNumber}/cancel`, { method: "POST" });
+      setConfirmCancel("");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function exportCsv() {
+    const header = ["Pedido", "Estado", "Cliente", "Correo", "Articulos", "Total", "Rastreo", "Fecha"];
+    const body = orders.map((o) => [o.order_number, o.status, o.customer_name, o.customer_email ?? "", o.item_count, `${o.currency} ${o.subtotal}`, o.tracking_number, new Date(o.placed_at).toLocaleString()]);
+    const csv = [header, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const columns: Column<Order>[] = [
+    { key: "order_number", header: "Pedido", render: (o) => <span className="font-medium text-text">#{o.order_number}</span> },
+    { key: "customer_name", header: "Cliente", render: (o) => o.customer_name },
+    { key: "subtotal", header: "Total", align: "right", render: (o) => money(o.subtotal) },
+    { key: "status", header: "Estado", render: (o) => <StatusBadge status={o.status} /> },
+    { key: "placed_at", header: "Fecha", hideOnMobile: true, render: (o) => <span className="text-muted">{fecha(o.placed_at)}</span> },
+  ];
+
   return (
-    <AdminShell title="Pedidos" description="Pedidos del storefront. Al avanzar el estado, el seguimiento del cliente se actualiza en vivo.">
-      {metrics && (
-        <>
-          <div className="metrics">
-            <div className="metric">
-              <span>Ventas</span>
-              <strong>{money(metrics.revenue)}</strong>
-            </div>
-            <div className="metric">
-              <span>Pedidos</span>
-              <strong>{metrics.orders}</strong>
-            </div>
-            <div className="metric">
-              <span>Productos activos</span>
-              <strong>{metrics.products}</strong>
-            </div>
-            <div className="metric">
-              <span>Valor de inventario</span>
-              <strong>{money(metrics.inventory_value)}</strong>
-            </div>
-          </div>
-          {metrics.top_products.length > 0 && (
-            <div className="tile">
-              <strong>Top productos</strong>
-              {metrics.top_products.map((product) => (
-                <div className="row" key={product.name}>
-                  <span>{product.name}</span>
-                  <span>
-                    {product.qty} uds · {money(product.revenue)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-      <form
-        className="row"
-        onSubmit={(event) => {
-          event.preventDefault();
-          load();
-        }}
-      >
-        <select value={status} onChange={(event) => setStatus(event.target.value)} style={{ width: "auto" }} aria-label="Estado">
+    <AdminShell
+      title="Pedidos"
+      description="Compras de la tienda. Al avanzar el estado, el cliente ve el seguimiento en vivo."
+      actions={
+        <Button variant="secondary" onClick={exportCsv} disabled={orders.length === 0}>
+          Exportar CSV
+        </Button>
+      }
+    >
+      <FilterBar>
+        <SearchInput value={query} onChange={setQuery} onSubmit={load} placeholder="Buscar por cliente o número" className="w-full sm:w-72" />
+        <Select value={status} onChange={setStatus} label="Estado">
           <option value="">Todos los estados</option>
           <option value="placed">Recibido</option>
           <option value="confirmed">Confirmado</option>
           <option value="preparing">En preparación</option>
           <option value="shipped">Enviado</option>
           <option value="delivered">Entregado</option>
-        </select>
-        <input placeholder="Buscar por cliente o número" value={query} onChange={(event) => setQuery(event.target.value)} />
-        <button className="compact">Buscar</button>
-        <button type="button" className="compact" onClick={exportCsv} disabled={orders.length === 0}>
-          Exportar CSV
-        </button>
-      </form>
-      {loading ? (
-        <p>Cargando…</p>
-      ) : orders.length === 0 ? (
-        <EmptyState title="Sin pedidos todavía" description="Cuando alguien compre en la tienda pública, el pedido aparecerá aquí." />
-      ) : (
-        orders.map((order) => (
-          <div className="tile" key={order.order_number}>
-            <div className="row">
-              <span>
-                <strong>{order.order_number}</strong> · {LABEL[order.status] ?? order.status}
-                <br />
-                {order.customer_name}
-                {order.customer_email ? ` · ${order.customer_email}` : ""} · {order.item_count} art. · {order.currency} {order.subtotal}
-                <br />
-                {order.tracking_number} · {new Date(order.placed_at).toLocaleString()}
-              </span>
-              <span className="nav">
-                <button type="button" style={{ width: "auto" }} onClick={() => toggle(order.order_number)}>
-                  {openNumber === order.order_number ? "Ocultar" : "Ver detalle"}
-                </button>
-                {order.status !== "delivered" && (
-                  <button style={{ width: "auto" }} disabled={busy === order.order_number} onClick={() => advance(order.order_number)}>
-                    {busy === order.order_number ? "…" : "Avanzar estado"}
-                  </button>
-                )}
-              </span>
-            </div>
+          <option value="cancelled">Cancelado</option>
+        </Select>
+      </FilterBar>
 
-            {openNumber === order.order_number && (
-              <div className="order-detail">
-                {!detail ? (
-                  <p>Cargando detalle…</p>
-                ) : (
-                  <>
-                    <div className="order-steps">
-                      {detail.stages.map((stage) => (
-                        <span key={stage.status} className={`order-step${stage.done ? " done" : ""}`}>
-                          {stage.done ? "●" : "○"} {stage.label}
-                        </span>
-                      ))}
-                    </div>
-                    {detail.shipping_address && <p className="order-ship">Envío a: {detail.shipping_address}</p>}
-                    {detail.items.map((item) => (
-                      <div className="order-item" key={item.sku}>
-                        <span className="order-thumb">
-                          {item.image ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={item.image} alt="" />
-                          ) : null}
-                        </span>
-                        <span className="order-item-name">
-                          {item.name}
-                          <br />
-                          <small>
-                            {item.sku} · x{item.quantity}
-                          </small>
-                        </span>
-                        <strong>
-                          {detail.currency} {item.line_total}
-                        </strong>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
+      <DataTable
+        columns={columns}
+        rows={orders}
+        keyField={(o) => o.order_number}
+        loading={loading}
+        onRowClick={(o) => toggle(o.order_number)}
+        empty={<EmptyState title="Sin pedidos todavía" description="Cuando alguien compre en la tienda, el pedido aparecerá aquí." />}
+        rowActions={(o) => (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => toggle(o.order_number)}>
+              {openNumber === o.order_number ? "Ocultar" : "Ver"}
+            </Button>
+            {o.status !== "delivered" && o.status !== "cancelled" && (
+              <Button size="sm" variant="secondary" disabled={busy === o.order_number} onClick={() => advance(o.order_number)}>
+                {busy === o.order_number ? "…" : "Avanzar"}
+              </Button>
             )}
+            {o.status !== "cancelled" && o.status !== "delivered" && (
+              <Button size="sm" variant="danger" onClick={() => setConfirmCancel(o.order_number)}>
+                Cancelar
+              </Button>
+            )}
+          </>
+        )}
+      />
+
+      {openNumber && (
+        <div className="mt-4 rounded-xl border border-line bg-panel p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <strong className="text-text">Detalle · #{openNumber}</strong>
+            <Button size="sm" variant="ghost" onClick={() => setOpenNumber("")}>
+              Cerrar
+            </Button>
           </div>
-        ))
+          {!detail ? (
+            <p className="text-sm text-muted">Cargando detalle…</p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {detail.stages.map((s) => (
+                  <StatusBadge key={s.status} status={s.status} tone={s.done ? undefined : "neutral"} />
+                ))}
+              </div>
+              {detail.shipping_address && <p className="mb-3 text-sm text-muted">Envío a: {detail.shipping_address}</p>}
+              <div className="divide-y divide-line/60">
+                {detail.items.map((item) => (
+                  <div key={item.sku} className="flex items-center gap-3 py-2">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-md bg-white">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {item.image ? <img src={item.image} alt="" className="h-full w-full object-contain" /> : null}
+                    </span>
+                    <span className="flex-1 text-sm">
+                      <span className="text-text">{item.name}</span>
+                      <br />
+                      <span className="text-xs text-muted">
+                        {item.sku} · x{item.quantity}
+                      </span>
+                    </span>
+                    <strong className="text-text">
+                      {detail.currency} {item.line_total}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       )}
+
       {error && (
-        <p className="error" role="alert">
+        <p className="mt-3 text-sm text-red-300" role="alert">
           {error}
         </p>
       )}
+
+      <ConfirmDialog
+        open={!!confirmCancel}
+        title="Cancelar pedido"
+        description={`Se cancelará el pedido #${confirmCancel}. Si no se ha despachado, el stock reservado se libera; si ya se despachó, se restituye.`}
+        confirmLabel="Cancelar pedido"
+        cancelLabel="Volver"
+        busy={busy === confirmCancel}
+        onConfirm={() => cancel(confirmCancel)}
+        onClose={() => setConfirmCancel("")}
+      />
     </AdminShell>
   );
 }
