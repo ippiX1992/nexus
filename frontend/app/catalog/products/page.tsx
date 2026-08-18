@@ -69,6 +69,7 @@ export default function Page() {
         rows={items}
         keyField={(p) => p.id}
         loading={loading}
+        stickyHeader
         onRowClick={(p) => router.push(`/catalog/products/${p.id}`)}
         empty={
           <EmptyState

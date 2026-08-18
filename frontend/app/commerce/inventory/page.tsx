@@ -155,6 +155,7 @@ export default function Page() {
         rows={levels}
         keyField={(s) => s.id}
         loading={loading}
+        stickyHeader
         empty={<EmptyState title="Sin stock todavía" description="Registra una recepción para crear el primer nivel de stock." />}
       />
 

@@ -22,6 +22,7 @@ export function DataTable<T>({
   empty,
   onRowClick,
   rowActions,
+  stickyHeader,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -31,6 +32,8 @@ export function DataTable<T>({
   onRowClick?: (row: T) => void;
   /** Trailing actions cell, right-aligned. */
   rowActions?: (row: T) => ReactNode;
+  /** Cap height and keep the header visible while the body scrolls (long lists). */
+  stickyHeader?: boolean;
 }) {
   if (loading && rows.length === 0) {
     return (
@@ -47,8 +50,9 @@ export function DataTable<T>({
   if (rows.length === 0) {
     return <>{empty ?? <EmptyState title="Sin resultados" description="No hay datos para mostrar." />}</>;
   }
+  const thBase = stickyHeader ? "sticky top-0 z-10 bg-panel" : "";
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-panel">
+    <div className={`rounded-xl border border-line bg-panel ${stickyHeader ? "max-h-[70vh] overflow-auto" : "overflow-x-auto"}`}>
       <table className="w-full min-w-[36rem] text-sm">
         <thead>
           <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
@@ -56,12 +60,12 @@ export function DataTable<T>({
               <th
                 key={c.key}
                 style={c.width ? { width: c.width } : undefined}
-                className={`px-4 py-2.5 font-medium ${alignCls[c.align ?? "left"]} ${c.hideOnMobile ? "hidden md:table-cell" : ""}`}
+                className={`px-4 py-2.5 font-medium ${alignCls[c.align ?? "left"]} ${thBase} ${c.hideOnMobile ? "hidden md:table-cell" : ""}`}
               >
                 {c.header}
               </th>
             ))}
-            {rowActions && <th className="px-4 py-2.5" />}
+            {rowActions && <th className={`px-4 py-2.5 ${thBase}`} />}
           </tr>
         </thead>
         <tbody>
