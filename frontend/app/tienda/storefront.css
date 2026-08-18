@@ -80,6 +80,7 @@
   height: 40px;
   border-radius: 8px;
   overflow: hidden;
+  background: #fff;
 }
 .az-search:focus-within {
   box-shadow: 0 0 0 3px var(--az-orange);
@@ -101,6 +102,10 @@
   font-size: 0.95rem;
   outline: none;
   color: #0f1111;
+  background: #fff;
+}
+.az-search input::placeholder {
+  color: var(--az-muted);
 }
 .az-search-btn {
   border: none;
@@ -473,6 +478,8 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
+  color: var(--az-text);
+  letter-spacing: -0.01em;
 }
 .sf-seeall {
   color: var(--az-link);
