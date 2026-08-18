@@ -171,9 +171,12 @@ export default function Page() {
       />
 
       {openNumber && (
-        <div className="mt-4 rounded-xl border border-line bg-panel p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <strong className="text-text">Detalle · #{openNumber}</strong>
+        <div className="mt-4 rounded-xl border border-line bg-panel p-5">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <strong className="text-text">Pedido #{openNumber}</strong>
+              {detail && <StatusBadge status={detail.status} />}
+            </div>
             <Button size="sm" variant="ghost" onClick={() => setOpenNumber("")}>
               Cerrar
             </Button>
@@ -181,34 +184,66 @@ export default function Page() {
           {!detail ? (
             <p className="text-sm text-muted">Cargando detalle…</p>
           ) : (
-            <>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {detail.stages.map((s) => (
-                  <StatusBadge key={s.status} status={s.status} tone={s.done ? undefined : "neutral"} />
-                ))}
-              </div>
-              {detail.shipping_address && <p className="mb-3 text-sm text-muted">Envío a: {detail.shipping_address}</p>}
-              <div className="divide-y divide-line/60">
-                {detail.items.map((item) => (
-                  <div key={item.sku} className="flex items-center gap-3 py-2">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-md bg-white">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {item.image ? <img src={item.image} alt="" className="h-full w-full object-contain" /> : null}
-                    </span>
-                    <span className="flex-1 text-sm">
-                      <span className="text-text">{item.name}</span>
-                      <br />
-                      <span className="text-xs text-muted">
-                        {item.sku} · x{item.quantity}
+            <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
+              <section>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Cliente</h4>
+                <div className="space-y-0.5 text-sm">
+                  <p className="text-text">{detail.customer_name}</p>
+                  {detail.customer_email && <p className="text-muted">{detail.customer_email}</p>}
+                  {detail.customer_phone && <p className="text-muted">{detail.customer_phone}</p>}
+                </div>
+              </section>
+
+              <section>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Envío</h4>
+                <div className="space-y-0.5 text-sm">
+                  <p className="text-text">{detail.shipping_address ?? "Sin dirección"}</p>
+                  <p className="text-muted">Rastreo: {detail.tracking_number}</p>
+                </div>
+              </section>
+
+              <section className="lg:col-span-2">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Productos</h4>
+                <div className="divide-y divide-line/60 overflow-hidden rounded-lg border border-line">
+                  {detail.items.map((item) => (
+                    <div key={item.sku} className="flex items-center gap-3 p-2.5">
+                      <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-md bg-white">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {item.image ? <img src={item.image} alt="" className="h-full w-full object-contain" /> : null}
                       </span>
-                    </span>
-                    <strong className="text-text">
-                      {detail.currency} {item.line_total}
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </>
+                      <span className="flex-1 text-sm">
+                        <span className="text-text">{item.name}</span>
+                        <br />
+                        <span className="text-xs text-muted">{item.sku} · x{item.quantity}</span>
+                      </span>
+                      <strong className="text-text tabular-nums">{money(item.line_total)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Totales</h4>
+                <dl className="space-y-1 text-sm">
+                  <div className="flex justify-between"><dt className="text-muted">Artículos</dt><dd className="text-text tabular-nums">{detail.item_count}</dd></div>
+                  <div className="flex justify-between"><dt className="text-muted">Subtotal</dt><dd className="text-text tabular-nums">{money(detail.subtotal)}</dd></div>
+                  <div className="flex justify-between border-t border-line pt-1.5"><dt className="font-medium text-text">Total</dt><dd className="font-semibold text-text tabular-nums">{money(detail.subtotal)}</dd></div>
+                </dl>
+              </section>
+
+              <section>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Historial</h4>
+                <ol className="space-y-2">
+                  {detail.stages.map((s) => (
+                    <li key={s.status} className="flex items-center gap-2 text-sm">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${s.done ? "bg-emerald-400" : "bg-white/15"}`} />
+                      <span className={s.done ? "text-text" : "text-muted"}>{s.label}</span>
+                      <span className="ml-auto text-xs text-muted tabular-nums">{new Date(s.at).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            </div>
           )}
         </div>
       )}

@@ -85,10 +85,11 @@ export default function Page() {
 
   const activeLocations = locations.filter((l) => l.status !== "archived");
   const columns: Column<Transfer>[] = [
-    { key: "quantity", header: "Cantidad", align: "right", render: (t) => `${t.quantity} uds` },
-    { key: "from", header: "Origen", render: (t) => <span className="text-muted">{locationLabel(t.from_location_id)}</span> },
+    { key: "from", header: "Origen", render: (t) => <span className="font-medium text-text">{locationLabel(t.from_location_id)}</span> },
     { key: "to", header: "Destino", render: (t) => <span className="text-muted">{locationLabel(t.to_location_id)}</span> },
+    { key: "quantity", header: "Unidades", align: "right", render: (t) => t.quantity },
     { key: "status", header: "Estado", render: (t) => <StatusBadge status={t.status} /> },
+    { key: "created_at", header: "Fecha", hideOnMobile: true, render: (t) => <span className="text-muted">{new Date(t.created_at).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}</span> },
   ];
 
   return (
