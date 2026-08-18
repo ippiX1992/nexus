@@ -1,11 +1,15 @@
 "use client";
-
-import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Shell } from "@/components/Shell";
+import { type FormEvent, useEffect, useState } from "react";
+import { AdminShell } from "@/components/admin/AdminShell";
+import { Button, LinkButton } from "@/components/admin/Button";
+import { Field, FormSection } from "@/components/admin/FormSection";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ApiError, api } from "@/lib/api";
 import { selectStore, type Store, updateResource } from "@/lib/platform";
+
+const inputCls = "w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 function errorMessage(error: unknown) {
   if (error instanceof ApiError) return `${error.message}${error.correlationId ? ` · ID ${error.correlationId}` : ""}`;
@@ -27,9 +31,9 @@ export default function Page() {
       setError(errorMessage(caught));
     }
   }
-
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -38,13 +42,7 @@ export default function Page() {
     setError("");
     const form = new FormData(event.currentTarget);
     try {
-      const value = await updateResource(`/stores/${id}`, {
-        name: form.get("name"),
-        slug: form.get("slug"),
-        default_locale: form.get("locale"),
-        default_currency: form.get("currency"),
-        timezone: form.get("timezone"),
-      });
+      const value = await updateResource(`/stores/${id}`, { name: form.get("name"), slug: form.get("slug"), default_locale: form.get("locale"), default_currency: form.get("currency"), timezone: form.get("timezone") });
       setStore(value);
       selectStore(value.id);
     } catch (caught) {
@@ -53,7 +51,6 @@ export default function Page() {
       setSaving(false);
     }
   }
-
   async function transition(action: string) {
     try {
       await api(`/stores/${id}/${action}`, { method: "POST" });
@@ -63,36 +60,59 @@ export default function Page() {
     }
   }
 
+  const breadcrumbs = [
+    { href: "/dashboard", label: "Inicio" },
+    { href: "/platform/stores", label: "Tiendas" },
+    { href: `/platform/stores/${id}`, label: store?.name ?? "Tienda" },
+  ];
+
   return (
-    <Shell title={store?.name ?? "Detalle de Store"}>
+    <AdminShell
+      title={store?.name ?? "Tienda"}
+      breadcrumbs={breadcrumbs}
+      actions={
+        store && (
+          <>
+            {store.status !== "active" && store.status !== "archived" && <Button variant="primary" onClick={() => transition("activate")}>Activar</Button>}
+            {store.status === "active" && <Button variant="secondary" onClick={() => transition("suspend")}>Suspender</Button>}
+            {store.status !== "archived" && <Button variant="danger" onClick={() => transition("archive")}>Archivar</Button>}
+          </>
+        )
+      }
+    >
       {store && (
         <>
-          <div className="tile-grid">
-            <div className="tile"><strong>Estado</strong><p>{store.status}</p></div>
-            <div className="tile"><strong>Código</strong><p>{store.code}</p></div>
+          <div className="mb-5 flex items-center gap-3">
+            <StatusBadge status={store.status} />
+            <span className="text-sm text-muted">Código {store.code}</span>
           </div>
+
           {store.status !== "archived" && (
-            <form className="tile" onSubmit={save} key={`${store.id}-${store.name}-${store.slug}`}>
-              <strong>Editar Store</strong>
-              <label>Nombre<input name="name" defaultValue={store.name} required minLength={2} /></label>
-              <label>Slug<input name="slug" defaultValue={store.slug} required /></label>
-              <label>Locale BCP 47<input name="locale" defaultValue={store.default_locale} required /></label>
-              <label>Moneda ISO 4217<input name="currency" defaultValue={store.default_currency} required maxLength={3} /></label>
-              <label>Zona horaria IANA<input name="timezone" defaultValue={store.timezone} required /></label>
-              <button disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</button>
+            <form onSubmit={save} key={`${store.id}-${store.name}-${store.slug}`} className="max-w-3xl">
+              <FormSection title="Información general" description="Nombre y slug de la tienda.">
+                <Field label="Nombre"><input name="name" defaultValue={store.name} required minLength={2} className={inputCls} /></Field>
+                <Field label="Slug"><input name="slug" defaultValue={store.slug} required className={inputCls} /></Field>
+              </FormSection>
+              <FormSection title="Configuración regional" description="Idioma, moneda y zona horaria por defecto.">
+                <Field label="Idioma (BCP 47)"><input name="locale" defaultValue={store.default_locale} required className={inputCls} /></Field>
+                <Field label="Moneda (ISO 4217)"><input name="currency" defaultValue={store.default_currency} required maxLength={3} className={inputCls} /></Field>
+                <Field label="Zona horaria (IANA)"><input name="timezone" defaultValue={store.timezone} required className={inputCls} /></Field>
+              </FormSection>
+              <div className="mt-6 border-t border-line pt-6">
+                <Button variant="primary" type="submit" disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</Button>
+              </div>
             </form>
           )}
-          <div className="nav">
-            {store.status !== "active" && store.status !== "archived" && <button onClick={() => transition("activate")}>Activar</button>}
-            {store.status === "active" && <button onClick={() => transition("suspend")}>Suspender</button>}
-            {store.status !== "archived" && <button onClick={() => transition("archive")}>Archivar</button>}
+
+          <div className="mt-8 flex flex-wrap gap-2">
+            <LinkButton href="/platform/sites" variant="secondary" size="sm">Sitios</LinkButton>
+            <LinkButton href="/platform/channels" variant="secondary" size="sm">Canales</LinkButton>
+            <LinkButton href="/platform/markets" variant="secondary" size="sm">Mercados</LinkButton>
+            <LinkButton href="/platform/environments" variant="secondary" size="sm">Ambientes</LinkButton>
           </div>
-          <p>
-            <Link href="/platform/sites">Configurar Sites</Link> · <Link href="/platform/channels">Channels</Link> · <Link href="/platform/environments">Environments</Link> · <Link href="/platform/markets">Markets</Link>
-          </p>
         </>
       )}
-      {error && <p className="error" role="alert">{error}</p>}
-    </Shell>
+      {error && <p className="mt-3 text-sm text-red-300" role="alert">{error}</p>}
+    </AdminShell>
   );
 }
