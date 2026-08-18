@@ -1,11 +1,11 @@
 "use client";
 import { type FormEvent, useState } from "react";
+import { inputCls } from "@/components/admin/forms";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { Field, FormSection } from "@/components/admin/FormSection";
 import { api } from "@/lib/api";
 
-const inputCls = "w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 export default function Page() {
   const [uri, setUri] = useState("");

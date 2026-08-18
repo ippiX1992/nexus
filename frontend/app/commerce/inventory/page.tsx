@@ -1,4 +1,5 @@
 "use client";
+import { inputCls } from "@/components/admin/forms";
 import { type FormEvent, useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
@@ -9,7 +10,6 @@ import { api } from "@/lib/api";
 import { variantLabels } from "@/lib/catalog";
 import { type LedgerEntry, type Location, type StockLevel, type Warehouse, inventoryAction, inventoryPage, technicalError } from "@/lib/inventory";
 
-const inputCls = "rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 export default function Page() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);

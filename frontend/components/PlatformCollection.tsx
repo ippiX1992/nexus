@@ -1,4 +1,5 @@
 "use client";
+import { inputCls } from "@/components/admin/forms";
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
@@ -25,7 +26,6 @@ type Item = {
 const labels: Record<Kind, string> = { sites: "Sitios", channels: "Canales", environments: "Ambientes", markets: "Mercados" };
 const singularLabel: Record<Kind, string> = { sites: "sitio", channels: "canal", environments: "ambiente", markets: "mercado" };
 const singular: Record<Kind, string> = { sites: "sites", channels: "channels", environments: "environments", markets: "markets" };
-const inputCls = "rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 function technicalError(value: unknown) {
   if (value instanceof ApiError) return `${value.message}${value.correlationId ? ` · ID ${value.correlationId}` : ""}`;

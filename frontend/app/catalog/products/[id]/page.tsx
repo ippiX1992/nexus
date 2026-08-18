@@ -1,4 +1,5 @@
 "use client";
+import { inputCls } from "@/components/admin/forms";
 import { useParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -9,7 +10,6 @@ import { Tabs } from "@/components/admin/Tabs";
 import { activeStore, listStores, selectStore, type Store } from "@/lib/platform";
 import { type Attribute, type AttributeOption, type Category, catalogCommand, catalogContext, catalogCreate, catalogGet, catalogPage, catalogUpdate, type Option, type OptionValue, type ProductAttributeValue, type ProductAttributeValueOption, type ProductDetail, type ProductOption, type ProductTypeAttribute, type Taxonomy, technicalError, type Variant, type VariantOptionValue } from "@/lib/catalog";
 
-const inputCls = "w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 export default function Page() {
   const params = useParams<{ id: string }>();

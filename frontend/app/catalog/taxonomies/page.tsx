@@ -1,4 +1,5 @@
 "use client";
+import { inputCls } from "@/components/admin/forms";
 import { type FormEvent, useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
@@ -7,7 +8,6 @@ import { FilterBar, Select } from "@/components/admin/FilterBar";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { type Category, catalogCommand, catalogContext, catalogCreate, catalogGet, catalogPage, type Taxonomy, technicalError } from "@/lib/catalog";
 
-const inputCls = "rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 export default function Page() {
   const [taxonomies, setTaxonomies] = useState<Taxonomy[]>([]);

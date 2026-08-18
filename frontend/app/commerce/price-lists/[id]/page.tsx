@@ -1,4 +1,5 @@
 "use client";
+import { inputCls } from "@/components/admin/forms";
 import { useParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -12,7 +13,6 @@ import { activeStore, listStores, type Store } from "@/lib/platform";
 import { type Assignment, type PriceList, type PriceListEntry, type ScopeType, pricingCommand, pricingCreate, pricingGet, pricingPage, pricingPut, technicalError } from "@/lib/pricing";
 
 type ScopeOption = { id: string; name: string };
-const inputCls = "rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 const SCOPE_LABEL: Record<string, string> = { store: "Tienda", channel: "Canal", market: "Mercado" };
 
 export default function Page() {

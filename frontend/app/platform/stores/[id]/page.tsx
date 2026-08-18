@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
+import { inputCls } from "@/components/admin/forms";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button, LinkButton } from "@/components/admin/Button";
 import { Field, FormSection } from "@/components/admin/FormSection";
@@ -9,7 +10,6 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ApiError, api } from "@/lib/api";
 import { selectStore, type Store, updateResource } from "@/lib/platform";
 
-const inputCls = "w-full rounded-lg border border-line bg-bg px-3 py-2 text-sm text-text focus:border-brand focus:outline-none";
 
 function errorMessage(error: unknown) {
   if (error instanceof ApiError) return `${error.message}${error.correlationId ? ` · ID ${error.correlationId}` : ""}`;
