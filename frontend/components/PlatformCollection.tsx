@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/admin/EmptyState";
 import { FilterBar, Select } from "@/components/admin/FilterBar";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ApiError, api } from "@/lib/api";
-import { activeStore, createResource, listStores, selectStore, type Store, updateResource } from "@/lib/platform";
+import { ACTIVE_STORE_CHANGED, activeStore, createResource, listStores, selectStore, type Store, updateResource } from "@/lib/platform";
 
 type Kind = "sites" | "channels" | "environments" | "markets";
 type Item = {
@@ -73,15 +73,22 @@ export function PlatformCollection({ kind }: { kind: Kind }) {
     const initial = activeStore();
     setStore(initial);
     load(initial);
+    // React to store changes from the topbar OR this page's own selector; both
+    // go through selectStore -> ACTIVE_STORE_CHANGED, so there is one code path.
+    const handler = (event: Event) => {
+      const next = (event as CustomEvent<{ storeId: string | null }>).detail.storeId ?? null;
+      setStore(next);
+      setEditing(null);
+      setShowForm(false);
+      load(next);
+    };
+    window.addEventListener(ACTIVE_STORE_CHANGED, handler);
+    return () => window.removeEventListener(ACTIVE_STORE_CHANGED, handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
   function choose(id: string) {
-    const selected = id || null;
-    selectStore(selected);
-    setStore(selected);
-    setEditing(null);
-    load(selected);
+    selectStore(id || null); // dispatches ACTIVE_STORE_CHANGED -> handler above
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -60,15 +60,20 @@ export function AdminShell({
   useEffect(() => {
     const handleStoreChange = (event: Event) => {
       const storeId = (event as CustomEvent<{ storeId: string | null }>).detail.storeId ?? "";
-      setIdentity((current) => ({ ...current, activeStoreId: storeId }));
+      setIdentity((current) => {
+        const next = { ...current, activeStoreId: storeId };
+        setIdentityCache(next);
+        return next;
+      });
     };
     window.addEventListener(ACTIVE_STORE_CHANGED, handleStoreChange);
     return () => window.removeEventListener(ACTIVE_STORE_CHANGED, handleStoreChange);
   }, []);
 
   function changeStore(storeId: string) {
+    // No full reload: selectStore dispatches ACTIVE_STORE_CHANGED, which the
+    // topbar selector and any store-scoped page (PlatformCollection) listen to.
     selectStore(storeId || null);
-    window.location.reload();
   }
 
   return (
