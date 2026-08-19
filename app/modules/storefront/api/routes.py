@@ -713,7 +713,8 @@ admin_router = APIRouter(prefix="/api/v1/admin/storefront", tags=["storefront-ad
 
 _ADMIN_LIST = text(
     """
-    SELECT order_number, tracking_number, status, currency, subtotal, item_count,
+    SELECT order_number, tracking_number, status, currency, subtotal,
+           shipping_amount, discount_amount, item_count,
            customer_name, customer_email, placed_at
     FROM storefront_orders
     WHERE (:status = '' OR status = :status)
@@ -751,7 +752,9 @@ async def admin_orders(
     return [
         {
             "order_number": r.order_number, "tracking_number": r.tracking_number, "status": r.status,
-            "currency": r.currency, "subtotal": str(r.subtotal), "item_count": r.item_count,
+            "currency": r.currency, "subtotal": str(r.subtotal),
+            "shipping_amount": str(r.shipping_amount), "discount_amount": str(r.discount_amount),
+            "total": str(r.subtotal + r.shipping_amount - r.discount_amount), "item_count": r.item_count,
             "customer_name": r.customer_name, "customer_email": r.customer_email, "placed_at": r.placed_at.isoformat(),
         }
         for r in rows

@@ -16,6 +16,9 @@ type Order = {
   status: string;
   currency: string;
   subtotal: string;
+  shipping_amount?: string;
+  discount_amount?: string;
+  total?: string;
   item_count: number;
   customer_name: string;
   customer_email?: string | null;
@@ -27,10 +30,7 @@ type OrderDetail = Order & {
   shipping_province?: string | null;
   shipping_city?: string | null;
   shipping_method?: string | null;
-  shipping_amount?: string;
-  discount_amount?: string;
   coupon_code?: string | null;
-  total?: string;
   items: { sku: string; name: string; image: string | null; quantity: number; unit_amount: string | null; line_total: string }[];
   stages: { status: string; label: string; at: string; done: boolean }[];
 };
@@ -110,7 +110,7 @@ export default function Page() {
 
   function exportCsv() {
     const header = ["Pedido", "Estado", "Cliente", "Correo", "Articulos", "Total", "Rastreo", "Fecha"];
-    const body = orders.map((o) => [o.order_number, o.status, o.customer_name, o.customer_email ?? "", o.item_count, `${o.currency} ${o.subtotal}`, o.tracking_number, new Date(o.placed_at).toLocaleString()]);
+    const body = orders.map((o) => [o.order_number, o.status, o.customer_name, o.customer_email ?? "", o.item_count, `${o.currency} ${o.total ?? o.subtotal}`, o.tracking_number, new Date(o.placed_at).toLocaleString()]);
     const csv = [header, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
@@ -123,7 +123,7 @@ export default function Page() {
   const columns: Column<Order>[] = [
     { key: "order_number", header: "Pedido", render: (o) => <span className="font-medium text-text">#{o.order_number}</span> },
     { key: "customer_name", header: "Cliente", render: (o) => o.customer_name },
-    { key: "subtotal", header: "Total", align: "right", render: (o) => money(o.subtotal) },
+    { key: "total", header: "Total", align: "right", render: (o) => money(o.total ?? o.subtotal) },
     { key: "status", header: "Estado", render: (o) => <StatusBadge status={o.status} /> },
     { key: "placed_at", header: "Fecha", hideOnMobile: true, render: (o) => <span className="text-muted">{fecha(o.placed_at)}</span> },
   ];
