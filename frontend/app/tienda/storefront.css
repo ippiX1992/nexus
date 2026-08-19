@@ -329,14 +329,12 @@
 /* ===== Hero banner ===== */
 .az-hero {
   position: relative;
-  height: clamp(200px, 28vw, 340px);
+  height: clamp(300px, 34vw, 440px);
   overflow: hidden;
 }
 .az-hero-slide {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
   opacity: 0;
   transition: opacity 0.6s ease;
   color: #fff;
@@ -344,37 +342,102 @@
 .az-hero-slide.active {
   opacity: 1;
 }
-.az-hero-copy {
+.az-hero-inner {
   max-width: 1200px;
-  width: 100%;
+  height: 100%;
   margin: 0 auto;
-  padding: 0 40px;
+  padding: 0 clamp(20px, 5vw, 48px);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.az-hero-copy {
+  flex: 1 1 54%;
+  min-width: 0;
+  max-width: 560px;
+  position: relative;
+  z-index: 2;
+}
+.az-hero-eyebrow {
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-bottom: 12px;
+}
+.az-hero-badge {
+  display: inline-block;
+  background: #fff;
+  color: #c0102f;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  padding: 5px 13px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
 }
 .az-hero-copy h2 {
-  margin: 0 0 8px;
-  font-size: clamp(1.6rem, 3.6vw, 2.7rem);
+  margin: 0 0 10px;
+  font-size: clamp(1.8rem, 3.9vw, 3rem);
   font-weight: 800;
   letter-spacing: -0.02em;
+  line-height: 1.05;
   color: #fff;
-  max-width: 640px;
+  text-wrap: balance;
 }
 .az-hero-copy p {
-  margin: 0 0 18px;
-  font-size: 1.05rem;
-  opacity: 0.95;
-  max-width: 520px;
+  margin: 0 0 20px;
+  font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+  line-height: 1.5;
+  opacity: 0.92;
+  max-width: 440px;
 }
 .az-hero-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: var(--az-yellow);
   color: var(--az-dark);
   font-weight: 700;
   text-decoration: none;
-  padding: 11px 24px;
-  border-radius: 8px;
+  padding: 12px 26px;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  transition: transform 0.12s ease, background 0.15s ease;
 }
 .az-hero-cta:hover {
   background: var(--az-yellow-h);
+  transform: translateY(-1px);
+}
+.az-hero-cta span {
+  transition: transform 0.15s ease;
+}
+.az-hero-cta:hover span {
+  transform: translateX(3px);
+}
+.az-hero-media {
+  flex: 1 1 46%;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The product render is a white-background photo; frame it as a clean white
+   card floating on the gradient so it reads as intentional on any product. */
+.az-hero-media img {
+  position: relative;
+  z-index: 1;
+  max-height: 88%;
+  max-width: 94%;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.32);
 }
 .az-hero-arrow {
   position: absolute;
@@ -1710,6 +1773,22 @@
 }
 
 @media (max-width: 760px) {
+  .az-hero-inner {
+    padding: 0 60px;
+  }
+  .az-hero-media {
+    display: none;
+  }
+  .az-hero-copy {
+    flex-basis: 100%;
+    max-width: none;
+    text-align: center;
+    margin: 0 auto;
+  }
+  .az-hero-copy p {
+    margin-left: auto;
+    margin-right: auto;
+  }
   .az-logo-text {
     display: none;
   }
