@@ -25,6 +25,17 @@ export type StoreMeta = { key: string; name: string; currency: string; locale: s
 export type StoreProductList = { items: StoreProduct[]; total: number };
 export type StoreCategory = { slug: string; name: string; product_count: number; children?: StoreCategory[] };
 
+// The catalog stores each product photo as the small PrestaShop "home_default"
+// thumbnail (~236px). The same host also serves larger, white-background
+// renders of the exact same photo (medium ~452px, thickbox ~1100px). Swap the
+// size token so images render crisp on the white product surfaces. Returns the
+// URL unchanged when it isn't a recognizable size-tagged clickhome URL.
+const IMAGE_SIZE_RE = /-(?:small|home|medium|large|thickbox|cart)_default\//;
+export function imageAt(url: string | null | undefined, size: "medium" | "large" | "thickbox"): string | null {
+  if (!url) return null;
+  return IMAGE_SIZE_RE.test(url) ? url.replace(IMAGE_SIZE_RE, `-${size}_default/`) : url;
+}
+
 async function storeFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = options?.body ? { "Content-Type": "application/json" } : undefined;
   const res = await fetch(`${API}/storefront${path}`, { credentials: "omit", headers, ...options });

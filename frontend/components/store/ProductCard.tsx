@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { formatPrice, type StoreProduct } from "@/lib/storefront";
+import { formatPrice, imageAt, type StoreProduct } from "@/lib/storefront";
 import { useCart } from "./cart";
 import { Stars } from "./Stars";
 import { Thumb } from "./Thumb";
@@ -27,10 +27,16 @@ export function ProductCard({ product }: { product: StoreProduct }) {
         {product.image ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={product.image} alt={product.name} loading="lazy" />
+            <img
+              src={imageAt(product.image, "medium")!}
+              srcSet={`${imageAt(product.image, "medium")} 452w, ${imageAt(product.image, "thickbox")} 1100w`}
+              sizes="(max-width: 640px) 45vw, 240px"
+              alt={product.name}
+              loading="lazy"
+            />
             {product.image2 && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="az-card-img2" src={product.image2} alt="" loading="lazy" />
+              <img className="az-card-img2" src={imageAt(product.image2, "medium")!} alt="" loading="lazy" />
             )}
           </>
         ) : (

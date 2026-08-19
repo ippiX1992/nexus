@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { formatPrice, storeProduct, type StoreProductDetail } from "@/lib/storefront";
+import { formatPrice, imageAt, storeProduct, type StoreProductDetail } from "@/lib/storefront";
 import { useCart } from "./cart";
 import { Stars } from "./Stars";
 import { Thumb } from "./Thumb";
@@ -42,7 +42,7 @@ export function QuickView() {
             <div className="sf-qv-media">
               {product.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.image} alt={product.name} />
+                <img src={imageAt(product.image, "thickbox")!} alt={product.name} />
               ) : (
                 <Thumb name={product.name} />
               )}

@@ -7,7 +7,7 @@ import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { useUI } from "@/components/store/ui";
 import { useWishlist } from "@/components/store/wishlist";
-import { createReview, formatPrice, getReviews, storeProduct, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
+import { createReview, formatPrice, getReviews, imageAt, storeProduct, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
@@ -84,7 +84,7 @@ export default function ProductPage() {
           <div className="sf-detail-media">
             {gallery.length > 0 ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="sf-img" src={gallery[activeImage]} alt={product.name} />
+              <img className="sf-img" src={imageAt(gallery[activeImage], "thickbox")!} alt={product.name} />
             ) : (
               <Thumb name={product.name} />
             )}
@@ -100,7 +100,7 @@ export default function ProductPage() {
                   aria-label={`Foto ${index + 1}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" loading="lazy" />
+                  <img src={imageAt(src, "medium")!} alt="" loading="lazy" />
                 </button>
               ))}
             </div>
