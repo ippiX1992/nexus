@@ -830,6 +830,9 @@
   font-size: 0.95rem;
 }
 .sf-track-form button {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
   border: none;
   border-radius: 8px;
   background: var(--az-yellow);
