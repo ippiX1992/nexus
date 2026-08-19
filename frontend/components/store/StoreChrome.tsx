@@ -21,7 +21,9 @@ export function StoreChrome({ storeName, children }: { storeName: string; childr
       <WishlistProvider>
         <CartProvider>
           <div className="sf-root">
-          <StoreHeader storeName={storeName} />
+          <Suspense fallback={<div className="az-header" aria-hidden="true" />}>
+            <StoreHeader storeName={storeName} />
+          </Suspense>
           <div className="sf-benefits">
             <div className="sf-benefits-inner">
               {BENEFITS.map((benefit) => (
