@@ -155,36 +155,9 @@ export function StoreHeader({ storeName }: { storeName: string }) {
         </div>
       </div>
       <div className="az-sub">
-        <div className="az-cats">
-          <button className="az-all" onClick={() => setMenuOpen(true)} aria-haspopup="true" aria-label="Todas las categorías">
-            <span aria-hidden="true">☰</span> Todas las categorías
-            <span className="az-caret" aria-hidden="true">▾</span>
-          </button>
-          <div className="az-cats-panel" role="menu">
-            {departments.map((category) => (
-              <div className="az-cats-item" key={category.slug}>
-                <Link href={`/tienda?category=${category.slug}`} className="az-cats-link" role="menuitem">
-                  <span>{titleCase(category.name)}</span>
-                  {category.children && category.children.length > 0 ? (
-                    <span className="az-cats-arrow" aria-hidden="true">›</span>
-                  ) : (
-                    <span className="az-cats-count">{category.product_count}</span>
-                  )}
-                </Link>
-                {category.children && category.children.length > 0 && (
-                  <div className="az-cats-flyout">
-                    {category.children.map((child) => (
-                      <Link key={child.slug} href={`/tienda?category=${child.slug}`}>
-                        <span>{titleCase(child.name)}</span>
-                        <span className="az-cats-count">{child.product_count}</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <button className="az-all" onClick={() => setMenuOpen(true)} aria-haspopup="dialog" aria-label="Todas las categorías">
+          <span aria-hidden="true">☰</span> Todas las categorías
+        </button>
         <nav className="az-depts" aria-label="Departamentos">
           {departments.map((category) => (
             <Link

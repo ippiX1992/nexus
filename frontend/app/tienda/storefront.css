@@ -182,13 +182,8 @@
   min-height: 46px;
 }
 
-/* Cascade megamenu: "Todas las categorías" opens a dropdown of departments,
-   each with a sub-flyout of its categories. */
-.az-cats {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-}
+/* "Todas las categorías" is the single entry point — it opens the lateral
+   drawer (the one main category menu). */
 .az-all {
   display: inline-flex;
   align-items: center;
@@ -206,100 +201,6 @@
 }
 .az-all:hover {
   background: #0b1420;
-}
-.az-caret {
-  font-size: 0.72rem;
-  transition: transform 0.15s ease;
-}
-.az-cats:hover .az-caret {
-  transform: rotate(180deg);
-}
-.az-cats-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 264px;
-  background: var(--az-surface);
-  border: 1px solid var(--az-border);
-  border-top: none;
-  border-radius: 0 0 10px 10px;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
-  padding: 6px;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(6px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 40;
-}
-.az-cats:hover .az-cats-panel,
-.az-cats:focus-within .az-cats-panel {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-}
-.az-cats-item {
-  position: relative;
-}
-.az-cats-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 9px 14px;
-  border-radius: 7px;
-  color: var(--az-text);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-.az-cats-item:hover > .az-cats-link {
-  background: #f2f7fb;
-  color: var(--az-link);
-}
-.az-cats-arrow {
-  color: var(--az-muted);
-  font-size: 1.05rem;
-  line-height: 1;
-}
-.az-cats-count {
-  color: var(--az-muted);
-  font-size: 0.76rem;
-}
-/* Second-level cascade flyout */
-.az-cats-flyout {
-  position: absolute;
-  top: -7px;
-  left: 100%;
-  min-width: 220px;
-  background: var(--az-surface);
-  border: 1px solid var(--az-border);
-  border-radius: 10px;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
-  padding: 6px;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(6px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 41;
-}
-.az-cats-item:hover .az-cats-flyout {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-}
-.az-cats-flyout a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: var(--az-text);
-  text-decoration: none;
-  font-size: 0.86rem;
-}
-.az-cats-flyout a:hover {
-  background: #f2f7fb;
-  color: var(--az-link);
 }
 
 /* Inline department quick links (tab-style underline) */
@@ -1913,7 +1814,6 @@
   .sf-benefits-inner{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
   .sf-detail-media{position:static}
   .az-depts{display:none}
-  .az-cats-panel,.az-cats-flyout{display:none}
   .az-all{padding:0 12px}
   .sf-qv-grid{grid-template-columns:1fr}
 }
