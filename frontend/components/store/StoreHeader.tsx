@@ -6,6 +6,11 @@ import { formatPrice, storeCategories, suggest, type StoreCategory, type Suggest
 import { useCart } from "./cart";
 import { useWishlist } from "./wishlist";
 
+// Category names arrive in mixed casing from the catalog (e.g. "ELECTROMENORES",
+// "LÍNEA BLANCA"). Normalize to Title Case so the menu reads consistently.
+const titleCase = (value: string) =>
+  value.toLocaleLowerCase("es").replace(/(^|[\s/-])(\p{L})/gu, (_match, sep: string, ch: string) => sep + ch.toLocaleUpperCase("es"));
+
 export function StoreHeader({ storeName }: { storeName: string }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -71,7 +76,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
               <option value="">Todo</option>
               {departments.map((category) => (
                 <option key={category.slug} value={category.slug}>
-                  {category.name}
+                  {titleCase(category.name)}
                 </option>
               ))}
             </select>
@@ -150,26 +155,47 @@ export function StoreHeader({ storeName }: { storeName: string }) {
         </div>
       </div>
       <div className="az-sub">
-        <button className="az-all" onClick={() => setMenuOpen(true)} aria-label="Todas las categorías">
-          <span aria-hidden="true">☰</span> Todos
-        </button>
-        {departments.map((category) => (
-          <div className="az-dept" key={category.slug}>
-            <Link href={`/tienda?category=${category.slug}`} className={`az-sub-link${activeCategory === category.slug ? " active" : ""}`}>
-              {category.name}
-            </Link>
-            {category.children && category.children.length > 0 && (
-              <div className="az-dept-menu">
-                {category.children.map((child) => (
-                  <Link key={child.slug} href={`/tienda?category=${child.slug}`}>
-                    {child.name}
-                    <span>{child.product_count}</span>
-                  </Link>
-                ))}
+        <div className="az-cats">
+          <button className="az-all" onClick={() => setMenuOpen(true)} aria-haspopup="true" aria-label="Todas las categorías">
+            <span aria-hidden="true">☰</span> Todas las categorías
+            <span className="az-caret" aria-hidden="true">▾</span>
+          </button>
+          <div className="az-cats-panel" role="menu">
+            {departments.map((category) => (
+              <div className="az-cats-item" key={category.slug}>
+                <Link href={`/tienda?category=${category.slug}`} className="az-cats-link" role="menuitem">
+                  <span>{titleCase(category.name)}</span>
+                  {category.children && category.children.length > 0 ? (
+                    <span className="az-cats-arrow" aria-hidden="true">›</span>
+                  ) : (
+                    <span className="az-cats-count">{category.product_count}</span>
+                  )}
+                </Link>
+                {category.children && category.children.length > 0 && (
+                  <div className="az-cats-flyout">
+                    {category.children.map((child) => (
+                      <Link key={child.slug} href={`/tienda?category=${child.slug}`}>
+                        <span>{titleCase(child.name)}</span>
+                        <span className="az-cats-count">{child.product_count}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
+        </div>
+        <nav className="az-depts" aria-label="Departamentos">
+          {departments.map((category) => (
+            <Link
+              key={category.slug}
+              href={`/tienda?category=${category.slug}`}
+              className={`az-sub-link${activeCategory === category.slug ? " active" : ""}`}
+            >
+              {titleCase(category.name)}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div className={`az-menu-scrim${menuOpen ? " open" : ""}`} onClick={() => setMenuOpen(false)} aria-hidden="true" />
@@ -187,7 +213,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
           {departments.map((category) => (
             <div className="az-menu-group" key={category.slug}>
               <Link className="az-menu-top" href={`/tienda?category=${category.slug}`} onClick={() => setMenuOpen(false)}>
-                {category.name}
+                {titleCase(category.name)}
                 <span>{category.product_count}</span>
               </Link>
               {category.children?.map((child) => (
@@ -197,7 +223,7 @@ export function StoreHeader({ storeName }: { storeName: string }) {
                   href={`/tienda?category=${child.slug}`}
                   onClick={() => setMenuOpen(false)}
                 >
-                  {child.name}
+                  {titleCase(child.name)}
                   <span>{child.product_count}</span>
                 </Link>
               ))}
