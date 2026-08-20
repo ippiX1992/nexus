@@ -6,6 +6,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { ProductGeneral } from "@/components/admin/ProductGeneral";
 import { ProductMedia } from "@/components/admin/ProductMedia";
 import { Tabs } from "@/components/admin/Tabs";
 import { activeStore, listStores, selectStore, type Store } from "@/lib/platform";
@@ -22,7 +23,7 @@ export default function Page() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("variants");
+  const [tab, setTab] = useState("general");
   const [options, setOptions] = useState<Option[]>([]);
   const [productOptions, setProductOptions] = useState<ProductOption[]>([]);
   const [valuesByOption, setValuesByOption] = useState<Record<string, OptionValue[]>>({});
@@ -241,6 +242,7 @@ export default function Page() {
 
       <Tabs
         tabs={[
+          { key: "general", label: "General" },
           { key: "variants", label: "Variantes", count: detail.variants.length },
           { key: "options", label: "Opciones", count: productOptions.length },
           { key: "media", label: "Medios" },
@@ -251,6 +253,16 @@ export default function Page() {
         active={tab}
         onChange={setTab}
       />
+
+      {tab === "general" && (
+        <ProductGeneral
+          productId={productId}
+          locale={detail.translations[0]?.locale ?? "es-EC"}
+          version={detail.product.version}
+          canManage={canUpdate}
+          onSaved={load}
+        />
+      )}
 
       {tab === "variants" && (
         <>
