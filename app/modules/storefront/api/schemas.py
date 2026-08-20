@@ -36,6 +36,7 @@ class SpecItem(BaseModel):
 class StorefrontProductDetail(StorefrontProduct):
     long_description: str | None = None
     images: list[str] = []
+    videos: list[str] = []
     specs: list[SpecItem] = []
 
 

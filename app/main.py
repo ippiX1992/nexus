@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.admin_routes import router as admin_router
@@ -7,6 +10,7 @@ from app.api.routes import router
 from app.core.config import get_settings
 from app.core.observability import correlation_and_logging_middleware
 from app.infrastructure.database import engine
+from app.modules.catalog.api.media_routes import router as catalog_media_router
 from app.modules.catalog.api.routes import router as catalog_router
 from app.modules.inventory.api.routes import router as inventory_router
 from app.modules.platform.api.routes import router as platform_router
@@ -21,10 +25,14 @@ app.include_router(router)
 app.include_router(admin_router)
 app.include_router(platform_router)
 app.include_router(catalog_router)
+app.include_router(catalog_media_router)
 app.include_router(pricing_router)
 app.include_router(inventory_router)
 app.include_router(storefront_router)
 app.include_router(storefront_admin_router)
+_media_dir = Path(settings.media_root)
+_media_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=str(_media_dir)), name="media")
 @app.get("/health",tags=["operations"])
 async def health(): return {"status":"ok","service":settings.app_name}
 @app.get("/ready",tags=["operations"])

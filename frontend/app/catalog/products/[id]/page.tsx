@@ -6,6 +6,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { ProductMedia } from "@/components/admin/ProductMedia";
 import { Tabs } from "@/components/admin/Tabs";
 import { activeStore, listStores, selectStore, type Store } from "@/lib/platform";
 import { type Attribute, type AttributeOption, type Category, catalogCommand, catalogContext, catalogCreate, catalogGet, catalogPage, catalogUpdate, type Option, type OptionValue, type ProductAttributeValue, type ProductAttributeValueOption, type ProductDetail, type ProductOption, type ProductTypeAttribute, type Taxonomy, technicalError, type Variant, type VariantOptionValue } from "@/lib/catalog";
@@ -242,6 +243,7 @@ export default function Page() {
         tabs={[
           { key: "variants", label: "Variantes", count: detail.variants.length },
           { key: "options", label: "Opciones", count: productOptions.length },
+          { key: "media", label: "Medios" },
           { key: "specs", label: "Especificaciones" },
           { key: "categories", label: "Categorías", count: detail.categories.length },
           { key: "store", label: "Tienda" },
@@ -299,6 +301,10 @@ export default function Page() {
             </label>
           )}
         </div>
+      )}
+
+      {tab === "media" && (
+        <ProductMedia productId={productId} canManage={permissions.includes("catalog.product.update")} />
       )}
 
       {tab === "specs" && (

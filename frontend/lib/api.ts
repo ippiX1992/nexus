@@ -12,3 +12,12 @@ async function request(path:string,options:RequestInit,retry:boolean){
  return response.status===204?null:response.json()
 }
 export function api(path:string,options:RequestInit={}){return request(path,options,true)}
+// Multipart upload: never set Content-Type by hand so the browser adds the
+// multipart boundary. Reuses the same bearer token + CSRF as api().
+export async function apiUpload(path:string,form:FormData){
+ const headers=new Headers();const access=token();if(access)headers.set("Authorization",`Bearer ${access}`);
+ const csrf=readCookie("csrf_token");if(csrf)headers.set("X-CSRF-Token",decodeURIComponent(csrf));
+ const response=await fetch(`${API}${path}`,{method:"POST",body:form,headers,credentials:"include"});
+ if(!response.ok){const body=await response.json().catch(()=>({}));throw new ApiError(body.detail??"No se pudo subir el archivo",response.status,response.headers.get("X-Correlation-ID")??undefined)}
+ return response.status===204?null:response.json()
+}

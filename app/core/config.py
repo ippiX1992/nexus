@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     max_active_sessions: int = 10
     allowed_origins: str = "http://localhost:3000"
     cookie_secure: bool = False
+    media_root: str = "media"
     @property
     def origins(self) -> list[str]: return [v.strip() for v in self.allowed_origins.split(",") if v.strip()]
 @lru_cache

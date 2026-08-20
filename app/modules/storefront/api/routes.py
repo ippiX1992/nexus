@@ -71,6 +71,24 @@ def _image2_for(sku: str) -> str | None:
     return gallery[1] if len(gallery) > 1 else None
 
 
+# Uploaded media (managed in the admin) takes priority over the demo photo map.
+_PRODUCT_MEDIA = text(
+    """
+    SELECT media_type, storage_key, external_url
+    FROM catalog_product_media
+    WHERE product_id = :product_id AND archived_at IS NULL
+    ORDER BY is_primary DESC, position, created_at
+    """
+)
+
+
+async def _uploaded_media(session: AsyncSession, product_id) -> tuple[list[str], list[str]]:
+    rows = (await session.execute(_PRODUCT_MEDIA, {"product_id": str(product_id)})).all()
+    images = [f"/media/{r.storage_key}" for r in rows if r.media_type == "image" and r.storage_key]
+    videos = [r.external_url or (f"/media/{r.storage_key}" if r.storage_key else "") for r in rows if r.media_type == "video"]
+    return images, [v for v in videos if v]
+
+
 # Real product specs (dimensions/weight/EAN) harvested from ClickHome. Warranty
 # is a store-wide policy (not per-product data), shown as such.
 _SPECS_PATH = Path(__file__).resolve().parents[1] / "clickhome_specs.json"
@@ -190,7 +208,8 @@ _ORDER = {
 }
 _DETAIL = text(
     """
-    SELECT COALESCE(t.slug, v.sku) AS slug,
+    SELECT p.id AS product_id,
+           COALESCE(t.slug, v.sku) AS slug,
            COALESCE(t.name, v.sku) AS name,
            t.short_description AS short_description,
            t.long_description AS long_description,
@@ -493,14 +512,17 @@ async def product_detail(
     if row is None:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     available = int(row.available or 0)
+    uploaded_images, uploaded_videos = await _uploaded_media(session, row.product_id)
+    images = uploaded_images or _images_for(row.sku)
     return StorefrontProductDetail(
         slug=row.slug,
         name=row.name,
         short_description=row.short_description,
         long_description=row.long_description,
         brand=row.brand,
-        image=_image_for(row.sku),
-        images=_images_for(row.sku),
+        image=images[0] if images else None,
+        images=images,
+        videos=uploaded_videos,
         specs=_specs_for(row.sku, available),
         sku=row.sku,
         price=row.price,
