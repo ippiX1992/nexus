@@ -20,7 +20,17 @@ export type StoreProduct = {
   in_stock: boolean;
 };
 export type SpecItem = { label: string; value: string };
-export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[]; specs?: SpecItem[] };
+export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[]; videos?: string[]; specs?: SpecItem[] };
+
+// Turn a video URL into something playable: YouTube/Vimeo become embed iframes;
+// anything else (a direct .mp4/.webm or an uploaded /media file) plays inline.
+export function videoEmbed(url: string): { kind: "iframe" | "file"; src: string } {
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
+  if (yt) return { kind: "iframe", src: `https://www.youtube.com/embed/${yt[1]}` };
+  const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeo) return { kind: "iframe", src: `https://player.vimeo.com/video/${vimeo[1]}` };
+  return { kind: "file", src: url };
+}
 export type StoreMeta = { key: string; name: string; currency: string; locale: string; brand?: string | null; product_count: number };
 export type StoreProductList = { items: StoreProduct[]; total: number };
 export type StoreCategory = { slug: string; name: string; product_count: number; children?: StoreCategory[] };

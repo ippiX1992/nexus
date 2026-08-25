@@ -7,7 +7,7 @@ import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { useUI } from "@/components/store/ui";
 import { useWishlist } from "@/components/store/wishlist";
-import { createReview, formatPrice, getReviews, imageAt, storeProduct, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
+import { createReview, formatPrice, getReviews, imageAt, storeProduct, videoEmbed, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
@@ -65,6 +65,11 @@ export default function ProductPage() {
 
   const price = product.price != null ? Number(product.price) : null;
   const gallery = product.images && product.images.length ? product.images : product.image ? [product.image] : [];
+  const media: { type: "image" | "video"; url: string }[] = [
+    ...gallery.map((url) => ({ type: "image" as const, url })),
+    ...(product.videos ?? []).map((url) => ({ type: "video" as const, url })),
+  ];
+  const activeMedia = media[activeImage] ?? media[0];
 
   return (
     <article className="sf-detail">
@@ -81,26 +86,43 @@ export default function ProductPage() {
       </nav>
       <div className="sf-detail-grid">
         <div className="sf-detail-gallery">
-          <div className="sf-detail-media">
-            {gallery.length > 0 ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="sf-img" src={imageAt(gallery[activeImage], "thickbox")!} alt={product.name} />
-            ) : (
+          <div className={`sf-detail-media${activeMedia?.type === "video" ? " is-video" : ""}`}>
+            {media.length === 0 ? (
               <Thumb name={product.name} />
+            ) : activeMedia.type === "video" ? (
+              videoEmbed(activeMedia.url).kind === "iframe" ? (
+                <iframe
+                  className="sf-video"
+                  src={videoEmbed(activeMedia.url).src}
+                  title={`Video de ${product.name}`}
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                // eslint-disable-next-line jsx-a11y/media-has-caption
+                <video className="sf-video" src={activeMedia.url} controls />
+              )
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="sf-img" src={imageAt(activeMedia.url, "thickbox")!} alt={product.name} />
             )}
           </div>
-          {gallery.length > 1 && (
+          {media.length > 1 && (
             <div className="sf-gallery-thumbs">
-              {gallery.map((src, index) => (
+              {media.map((item, index) => (
                 <button
-                  key={src}
-                  className={`sf-gallery-thumb${index === activeImage ? " active" : ""}`}
-                  onMouseEnter={() => setActiveImage(index)}
+                  key={`${item.type}-${item.url}-${index}`}
+                  className={`sf-gallery-thumb${index === activeImage ? " active" : ""}${item.type === "video" ? " is-video" : ""}`}
+                  onMouseEnter={() => item.type === "image" && setActiveImage(index)}
                   onClick={() => setActiveImage(index)}
-                  aria-label={`Foto ${index + 1}`}
+                  aria-label={item.type === "video" ? "Video" : `Foto ${index + 1}`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imageAt(src, "medium")!} alt="" loading="lazy" />
+                  {item.type === "video" ? (
+                    <span className="sf-thumb-play" aria-hidden="true">▶</span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageAt(item.url, "medium")!} alt="" loading="lazy" />
+                  )}
                 </button>
               ))}
             </div>
