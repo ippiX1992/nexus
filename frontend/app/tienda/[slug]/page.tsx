@@ -109,8 +109,30 @@ export default function ProductPage() {
   ];
   const activeMedia = media[activeImage] ?? media[0];
 
+  // Product structured data (schema.org) for rich results in search engines.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: gallery,
+    description: product.short_description || product.long_description || product.name,
+    sku: product.sku,
+    ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
+    offers: {
+      "@type": "Offer",
+      priceCurrency: product.currency,
+      price: price ?? undefined,
+      availability: product.in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
+    ...(reviews && reviews.count > 0
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.average, reviewCount: reviews.count } }
+      : {}),
+  };
+
   return (
     <article className="sf-detail">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav className="sf-crumbs" aria-label="Ruta">
         <Link href="/tienda">Inicio</Link>
         <span>›</span>
