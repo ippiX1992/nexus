@@ -3,11 +3,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useCart } from "@/components/store/cart";
+import { ProductCard } from "@/components/store/ProductCard";
 import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { useUI } from "@/components/store/ui";
 import { useWishlist } from "@/components/store/wishlist";
-import { createReview, formatPrice, getReviews, imageAt, storeProduct, videoEmbed, type ReviewSummary, type StoreProductDetail } from "@/lib/storefront";
+import { createReview, formatPrice, getReviews, imageAt, storeProduct, storeProducts, videoEmbed, type ReviewSummary, type StoreProduct, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function ProductPage() {
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [related, setRelated] = useState<StoreProduct[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -49,6 +51,27 @@ export default function ProductPage() {
       if (previousDesc != null) meta.setAttribute("content", previousDesc);
     };
   }, [product]);
+
+  // Related products: other items in the same category.
+  useEffect(() => {
+    const category = product?.category_slug;
+    const current = product?.slug;
+    if (!category) {
+      setRelated([]);
+      return;
+    }
+    let alive = true;
+    storeProducts("", category, 12)
+      .then((page) => {
+        if (alive) setRelated(page.items.filter((p) => p.slug !== current).slice(0, 5));
+      })
+      .catch(() => {
+        if (alive) setRelated([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [product?.category_slug, product?.slug]);
 
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,8 +175,12 @@ export default function ProductPage() {
             count={reviews && reviews.count > 0 ? reviews.count : undefined}
           />
           <div className="sf-detail-price">{formatPrice(product.price, product.currency)}</div>
-          <div className={`sf-stock ${product.in_stock ? "in" : "out"}`}>
-            {product.in_stock ? `En stock · ${product.available} disponibles` : "Agotado"}
+          <div className={`sf-stock ${!product.in_stock ? "out" : product.available <= 5 ? "low" : "in"}`}>
+            {!product.in_stock
+              ? "Agotado"
+              : product.available <= 5
+                ? `¡Solo quedan ${product.available}! · pide pronto`
+                : `En stock · ${product.available} disponibles`}
           </div>
           {product.in_stock && price != null && (
             <div className="sf-buy">
@@ -259,6 +286,19 @@ export default function ProductPage() {
           </div>
         )}
       </section>
+
+      {related.length > 0 && (
+        <section className="sf-related" aria-label="Productos relacionados">
+          <h2 className="sf-related-title">También te puede interesar</h2>
+          <div className="sf-related-row">
+            {related.map((item) => (
+              <div className="sf-related-item" key={item.slug}>
+                <ProductCard product={item} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </article>
   );
 }

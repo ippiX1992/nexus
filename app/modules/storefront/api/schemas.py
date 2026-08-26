@@ -38,6 +38,7 @@ class StorefrontProductDetail(StorefrontProduct):
     images: list[str] = []
     videos: list[str] = []
     specs: list[SpecItem] = []
+    category_slug: str | None = None
 
 
 class StorefrontProductList(BaseModel):

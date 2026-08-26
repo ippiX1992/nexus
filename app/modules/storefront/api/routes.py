@@ -217,7 +217,11 @@ _DETAIL = text(
            v.sku AS sku,
            e.unit_amount AS price,
            e.compare_at_amount AS compare_at,
-           COALESCE(s.available, 0) AS available
+           COALESCE(s.available, 0) AS available,
+           (SELECT c.slug FROM catalog_product_categories pc
+              JOIN catalog_categories c ON c.id = pc.category_id AND c.tenant_id = pc.tenant_id
+             WHERE pc.product_id = p.id AND pc.tenant_id = p.tenant_id
+             ORDER BY pc.is_primary DESC NULLS LAST LIMIT 1) AS category_slug
     FROM catalog_products p
     JOIN catalog_product_variants v
       ON v.product_id = p.id AND v.is_default AND v.archived_at IS NULL
@@ -284,11 +288,16 @@ def _inventory(session: AsyncSession, tenant_id) -> InventoryService:
 _IVA_RATE = Decimal("0.15")
 _SHIPPING_CONTINENTAL = Decimal("5")
 _SHIPPING_GALAPAGOS = Decimal("12")
+# Continental shipping is free at/above this subtotal. Mirror in the storefront
+# client (FREE_SHIPPING_MIN) so the cart's "free shipping" bar stays accurate.
+_FREE_SHIPPING_MIN = Decimal("99")
 
 
-def _shipping_for(province: str | None) -> tuple[str, Decimal]:
+def _shipping_for(province: str | None, subtotal: Decimal = Decimal("0")) -> tuple[str, Decimal]:
     if (province or "").strip().lower() in {"galápagos", "galapagos"}:
         return "galapagos", _SHIPPING_GALAPAGOS
+    if subtotal >= _FREE_SHIPPING_MIN:
+        return "continental", Decimal("0")
     return "continental", _SHIPPING_CONTINENTAL
 
 # Promo codes applied to the subtotal (demo config).
@@ -524,6 +533,7 @@ async def product_detail(
         images=images,
         videos=uploaded_videos,
         specs=_specs_for(row.sku, available),
+        category_slug=row.category_slug,
         sku=row.sku,
         price=row.price,
         compare_at=row.compare_at,
@@ -669,7 +679,7 @@ async def create_order(
     number = f"CH-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}"
     tracking = f"TRK{secrets.token_hex(5).upper()}"
     item_count = sum(line["quantity"] for line in lines)
-    method, shipping_amount = _shipping_for(payload.shipping_province)
+    method, shipping_amount = _shipping_for(payload.shipping_province, subtotal)
     coupon_code, discount = _coupon_discount(payload.coupon_code, subtotal)
     await session.execute(
         _INSERT_ORDER,

@@ -4,6 +4,9 @@
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export const STORE_KEY = "clickhome";
+// Continental shipping is free at/above this subtotal — mirrors the backend
+// (_FREE_SHIPPING_MIN). Drives the cart's free-shipping progress bar.
+export const FREE_SHIPPING_MIN = 99;
 
 export type StoreProduct = {
   slug: string;
@@ -20,7 +23,7 @@ export type StoreProduct = {
   in_stock: boolean;
 };
 export type SpecItem = { label: string; value: string };
-export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[]; videos?: string[]; specs?: SpecItem[] };
+export type StoreProductDetail = StoreProduct & { long_description?: string | null; images?: string[]; videos?: string[]; specs?: SpecItem[]; category_slug?: string | null };
 
 // Turn a video URL into something playable: YouTube/Vimeo become embed iframes;
 // anything else (a direct .mp4/.webm or an uploaded /media file) plays inline.

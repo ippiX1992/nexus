@@ -59,7 +59,9 @@ export function ProductCard({ product }: { product: StoreProduct }) {
       </Link>
       <Stars seed={product.slug} />
       <div className="az-card-price">{price != null ? formatPrice(product.price, product.currency) : "Consultar"}</div>
-      <div className={`az-card-stock ${product.in_stock ? "in" : "out"}`}>{product.in_stock ? "Disponible" : "Agotado"}</div>
+      <div className={`az-card-stock ${!product.in_stock ? "out" : product.available > 0 && product.available <= 5 ? "low" : "in"}`}>
+        {!product.in_stock ? "Agotado" : product.available > 0 && product.available <= 5 ? `¡Solo quedan ${product.available}!` : "Disponible"}
+      </div>
       {product.in_stock && price != null && (
         <button
           className="az-add"

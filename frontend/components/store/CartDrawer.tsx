@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { ECUADOR, GALAPAGOS_PROVINCE, PROVINCES } from "@/lib/ecuador";
-import { createOrder, formatPrice, validateCoupon, type CouponInfo, type StoreOrder } from "@/lib/storefront";
+import { createOrder, formatPrice, FREE_SHIPPING_MIN, validateCoupon, type CouponInfo, type StoreOrder } from "@/lib/storefront";
 import { useCart } from "./cart";
 
 type Stage = "cart" | "form" | "done";
@@ -261,6 +261,18 @@ export function CartDrawer() {
               ))}
             </div>
             <div className="sf-drawer-foot">
+              {subtotal >= FREE_SHIPPING_MIN ? (
+                <div className="sf-freeship done">🎉 ¡Tu pedido tiene envío gratis!</div>
+              ) : (
+                <div className="sf-freeship">
+                  <p>
+                    Te faltan <strong>{formatPrice(FREE_SHIPPING_MIN - subtotal, currency)}</strong> para <strong>envío gratis</strong>
+                  </p>
+                  <div className="sf-freeship-bar">
+                    <span style={{ width: `${Math.min(100, (subtotal / FREE_SHIPPING_MIN) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
               <div className="sf-subtotal">
                 <span>Subtotal</span>
                 <strong>{formatPrice(subtotal, currency)}</strong>
