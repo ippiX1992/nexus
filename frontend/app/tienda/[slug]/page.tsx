@@ -35,6 +35,21 @@ export default function ProductPage() {
     getReviews(slug).then(setReviews).catch(() => setReviews(null));
   }, [slug]);
 
+  // Set the browser tab title + meta description from the product (basic SEO for
+  // shareable product links, since this page renders client-side).
+  useEffect(() => {
+    if (!product) return;
+    const previousTitle = document.title;
+    document.title = `${product.name} · ClickHome`;
+    const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(Object.assign(document.createElement("meta"), { name: "description" }));
+    const previousDesc = meta.getAttribute("content");
+    if (product.short_description) meta.setAttribute("content", product.short_description);
+    return () => {
+      document.title = previousTitle;
+      if (previousDesc != null) meta.setAttribute("content", previousDesc);
+    };
+  }, [product]);
+
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
