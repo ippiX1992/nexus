@@ -5,6 +5,8 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/admin/Button";
 import { DataTable, type Column } from "@/components/admin/DataTable";
 import { EmptyState } from "@/components/admin/EmptyState";
+import { FilterBar } from "@/components/admin/FilterBar";
+import { SearchInput } from "@/components/admin/SearchInput";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { api } from "@/lib/api";
 import { variantLabels } from "@/lib/catalog";
@@ -24,6 +26,16 @@ export default function Page() {
 
   const canAdjust = permissions.includes("inventory.stock.adjust");
   const canRecount = permissions.includes("inventory.stock.recount");
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [warehouseFilter, setWarehouseFilter] = useState("");
+  const [sortLow, setSortLow] = useState(false);
+
+  useEffect(() => {
+    const st = new URLSearchParams(window.location.search).get("status");
+    if (st) setStatusFilter(st);
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -62,6 +74,28 @@ export default function Page() {
     return loc ? `${wh ? `${wh.code} · ` : ""}${loc.name}` : "—";
   };
   const stockStatus = (a: number) => (a <= 0 ? "out_of_stock" : a <= 5 ? "low_stock" : "in_stock");
+
+  let visibleLevels = levels;
+  if (search.trim()) {
+    const term = search.trim().toLowerCase();
+    visibleLevels = visibleLevels.filter((s) => `${productName(s.variant_id)} ${productSku(s.variant_id)}`.toLowerCase().includes(term));
+  }
+  if (statusFilter) visibleLevels = visibleLevels.filter((s) => stockStatus(s.available) === statusFilter);
+  if (warehouseFilter) visibleLevels = visibleLevels.filter((s) => locations.find((l) => l.id === s.location_id)?.warehouse_id === warehouseFilter);
+  if (sortLow) visibleLevels = [...visibleLevels].sort((a, b) => a.available - b.available);
+  const hasStockFilters = !!(search || statusFilter || warehouseFilter);
+
+  function exportStockCsv() {
+    const header = ["Producto", "SKU", "Bodega", "Disponible", "Reservado", "Estado"];
+    const body = visibleLevels.map((s) => [productName(s.variant_id), productSku(s.variant_id), warehouseFor(s.location_id), s.available, s.reserved, stockStatus(s.available)]);
+    const csv = [header, ...body].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `stock-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function submitMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -149,14 +183,45 @@ export default function Page() {
         </form>
       )}
 
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Niveles de stock</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Niveles de stock</h2>
+        <button type="button" onClick={exportStockCsv} className="w-fit shrink-0 rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text hover:bg-panel-2">
+          Exportar CSV
+        </button>
+      </div>
+      <FilterBar>
+        <SearchInput value={search} onChange={setSearch} onSubmit={() => {}} placeholder="Buscar producto o SKU" className="w-full sm:w-64" />
+        <select aria-label="Estado" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={inputCls}>
+          <option value="">Todos los estados</option>
+          <option value="in_stock">En stock</option>
+          <option value="low_stock">Stock bajo</option>
+          <option value="out_of_stock">Sin stock</option>
+        </select>
+        <select aria-label="Bodega" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className={inputCls}>
+          <option value="">Todas las bodegas</option>
+          {warehouses.filter((w) => w.status !== "archived").map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.code ? `${w.code} · ${w.name}` : w.name}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input type="checkbox" checked={sortLow} onChange={(e) => setSortLow(e.target.checked)} />
+          Menor stock primero
+        </label>
+      </FilterBar>
       <DataTable
         columns={stockCols}
-        rows={levels}
+        rows={visibleLevels}
         keyField={(s) => s.id}
         loading={loading}
         stickyHeader
-        empty={<EmptyState title="Sin stock todavía" description="Registra una recepción para crear el primer nivel de stock." />}
+        empty={
+          <EmptyState
+            title={hasStockFilters ? "Sin resultados" : "Sin stock todavía"}
+            description={hasStockFilters ? "Ningún producto coincide con los filtros." : "Registra una recepción para crear el primer nivel de stock."}
+          />
+        }
       />
 
       <h2 className="mb-3 mt-8 text-sm font-semibold uppercase tracking-wide text-muted">Movimientos recientes</h2>

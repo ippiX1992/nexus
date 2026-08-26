@@ -56,8 +56,8 @@ export default function Page() {
   const attention = m
     ? ([
         pending > 0 && { n: pending, label: pending === 1 ? "pedido pendiente" : "pedidos pendientes", href: "/commerce/orders", tone: "warn", icon: "📦" },
-        m.inventory.out_of_stock > 0 && { n: m.inventory.out_of_stock, label: "productos sin stock", href: "/commerce/inventory", tone: "bad", icon: "🚫" },
-        m.inventory.low_stock > 0 && { n: m.inventory.low_stock, label: "productos con stock bajo", href: "/commerce/inventory", tone: "warn", icon: "📉" },
+        m.inventory.out_of_stock > 0 && { n: m.inventory.out_of_stock, label: "productos sin stock", href: "/commerce/inventory?status=out_of_stock", tone: "bad", icon: "🚫" },
+        m.inventory.low_stock > 0 && { n: m.inventory.low_stock, label: "productos con stock bajo", href: "/commerce/inventory?status=low_stock", tone: "warn", icon: "📉" },
         m.transfers_in_transit > 0 && { n: m.transfers_in_transit, label: "transferencias en tránsito", href: "/commerce/transfers", tone: "info", icon: "🚚" },
       ].filter(Boolean) as { n: number; label: string; href: string; tone: string; icon: string }[])
     : [];
