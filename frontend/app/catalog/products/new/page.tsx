@@ -34,7 +34,13 @@ export default function Page() {
         brand_id: form.get("brand_id") || null,
         code: form.get("code") || null,
         sku: form.get("sku"),
-        translation: { locale: form.get("locale"), name: form.get("name"), slug: form.get("slug"), short_description: null, long_description: null },
+        translation: {
+          locale: form.get("locale"),
+          name: form.get("name"),
+          slug: form.get("slug"),
+          short_description: (form.get("short_description") as string)?.trim() || null,
+          long_description: (form.get("long_description") as string)?.trim() || null,
+        },
       });
       router.push(`/catalog/products/${product.product.id}`);
     } catch (e) {
@@ -77,6 +83,15 @@ export default function Page() {
                 </option>
               ))}
             </select>
+          </Field>
+        </FormSection>
+
+        <FormSection title="Descripción" description="Textos que verá el cliente en la tienda (puedes editarlos después).">
+          <Field label="Descripción corta" hint="Resumen breve que se muestra junto al producto.">
+            <textarea name="short_description" rows={2} maxLength={1000} className={inputCls} />
+          </Field>
+          <Field label="Descripción larga">
+            <textarea name="long_description" rows={6} className={inputCls} />
           </Field>
         </FormSection>
 

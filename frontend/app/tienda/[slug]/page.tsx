@@ -131,7 +131,11 @@ export default function ProductPage() {
         <div className="sf-detail-info">
           {product.brand && <span className="sf-brand">{product.brand}</span>}
           <h1>{product.name}</h1>
-          <Stars seed={product.slug} />
+          <Stars
+            seed={product.slug}
+            rating={reviews && reviews.count > 0 ? reviews.average : undefined}
+            count={reviews && reviews.count > 0 ? reviews.count : undefined}
+          />
           <div className="sf-detail-price">{formatPrice(product.price, product.currency)}</div>
           <div className={`sf-stock ${product.in_stock ? "in" : "out"}`}>
             {product.in_stock ? `En stock · ${product.available} disponibles` : "Agotado"}
