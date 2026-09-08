@@ -8,7 +8,7 @@ import { Stars } from "@/components/store/Stars";
 import { Thumb } from "@/components/store/Thumb";
 import { useUI } from "@/components/store/ui";
 import { useWishlist } from "@/components/store/wishlist";
-import { createReview, formatPrice, getReviews, imageAt, storeProduct, storeProducts, videoEmbed, type ReviewSummary, type StoreProduct, type StoreProductDetail } from "@/lib/storefront";
+import { createReview, formatPrice, getReviews, imageAt, pushRecentlyViewed, storeProduct, storeProducts, videoEmbed, type ReviewSummary, type StoreProduct, type StoreProductDetail } from "@/lib/storefront";
 
 export default function ProductPage() {
   const params = useParams();
@@ -41,6 +41,7 @@ export default function ProductPage() {
   // shareable product links, since this page renders client-side).
   useEffect(() => {
     if (!product) return;
+    pushRecentlyViewed(product);
     const previousTitle = document.title;
     document.title = `${product.name} · ClickHome`;
     const meta = document.querySelector('meta[name="description"]') ?? document.head.appendChild(Object.assign(document.createElement("meta"), { name: "description" }));

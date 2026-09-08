@@ -6,7 +6,7 @@ import { Carousel } from "@/components/store/Carousel";
 import { HeroBanner } from "@/components/store/HeroBanner";
 import { ProductCard } from "@/components/store/ProductCard";
 import { SkeletonGrid } from "@/components/store/Skeletons";
-import { storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
+import { getRecentlyViewed, storeCategories, storeProducts, type StoreCategory, type StoreProduct } from "@/lib/storefront";
 
 type Section = { category: StoreCategory; items: StoreProduct[] };
 const PAGE = 24;
@@ -51,6 +51,11 @@ export default function StorePage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [recentlyViewed, setRecentlyViewed] = useState<StoreProduct[]>([]);
+
+  useEffect(() => {
+    setRecentlyViewed(getRecentlyViewed());
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -133,6 +138,21 @@ export default function StorePage() {
                   <span className="az-tile-count">{entry.product_count} productos →</span>
                 </Link>
               ))}
+            </section>
+          )}
+
+          {recentlyViewed.length >= 2 && (
+            <section className="sf-section">
+              <div className="sf-section-head">
+                <h2>Vistos recientemente</h2>
+              </div>
+              <Carousel>
+                {recentlyViewed.map((product) => (
+                  <div className="sf-carousel-item" key={product.slug}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </Carousel>
             </section>
           )}
 

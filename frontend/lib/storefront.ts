@@ -8,6 +8,45 @@ export const STORE_KEY = "clickhome";
 // (_FREE_SHIPPING_MIN). Drives the cart's free-shipping progress bar.
 export const FREE_SHIPPING_MIN = 99;
 
+// "Recently viewed": a per-browser list of product snapshots kept in
+// localStorage (most-recent first, capped). All access is guarded so it is
+// safe during SSR and when storage is unavailable.
+const RECENTLY_VIEWED_KEY = "clickhome_recently_viewed";
+export function pushRecentlyViewed(product: StoreProduct) {
+  if (typeof window === "undefined") return;
+  try {
+    const snapshot: StoreProduct = {
+      slug: product.slug,
+      name: product.name,
+      short_description: product.short_description ?? null,
+      brand: product.brand ?? null,
+      image: product.image ?? null,
+      image2: product.image2 ?? null,
+      sku: product.sku,
+      price: product.price,
+      compare_at: product.compare_at ?? null,
+      currency: product.currency,
+      available: product.available,
+      in_stock: product.in_stock,
+    };
+    const stored = localStorage.getItem(RECENTLY_VIEWED_KEY);
+    const list: StoreProduct[] = stored ? JSON.parse(stored) : [];
+    const next = [snapshot, ...list.filter((item) => item.slug !== product.slug)].slice(0, 8);
+    localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(next));
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
+export function getRecentlyViewed(): StoreProduct[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(RECENTLY_VIEWED_KEY);
+    return stored ? (JSON.parse(stored) as StoreProduct[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export type StoreProduct = {
   slug: string;
   name: string;
