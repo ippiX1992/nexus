@@ -91,6 +91,28 @@ export default function Page() {
     return count;
   }
 
+  // Order categories as a tree (each child right under its parent).
+  function treeOrder(cats: Category[]): Category[] {
+    const byParent = new Map<string, Category[]>();
+    for (const c of cats) {
+      const key = c.parent_id ?? "__root__";
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(c);
+    }
+    for (const arr of byParent.values()) arr.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+    const out: Category[] = [];
+    const walk = (parent: string) => {
+      for (const c of byParent.get(parent) ?? []) {
+        out.push(c);
+        walk(c.id);
+      }
+    };
+    walk("__root__");
+    const seen = new Set(out.map((c) => c.id));
+    for (const c of cats) if (!seen.has(c.id)) out.push(c); // orphans (parent archived/missing)
+    return out;
+  }
+
   return (
     <AdminShell
       title="Categorías"
@@ -142,7 +164,7 @@ export default function Page() {
         <EmptyState title="Sin categorías" description="Crea la primera categoría de esta taxonomía." action={canCategory ? <Button variant="primary" onClick={() => setShowCatForm(true)}>Nueva categoría</Button> : undefined} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-line bg-panel">
-          {categories.map((item) => (
+          {treeOrder(categories).map((item) => (
             <div key={item.id} className="flex items-center justify-between gap-3 border-b border-line/50 px-4 py-2.5 last:border-0" style={{ paddingLeft: `${1 + depth(item) * 1.5}rem` }}>
               <span className="flex items-center gap-2 text-sm">
                 {depth(item) > 0 && <span className="text-muted/50">└</span>}
@@ -150,7 +172,10 @@ export default function Page() {
                 <span className="text-xs text-muted">{item.code}</span>
                 <StatusBadge status={item.status} />
               </span>
-              {canCategory && item.status !== "archived" && <Button size="sm" variant="danger" onClick={() => archive(item)}>Archivar</Button>}
+              <span className="flex items-center gap-3">
+                <span className="text-xs text-muted tabular-nums">{item.product_count ?? 0} {item.product_count === 1 ? "producto" : "productos"}</span>
+                {canCategory && item.status !== "archived" && <Button size="sm" variant="danger" onClick={() => archive(item)}>Archivar</Button>}
+              </span>
             </div>
           ))}
         </div>

@@ -884,10 +884,22 @@ async def list_categories(
     repository = SqlAlchemyCatalogRepository(db)
     if await repository.get_taxonomy(ctx.tenant_id, taxonomy_id) is None:
         raise HTTPException(404, "Taxonomy not found")
-    return [
-        CategoryResponse.model_validate(row)
-        for row in await repository.list_categories(ctx.tenant_id, taxonomy_id)
-    ]
+    rows = await repository.list_categories(ctx.tenant_id, taxonomy_id)
+    counts = {
+        str(cid): int(n)
+        for cid, n in (
+            await db.execute(
+                text("SELECT category_id, COUNT(*) FROM catalog_product_categories WHERE tenant_id = :tenant GROUP BY category_id"),
+                {"tenant": str(ctx.tenant_id)},
+            )
+        ).all()
+    }
+    result: list[CategoryResponse] = []
+    for row in rows:
+        resp = CategoryResponse.model_validate(row)
+        resp.product_count = counts.get(str(row.id), 0)
+        result.append(resp)
+    return result
 
 
 @router.post("/taxonomies/{taxonomy_id}/categories", response_model=CategoryResponse, status_code=201)

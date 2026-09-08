@@ -21,7 +21,7 @@ export type ProductStore={id:string;product_id:string;store_id:string;status:str
 export type ProductCategory={product_id:string;category_id:string;taxonomy_id:string;is_primary:boolean;position:number};
 export type ProductDetail={product:Product;variants:Variant[];translations:Translation[];categories:ProductCategory[];stores:ProductStore[]};
 export type Taxonomy={id:string;code:string;name:string;status:string;version:number};
-export type Category={id:string;taxonomy_id:string;parent_id?:string;code:string;name:string;slug:string;position:number;status:string;version:number};
+export type Category={id:string;taxonomy_id:string;parent_id?:string;code:string;name:string;slug:string;position:number;status:string;version:number;product_count?:number};
 export type Page<T>={items:T[];next_cursor?:string;has_more:boolean};
 
 export function technicalError(value:unknown){if(value instanceof ApiError)return`${value.message}${value.correlationId?` · ID ${value.correlationId}`:""}`;return value instanceof Error?value.message:"Error inesperado"}

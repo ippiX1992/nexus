@@ -260,6 +260,7 @@ class CategoryResponse(CatalogSchema):
     version: int
     created_at: datetime
     updated_at: datetime
+    product_count: int = 0
     archived_at: datetime | None
 
 
