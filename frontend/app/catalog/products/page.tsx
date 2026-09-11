@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { LinkButton } from "@/components/admin/Button";
+import { Button, LinkButton } from "@/components/admin/Button";
 import { DataTable, type Column } from "@/components/admin/DataTable";
 import { EmptyState } from "@/components/admin/EmptyState";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -10,7 +10,7 @@ import { inputCls } from "@/components/admin/forms";
 import { LoadMore } from "@/components/admin/Pagination";
 import { SearchInput } from "@/components/admin/SearchInput";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { type Brand, catalogContext, catalogPage, type Product, technicalError } from "@/lib/catalog";
+import { type Brand, catalogCommand, catalogContext, catalogPage, type Product, technicalError } from "@/lib/catalog";
 
 export default function Page() {
   const router = useRouter();
@@ -23,6 +23,44 @@ export default function Page() {
   const [brand, setBrand] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const canManage = permissions.includes("catalog.product.update") || permissions.includes("catalog.product.archive");
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = (checked: boolean) => setSelected(checked ? new Set(items.map((p) => p.id)) : new Set());
+  const clearSelection = () => setSelected(new Set());
+
+  async function bulkAction(action: "archive" | "activate") {
+    const targets = items.filter(
+      (p) => selected.has(p.id) && (action === "archive" ? p.status !== "archived" : p.status !== "active"),
+    );
+    if (targets.length === 0) {
+      clearSelection();
+      return;
+    }
+    setBulkBusy(true);
+    setError("");
+    let ok = 0;
+    for (const p of targets) {
+      try {
+        await catalogCommand(`/products/${p.id}/${action}`, p.version, "POST");
+        ok++;
+      } catch {
+        /* skip items that can't transition */
+      }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    await load();
+    if (ok < targets.length) setError(`${ok}/${targets.length} productos actualizados (algunos no se pudieron cambiar).`);
+  }
 
   useEffect(() => {
     const current = new URLSearchParams(window.location.search).get("search") ?? "";
@@ -112,12 +150,23 @@ export default function Page() {
           ))}
         </select>
       </FilterBar>
+      {canManage && selected.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm">
+          <span className="font-medium text-text">{selected.size} seleccionado{selected.size === 1 ? "" : "s"}</span>
+          <Button size="sm" variant="primary" onClick={() => bulkAction("activate")} disabled={bulkBusy}>Activar</Button>
+          <Button size="sm" variant="danger" onClick={() => bulkAction("archive")} disabled={bulkBusy}>Archivar</Button>
+          <button type="button" onClick={clearSelection} className="w-fit text-xs text-muted hover:underline">Limpiar</button>
+        </div>
+      )}
       <DataTable
         columns={columns}
         rows={items}
         keyField={(p) => p.id}
         loading={loading}
         stickyHeader
+        selectedIds={canManage ? selected : undefined}
+        onToggleRow={toggleRow}
+        onToggleAll={toggleAll}
         onRowClick={(p) => router.push(`/catalog/products/${p.id}`)}
         empty={
           <EmptyState

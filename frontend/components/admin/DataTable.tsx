@@ -23,6 +23,9 @@ export function DataTable<T>({
   onRowClick,
   rowActions,
   stickyHeader,
+  selectedIds,
+  onToggleRow,
+  onToggleAll,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -34,7 +37,13 @@ export function DataTable<T>({
   rowActions?: (row: T) => ReactNode;
   /** Cap height and keep the header visible while the body scrolls (long lists). */
   stickyHeader?: boolean;
+  /** When provided, renders a leading checkbox column for row selection. */
+  selectedIds?: Set<string>;
+  onToggleRow?: (id: string) => void;
+  onToggleAll?: (checked: boolean) => void;
 }) {
+  const selectable = !!selectedIds;
+  const allSelected = selectable && rows.length > 0 && rows.every((r) => selectedIds!.has(keyField(r)));
   if (loading && rows.length === 0) {
     return (
       <div className="overflow-hidden rounded-xl border border-line">
@@ -56,6 +65,11 @@ export function DataTable<T>({
       <table className="w-full min-w-[36rem] text-sm">
         <thead>
           <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+            {selectable && (
+              <th className={`w-10 px-4 py-2.5 ${thBase}`}>
+                <input type="checkbox" checked={allSelected} onChange={(e) => onToggleAll?.(e.target.checked)} aria-label="Seleccionar todo" />
+              </th>
+            )}
             {columns.map((c) => (
               <th
                 key={c.key}
@@ -73,8 +87,13 @@ export function DataTable<T>({
             <tr
               key={keyField(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`border-b border-line/50 last:border-0 ${onRowClick ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
+              className={`border-b border-line/50 last:border-0 ${selectable && selectedIds!.has(keyField(row)) ? "bg-brand/5" : ""} ${onRowClick ? "cursor-pointer hover:bg-white/[0.03]" : ""}`}
             >
+              {selectable && (
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <input type="checkbox" checked={selectedIds!.has(keyField(row))} onChange={() => onToggleRow?.(keyField(row))} aria-label="Seleccionar fila" />
+                </td>
+              )}
               {columns.map((c) => (
                 <td
                   key={c.key}
